@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function SampleDetailsPage() {
   const params = useParams();
-  const router = useRouter();
+  const id = params.id as string;
 
   const [sample, setSample] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -19,12 +19,12 @@ export default function SampleDetailsPage() {
     const { data, error } = await supabase
       .from("samples")
       .select("*")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (error) {
       alert(error.message);
-      router.push("/samples");
+      setLoading(false);
       return;
     }
 
@@ -35,7 +35,7 @@ export default function SampleDetailsPage() {
   if (loading) {
     return (
       <div className="p-8 text-center">
-        Loading sample...
+        Loading...
       </div>
     );
   }
@@ -49,67 +49,77 @@ export default function SampleDetailsPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-8">
 
-      <button
-        onClick={() => router.back()}
-        className="mb-6 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded"
-      >
-        ← Back
-      </button>
+      <h1 className="text-3xl font-bold mb-8">
+        Sample Details
+      </h1>
 
-      <div className="bg-white shadow-xl rounded-xl p-8">
+      <div className="bg-white rounded-xl shadow p-6 mb-8">
 
-        <h1 className="text-3xl font-bold mb-8">
-          Sample Details
-        </h1>
+        <div className="grid grid-cols-2 gap-4">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <strong>Sample Number:</strong><br />
+            {sample.sample_number}
+          </div>
 
-          <Info title="Project Name" value={sample.project_name} />
-          <Info title="Client Name" value={sample.client_name} />
-          <Info title="Sample Type" value={sample.sample_type} />
-          <Info title="Received Date" value={sample.received_date} />
-          <Info title="Received By" value={sample.received_by} />
-          <Info title="Status" value={sample.status} />
-          <Info title="Sample ID" value={sample.id} />
+          <div>
+            <strong>Sample Type:</strong><br />
+            {sample.sample_type}
+          </div>
 
-        </div>
+          <div>
+            <strong>Received Date:</strong><br />
+            {sample.received_date}
+          </div>
 
-        <div className="mt-10 border-t pt-6">
+          <div>
+            <strong>Received By:</strong><br />
+            {sample.received_by}
+          </div>
 
-          <h2 className="text-xl font-semibold mb-4">
-            Notes
-          </h2>
+          <div>
+            <strong>Status:</strong><br />
+            {sample.status}
+          </div>
 
-          <div className="bg-gray-100 rounded-lg p-4 min-h-[120px]">
-            {sample.notes || "No notes available"}
+          <div>
+            <strong>Condition:</strong><br />
+            {sample.received_condition}
+          </div>
+
+          <div className="col-span-2">
+            <strong>Notes:</strong><br />
+            {sample.notes || "-"}
           </div>
 
         </div>
 
       </div>
 
-    </div>
-  );
-}
+      <div className="bg-white rounded-xl shadow p-6">
 
-function Info({
-  title,
-  value,
-}: {
-  title: string;
-  value: any;
-}) {
-  return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="text-sm text-gray-500">
-        {title}
+        <div className="flex justify-between items-center mb-5">
+
+          <h2 className="text-2xl font-bold">
+            Tests
+          </h2>
+
+          <button
+            className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
+          >
+            + Add Test
+          </button>
+
+        </div>
+
+        <p className="text-gray-500">
+          No tests added yet.
+        </p>
+
       </div>
 
-      <div className="font-semibold text-lg mt-1">
-        {value || "-"}
-      </div>
     </div>
   );
 }
