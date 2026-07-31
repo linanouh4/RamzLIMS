@@ -19,7 +19,8 @@ export default function SampleDetailsPage() {
   const [openAddTest, setOpenAddTest] = useState(false);
 
   const [openResult, setOpenResult] = useState(false);
-  const [selectedSampleTest, setSelectedSampleTest] = useState<number | null>(null);
+  const [selectedSampleTest, setSelectedSampleTest] =
+    useState<number | null>(null);
 
 
 
@@ -30,6 +31,7 @@ export default function SampleDetailsPage() {
     }
 
   }, [id]);
+
 
 
 
@@ -53,7 +55,9 @@ export default function SampleDetailsPage() {
     if (error) {
 
       alert(error.message);
+
       setLoading(false);
+
       return;
 
     }
@@ -67,6 +71,7 @@ export default function SampleDetailsPage() {
 
 
 
+
     const { data: tests, error: testsError } = await supabase
       .from("sample_tests")
       .select(`
@@ -74,9 +79,16 @@ export default function SampleDetailsPage() {
         status,
         tests (
           test_name
+        ),
+        test_results (
+          id,
+          result_value,
+          unit,
+          notes
         )
       `)
       .eq("sample_id", id);
+
 
 
 
@@ -86,6 +98,7 @@ export default function SampleDetailsPage() {
       alert(testsError.message);
 
     }
+
 
 
 
@@ -101,9 +114,11 @@ export default function SampleDetailsPage() {
 
 
 
+
+
   async function updateStatus(
-    testId: number,
-    status: string
+    testId:number,
+    status:string
   ) {
 
 
@@ -120,6 +135,7 @@ export default function SampleDetailsPage() {
     if (error) {
 
       alert(error.message);
+
       return;
 
     }
@@ -137,7 +153,7 @@ export default function SampleDetailsPage() {
 
 
 
-  async function deleteTest(testId: number) {
+  async function deleteTest(testId:number) {
 
 
     const confirmDelete = confirm(
@@ -164,6 +180,7 @@ export default function SampleDetailsPage() {
     if (error) {
 
       alert(error.message);
+
       return;
 
     }
@@ -174,6 +191,7 @@ export default function SampleDetailsPage() {
     loadSample();
 
   }
+
 
 
 
@@ -276,6 +294,7 @@ export default function SampleDetailsPage() {
           <div className="col-span-2">
 
             <strong>Notes:</strong>
+
             <br />
 
             {sample.notes || "-"}
@@ -313,16 +332,14 @@ export default function SampleDetailsPage() {
 
 
 
-        <div className="space-y-3">
+        <div className="space-y-4">
 
 
           {sampleTests.length === 0 ? (
 
-
             <p className="text-gray-500">
               No tests added yet
             </p>
-
 
 
           ) : (
@@ -333,109 +350,187 @@ export default function SampleDetailsPage() {
 
               <div
                 key={item.id}
-                className="border rounded-lg p-4 flex justify-between items-center"
+                className="border rounded-lg p-4"
               >
 
 
 
-                <div>
+
+                <div className="flex justify-between items-center">
 
 
-                  <div className="font-semibold">
+                  <div>
 
-                    {item.tests?.test_name || "Unknown Test"}
+
+                    <div className="font-semibold text-lg">
+
+                      {item.tests?.test_name || "Unknown Test"}
+
+                    </div>
+
+
+
+
+
+                    <select
+
+                      className="mt-2 border rounded p-2"
+
+                      value={item.status || "Pending"}
+
+                      onChange={(e) =>
+                        updateStatus(
+                          item.id,
+                          e.target.value
+                        )
+                      }
+
+                    >
+
+                      <option value="Pending">
+                        Pending
+                      </option>
+
+
+                      <option value="In Progress">
+                        In Progress
+                      </option>
+
+
+                      <option value="Completed">
+                        Completed
+                      </option>
+
+
+                    </select>
+
+
 
                   </div>
 
 
 
 
-                  <select
-                    className="mt-2 border rounded p-2"
-                    value={item.status || "Pending"}
-
-                    onChange={(e) =>
-                      updateStatus(
-                        item.id,
-                        e.target.value
-                      )
-                    }
-
-                  >
-
-                    <option value="Pending">
-                      Pending
-                    </option>
 
 
-                    <option value="In Progress">
-                      In Progress
-                    </option>
+                  <div className="flex gap-2">
 
 
-                    <option value="Completed">
-                      Completed
-                    </option>
+                    <button
+
+                      onClick={() => {
+
+                        setSelectedSampleTest(item.id);
+
+                        setOpenResult(true);
+
+                      }}
+
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg"
+
+                    >
+
+                      Add Result
+
+                    </button>
 
 
-                  </select>
 
+
+
+                    <button
+
+                      onClick={() =>
+                        deleteTest(item.id)
+                      }
+
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg"
+
+                    >
+
+                      Delete
+
+                    </button>
+
+
+
+                  </div>
+
+
+                </div>
+
+
+
+
+
+
+
+                <div className="mt-4">
+
+
+                  <strong>
+                    Results:
+                  </strong>
+
+
+
+
+
+                  {item.test_results?.length === 0 ? (
+
+
+                    <div className="text-gray-500 mt-2">
+                      No result yet
+                    </div>
+
+
+
+                  ) : (
+
+
+                    item.test_results?.map((result:any) => (
+
+
+                      <div
+
+                        key={result.id}
+
+                        className="mt-2 bg-gray-100 p-3 rounded"
+
+                      >
+
+                        <div>
+                          Value: {result.result_value}
+                        </div>
+
+
+                        <div>
+                          Unit: {result.unit || "-"}
+                        </div>
+
+
+                        <div>
+                          Notes: {result.notes || "-"}
+                        </div>
+
+
+                      </div>
+
+
+
+                    ))
+
+
+                  )}
 
 
                 </div>
 
-
-
-
-
-
-                <div className="flex gap-2">
-
-
-                  <button
-
-                    onClick={() => {
-
-                      setSelectedSampleTest(item.id);
-                      setOpenResult(true);
-
-                    }}
-
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg"
-
-                  >
-
-                    Add Result
-
-                  </button>
-
-
-
-
-
-                  <button
-
-                    onClick={() =>
-                      deleteTest(item.id)
-                    }
-
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg"
-
-                  >
-
-                    Delete
-
-                  </button>
-
-
-
-                </div>
 
 
 
 
               </div>
-
 
 
             ))
@@ -444,12 +539,11 @@ export default function SampleDetailsPage() {
           )}
 
 
-
         </div>
 
 
-
       </div>
+
 
 
 
@@ -517,12 +611,13 @@ export default function SampleDetailsPage() {
 
 
 
-
           onSaved={() => {
 
             setOpenResult(false);
 
             setSelectedSampleTest(null);
+
+            loadSample();
 
           }}
 
@@ -532,6 +627,7 @@ export default function SampleDetailsPage() {
 
 
       )}
+
 
 
 
