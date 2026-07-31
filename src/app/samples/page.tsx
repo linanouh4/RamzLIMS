@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import AddSampleModal from "@/components/AddSampleModal";
+import AddSampleModal from "@/app/components/AddSampleModal";
 
 export default function SamplesPage() {
   const [samples, setSamples] = useState<any[]>([]);
