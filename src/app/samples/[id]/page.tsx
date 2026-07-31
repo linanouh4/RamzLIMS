@@ -4,24 +4,42 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AddTestToSampleModal from "@/components/AddTestToSampleModal";
+import AddResultModal from "@/components/AddResultModal";
 
 export default function SampleDetailsPage() {
+
   const params = useParams();
   const id = params.id as string;
+
 
   const [sample, setSample] = useState<any>(null);
   const [sampleTests, setSampleTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [openAddTest, setOpenAddTest] = useState(false);
 
+  const [openResult, setOpenResult] = useState(false);
+  const [selectedSampleTest, setSelectedSampleTest] = useState<number | null>(null);
+
+
+
   useEffect(() => {
+
     if (id) {
       loadSample();
     }
+
   }, [id]);
 
+
+
+
+
   async function loadSample() {
+
     setLoading(true);
+
+
 
     const { data, error } = await supabase
       .from("samples")
@@ -29,13 +47,25 @@ export default function SampleDetailsPage() {
       .eq("id", id)
       .single();
 
+
+
+
     if (error) {
+
       alert(error.message);
       setLoading(false);
       return;
+
     }
 
+
+
+
     setSample(data);
+
+
+
+
 
     const { data: tests, error: testsError } = await supabase
       .from("sample_tests")
@@ -48,43 +78,155 @@ export default function SampleDetailsPage() {
       `)
       .eq("sample_id", id);
 
+
+
+
     if (testsError) {
+
       alert(testsError.message);
+
     }
+
+
+
 
     setSampleTests(tests || []);
 
     setLoading(false);
+
   }
+
+
+
+
+
+
+  async function updateStatus(
+    testId: number,
+    status: string
+  ) {
+
+
+    const { error } = await supabase
+      .from("sample_tests")
+      .update({
+        status,
+      })
+      .eq("id", testId);
+
+
+
+
+    if (error) {
+
+      alert(error.message);
+      return;
+
+    }
+
+
+
+
+    loadSample();
+
+  }
+
+
+
+
+
+
+
+  async function deleteTest(testId: number) {
+
+
+    const confirmDelete = confirm(
+      "Delete this test?"
+    );
+
+
+
+    if (!confirmDelete) return;
+
+
+
+
+
+    const { error } = await supabase
+      .from("sample_tests")
+      .delete()
+      .eq("id", testId);
+
+
+
+
+
+    if (error) {
+
+      alert(error.message);
+      return;
+
+    }
+
+
+
+
+    loadSample();
+
+  }
+
+
+
+
 
 
   if (loading) {
+
     return (
+
       <div className="p-8 text-center">
         Loading...
       </div>
+
     );
+
   }
+
+
+
 
 
   if (!sample) {
+
     return (
+
       <div className="p-8 text-center">
         Sample not found
       </div>
+
     );
+
   }
 
 
+
+
+
   return (
+
     <div className="p-8">
+
 
       <h1 className="text-3xl font-bold mb-8">
         Sample Details
       </h1>
 
 
+
+
+
       <div className="bg-white rounded-xl shadow p-6 mb-8">
+
 
         <div className="grid grid-cols-2 gap-4">
 
@@ -143,11 +285,9 @@ export default function SampleDetailsPage() {
 
         </div>
 
+
       </div>
-
-
-
-      <div className="bg-white rounded-xl shadow p-6">
+            <div className="bg-white rounded-xl shadow p-6">
 
 
         <div className="flex justify-between items-center mb-5">
@@ -156,6 +296,7 @@ export default function SampleDetailsPage() {
           <h2 className="text-2xl font-bold">
             Tests
           </h2>
+
 
 
           <button
@@ -170,50 +311,142 @@ export default function SampleDetailsPage() {
 
 
 
+
+
         <div className="space-y-3">
 
 
           {sampleTests.length === 0 ? (
 
+
             <p className="text-gray-500">
               No tests added yet
             </p>
 
+
+
           ) : (
 
+
             sampleTests.map((item) => (
+
 
               <div
                 key={item.id}
                 className="border rounded-lg p-4 flex justify-between items-center"
               >
 
+
+
                 <div>
 
+
                   <div className="font-semibold">
+
                     {item.tests?.test_name || "Unknown Test"}
-                  </div>
-
-
-                  <div className="text-sm text-gray-500">
-
-                    Status:
-                    {" "}
-                    {item.status || "Pending"}
 
                   </div>
+
+
+
+
+                  <select
+                    className="mt-2 border rounded p-2"
+                    value={item.status || "Pending"}
+
+                    onChange={(e) =>
+                      updateStatus(
+                        item.id,
+                        e.target.value
+                      )
+                    }
+
+                  >
+
+                    <option value="Pending">
+                      Pending
+                    </option>
+
+
+                    <option value="In Progress">
+                      In Progress
+                    </option>
+
+
+                    <option value="Completed">
+                      Completed
+                    </option>
+
+
+                  </select>
+
+
 
                 </div>
 
 
+
+
+
+
+                <div className="flex gap-2">
+
+
+                  <button
+
+                    onClick={() => {
+
+                      setSelectedSampleTest(item.id);
+                      setOpenResult(true);
+
+                    }}
+
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg"
+
+                  >
+
+                    Add Result
+
+                  </button>
+
+
+
+
+
+                  <button
+
+                    onClick={() =>
+                      deleteTest(item.id)
+                    }
+
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg"
+
+                  >
+
+                    Delete
+
+                  </button>
+
+
+
+                </div>
+
+
+
+
               </div>
 
+
+
             ))
+
 
           )}
 
 
+
         </div>
+
 
 
       </div>
@@ -221,15 +454,27 @@ export default function SampleDetailsPage() {
 
 
 
+
+
       {openAddTest && (
+
 
         <AddTestToSampleModal
 
-          sampleId={id}
 
-          onClose={() => setOpenAddTest(false)}
+          open={openAddTest}
 
-          onAdded={() => {
+
+          sampleId={Number(id)}
+
+
+          onClose={() =>
+            setOpenAddTest(false)
+          }
+
+
+
+          onSaved={() => {
 
             setOpenAddTest(false);
 
@@ -237,12 +482,63 @@ export default function SampleDetailsPage() {
 
           }}
 
+
+
         />
+
 
       )}
 
 
 
+
+
+
+      {openResult && selectedSampleTest && (
+
+
+        <AddResultModal
+
+
+          open={openResult}
+
+
+          sampleTestId={selectedSampleTest}
+
+
+
+          onClose={() => {
+
+            setOpenResult(false);
+
+            setSelectedSampleTest(null);
+
+          }}
+
+
+
+
+          onSaved={() => {
+
+            setOpenResult(false);
+
+            setSelectedSampleTest(null);
+
+          }}
+
+
+
+        />
+
+
+      )}
+
+
+
+
+
     </div>
+
   );
+
 }
