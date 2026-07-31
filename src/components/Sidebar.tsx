@@ -32,6 +32,13 @@ export default function Sidebar({ user }: Props) {
         </Link>
 
         <Link
+          href="/tests"
+          className="block hover:bg-blue-700 p-3 rounded-lg"
+        >
+          🔬 Tests
+        </Link>
+
+        <Link
           href="/clients"
           className="block hover:bg-blue-700 p-3 rounded-lg"
         >
