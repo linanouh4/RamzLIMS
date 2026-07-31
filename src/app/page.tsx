@@ -12,11 +12,11 @@ export default function Home() {
 
   const handleLogin = async () => {
     const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("username", username.trim())
-      .eq("password", password.trim())
-      .limit(1);
+  .from("users")
+  .select("*");
+
+console.log("USERS:", data);
+console.log("ERROR:", error);
 
     console.log(data);
     console.log(error);
