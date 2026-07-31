@@ -17,11 +17,26 @@ export default function Sidebar({ user }: Props) {
       </h1>
 
       <nav className="space-y-4">
+
         <Link
           href="/dashboard"
           className="block hover:bg-blue-700 p-3 rounded-lg"
         >
           🏠 Dashboard
+        </Link>
+
+        <Link
+          href="/clients"
+          className="block hover:bg-blue-700 p-3 rounded-lg"
+        >
+          👥 Clients
+        </Link>
+
+        <Link
+          href="/projects"
+          className="block hover:bg-blue-700 p-3 rounded-lg"
+        >
+          🏗 Projects
         </Link>
 
         <Link
@@ -36,13 +51,6 @@ export default function Sidebar({ user }: Props) {
           className="block hover:bg-blue-700 p-3 rounded-lg"
         >
           🔬 Tests
-        </Link>
-
-        <Link
-          href="/clients"
-          className="block hover:bg-blue-700 p-3 rounded-lg"
-        >
-          👥 Clients
         </Link>
 
         <Link
@@ -69,6 +77,7 @@ export default function Sidebar({ user }: Props) {
             </Link>
           </>
         )}
+
       </nav>
     </aside>
   );
