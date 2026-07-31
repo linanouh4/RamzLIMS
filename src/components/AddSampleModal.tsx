@@ -22,6 +22,7 @@ export default function AddSampleModal({
   const [receivedDate, setReceivedDate] = useState("");
   const [receivedBy, setReceivedBy] = useState("");
   const [status, setStatus] = useState("Pending");
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function AddSampleModal({
       setReceivedDate(sample.received_date || "");
       setReceivedBy(sample.received_by || "");
       setStatus(sample.status || "Pending");
+      setNotes(sample.notes || "");
     } else {
       setProjectName("");
       setClientName("");
@@ -39,6 +41,7 @@ export default function AddSampleModal({
       setReceivedDate("");
       setReceivedBy("");
       setStatus("Pending");
+      setNotes("");
     }
   }, [sample, open]);
 
@@ -59,6 +62,7 @@ export default function AddSampleModal({
           received_date: receivedDate,
           received_by: receivedBy,
           status,
+          notes,
         })
         .eq("id", sample.id));
     } else {
@@ -72,6 +76,7 @@ export default function AddSampleModal({
             received_date: receivedDate,
             received_by: receivedBy,
             status,
+            notes,
           },
         ]));
     }
@@ -140,7 +145,15 @@ export default function AddSampleModal({
             <option>Pending</option>
             <option>In Progress</option>
             <option>Completed</option>
+            <option>Approved</option>
           </select>
+
+          <textarea
+            className="border rounded-lg p-3 col-span-2"
+            placeholder="Notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
 
         </div>
 
