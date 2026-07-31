@@ -25,6 +25,21 @@ export default function AddSampleModal({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [projects, setProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  async function loadProjects() {
+    const { data } = await supabase
+      .from("projects")
+      .select("*")
+      .order("project_name");
+
+    setProjects(data || []);
+  }
+
   useEffect(() => {
     if (sample) {
       setProjectName(sample.project_name || "");
@@ -102,12 +117,22 @@ export default function AddSampleModal({
 
         <div className="grid grid-cols-2 gap-4">
 
-          <input
+          <select
             className="border rounded-lg p-3"
-            placeholder="Project Name"
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
-          />
+          >
+            <option value="">Select Project</option>
+
+            {projects.map((project) => (
+              <option
+                key={project.id}
+                value={project.project_name}
+              >
+                {project.project_name}
+              </option>
+            ))}
+          </select>
 
           <input
             className="border rounded-lg p-3"
