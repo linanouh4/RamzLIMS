@@ -22,6 +22,7 @@ export default function SampleDetailsPage() {
   }, [id]);
 
 
+
   async function loadSample() {
     setLoading(true);
 
@@ -31,6 +32,7 @@ export default function SampleDetailsPage() {
       .select("*")
       .eq("id", id)
       .single();
+
 
 
     if (error) {
@@ -69,6 +71,64 @@ export default function SampleDetailsPage() {
 
 
 
+
+  async function updateStatus(
+    testId: number,
+    status: string
+  ) {
+
+    const { error } = await supabase
+      .from("sample_tests")
+      .update({
+        status: status,
+      })
+      .eq("id", testId);
+
+
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+
+    loadSample();
+  }
+
+
+
+
+  async function deleteTest(testId: number) {
+
+    const confirmDelete = confirm(
+      "Delete this test?"
+    );
+
+
+    if (!confirmDelete) return;
+
+
+
+    const { error } = await supabase
+      .from("sample_tests")
+      .delete()
+      .eq("id", testId);
+
+
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+
+    loadSample();
+  }
+
+
+
+
+
   if (loading) {
     return (
       <div className="p-8 text-center">
@@ -76,6 +136,7 @@ export default function SampleDetailsPage() {
       </div>
     );
   }
+
 
 
 
@@ -90,13 +151,16 @@ export default function SampleDetailsPage() {
 
 
 
+
   return (
+
     <div className="p-8">
 
 
       <h1 className="text-3xl font-bold mb-8">
         Sample Details
       </h1>
+
 
 
 
@@ -114,11 +178,13 @@ export default function SampleDetailsPage() {
           </div>
 
 
+
           <div>
             <strong>Sample Type:</strong>
             <br />
             {sample.sample_type}
           </div>
+
 
 
           <div>
@@ -128,11 +194,13 @@ export default function SampleDetailsPage() {
           </div>
 
 
+
           <div>
             <strong>Received By:</strong>
             <br />
             {sample.received_by}
           </div>
+
 
 
           <div>
@@ -142,6 +210,7 @@ export default function SampleDetailsPage() {
           </div>
 
 
+
           <div>
             <strong>Condition:</strong>
             <br />
@@ -149,10 +218,14 @@ export default function SampleDetailsPage() {
           </div>
 
 
+
           <div className="col-span-2">
+
             <strong>Notes:</strong>
             <br />
+
             {sample.notes || "-"}
+
           </div>
 
 
@@ -160,6 +233,7 @@ export default function SampleDetailsPage() {
 
 
       </div>
+
 
 
 
@@ -190,45 +264,110 @@ export default function SampleDetailsPage() {
 
 
 
+
         <div className="space-y-3">
 
 
           {sampleTests.length === 0 ? (
 
+
             <p className="text-gray-500">
               No tests added yet
             </p>
 
+
           ) : (
+
 
             sampleTests.map((item) => (
 
+
               <div
                 key={item.id}
-                className="border rounded-lg p-4"
+                className="border rounded-lg p-4 flex justify-between items-center"
               >
 
-                <div className="font-semibold">
-                  {item.tests?.test_name || "Unknown Test"}
+
+
+                <div>
+
+
+                  <div className="font-semibold">
+
+                    {item.tests?.test_name || "Unknown Test"}
+
+                  </div>
+
+
+
+
+                  <select
+                    className="mt-2 border rounded p-2"
+                    value={item.status || "Pending"}
+
+                    onChange={(e) =>
+                      updateStatus(
+                        item.id,
+                        e.target.value
+                      )
+                    }
+
+                  >
+
+                    <option value="Pending">
+                      Pending
+                    </option>
+
+
+                    <option value="In Progress">
+                      In Progress
+                    </option>
+
+
+                    <option value="Completed">
+                      Completed
+                    </option>
+
+
+                  </select>
+
+
+
                 </div>
 
 
-                <div className="text-sm text-gray-500">
-                  Status: {item.status || "Pending"}
-                </div>
+
+
+
+                <button
+                  onClick={() =>
+                    deleteTest(item.id)
+                  }
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg"
+                >
+
+                  Delete
+
+                </button>
+
 
 
               </div>
 
+
             ))
 
+
           )}
+
 
 
         </div>
 
 
+
       </div>
+
 
 
 
@@ -242,7 +381,10 @@ export default function SampleDetailsPage() {
 
           sampleId={Number(id)}
 
-          onClose={() => setOpenAddTest(false)}
+          onClose={() =>
+            setOpenAddTest(false)
+          }
+
 
           onSaved={() => {
 
@@ -259,6 +401,8 @@ export default function SampleDetailsPage() {
 
 
 
+
     </div>
+
   );
 }
