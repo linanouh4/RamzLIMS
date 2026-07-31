@@ -12,14 +12,14 @@ export default function Home() {
 
   const handleLogin = async () => {
     const { data, error } = await supabase
-  .from("users")
-  .select("*");
+      .from("users")
+      .select("*")
+      .eq("username", username.trim())
+      .eq("password", password.trim())
+      .limit(1);
 
-console.log("USERS:", data);
-console.log("ERROR:", error);
-
-    console.log(data);
-    console.log(error);
+    console.log("LOGIN DATA:", data);
+    console.log("LOGIN ERROR:", error);
 
     if (error) {
       alert(error.message);
@@ -31,7 +31,6 @@ console.log("ERROR:", error);
       return;
     }
 
-    // حفظ بيانات المستخدم بعد تسجيل الدخول
     localStorage.setItem(
       "user",
       JSON.stringify(data[0])
