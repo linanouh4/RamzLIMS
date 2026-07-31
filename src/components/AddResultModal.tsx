@@ -1,21 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type Props = {
   open: boolean;
   sampleTestId: number;
+  resultId?: number;
+  initialData?: {
+    result_value?: string;
+    unit?: string;
+    notes?: string;
+  };
   onClose: () => void;
   onSaved: () => void;
 };
 
+
 export default function AddResultModal({
   open,
   sampleTestId,
+  resultId,
+  initialData,
   onClose,
   onSaved,
 }: Props) {
+
 
   const [resultValue, setResultValue] = useState("");
   const [unit, setUnit] = useState("");
@@ -24,25 +34,103 @@ export default function AddResultModal({
 
 
 
+  useEffect(() => {
+
+    if (open && initialData) {
+
+      setResultValue(
+        initialData.result_value || ""
+      );
+
+      setUnit(
+        initialData.unit || ""
+      );
+
+      setNotes(
+        initialData.notes || ""
+      );
+
+    }
+
+
+    if (open && !initialData) {
+
+      setResultValue("");
+      setUnit("");
+      setNotes("");
+
+    }
+
+  }, [open, initialData]);
+
+
+
+
+
   if (!open) return null;
+
+
+
 
 
 
   async function saveResult() {
 
+
     setLoading(true);
 
 
-    const { error } = await supabase
-      .from("test_results")
-      .insert([
-        {
-          sample_test_id: sampleTestId,
+
+    let error;
+
+
+
+    if (resultId) {
+
+
+      const response = await supabase
+        .from("test_results")
+        .update({
+
           result_value: resultValue,
           unit: unit,
           notes: notes,
-        },
-      ]);
+
+        })
+        .eq("id", resultId);
+
+
+
+      error = response.error;
+
+
+
+    } else {
+
+
+      const response = await supabase
+        .from("test_results")
+        .insert([
+
+          {
+
+            sample_test_id: sampleTestId,
+            result_value: resultValue,
+            unit: unit,
+            notes: notes,
+
+          }
+
+        ]);
+
+
+
+      error = response.error;
+
+
+    }
+
+
 
 
 
@@ -50,17 +138,26 @@ export default function AddResultModal({
 
 
 
+
     if (error) {
+
       alert(error.message);
+
       return;
+
     }
+
+
 
 
     onSaved();
 
     onClose();
 
+
   }
+
+
 
 
 
@@ -74,35 +171,68 @@ export default function AddResultModal({
 
 
         <h2 className="text-2xl font-bold mb-5">
-          Add Result
+
+          {resultId ? "Edit Result" : "Add Result"}
+
         </h2>
 
 
 
+
+
         <input
+
           className="w-full border rounded p-3 mb-3"
+
           placeholder="Result Value"
+
           value={resultValue}
-          onChange={(e)=>setResultValue(e.target.value)}
+
+          onChange={(e) =>
+            setResultValue(e.target.value)
+          }
+
         />
+
+
 
 
 
         <input
+
           className="w-full border rounded p-3 mb-3"
+
           placeholder="Unit"
+
           value={unit}
-          onChange={(e)=>setUnit(e.target.value)}
+
+          onChange={(e) =>
+            setUnit(e.target.value)
+          }
+
         />
+
+
 
 
 
         <textarea
+
           className="w-full border rounded p-3 mb-5"
+
           placeholder="Notes"
+
           value={notes}
-          onChange={(e)=>setNotes(e.target.value)}
+
+          onChange={(e) =>
+            setNotes(e.target.value)
+          }
+
         />
+
+
+
+
 
 
 
@@ -110,18 +240,29 @@ export default function AddResultModal({
 
 
           <button
+
             onClick={onClose}
+
             className="px-5 py-2 border rounded"
+
           >
+
             Cancel
+
           </button>
 
 
 
+
+
           <button
+
             onClick={saveResult}
+
             disabled={loading}
+
             className="bg-blue-700 text-white px-5 py-2 rounded"
+
           >
 
             {loading ? "Saving..." : "Save"}
@@ -129,7 +270,9 @@ export default function AddResultModal({
           </button>
 
 
+
         </div>
+
 
 
       </div>
