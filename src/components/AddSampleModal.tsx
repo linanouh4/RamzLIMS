@@ -16,16 +16,15 @@ export default function AddSampleModal({
   onClose,
   onSaved,
 }: Props) {
-  const [projectName, setProjectName] = useState("");
-  const [clientName, setClientName] = useState("");
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectId, setProjectId] = useState("");
+
   const [sampleType, setSampleType] = useState("");
   const [receivedDate, setReceivedDate] = useState("");
   const [receivedBy, setReceivedBy] = useState("");
   const [status, setStatus] = useState("Pending");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const [projects, setProjects] = useState<any[]>([]);
 
   useEffect(() => {
     loadProjects();
@@ -42,16 +41,14 @@ export default function AddSampleModal({
 
   useEffect(() => {
     if (sample) {
-      setProjectName(sample.project_name || "");
-      setClientName(sample.client_name || "");
+      setProjectId(sample.project_id?.toString() || "");
       setSampleType(sample.sample_type || "");
       setReceivedDate(sample.received_date || "");
       setReceivedBy(sample.received_by || "");
       setStatus(sample.status || "Pending");
       setNotes(sample.notes || "");
     } else {
-      setProjectName("");
-      setClientName("");
+      setProjectId("");
       setSampleType("");
       setReceivedDate("");
       setReceivedBy("");
@@ -67,33 +64,24 @@ export default function AddSampleModal({
 
     let error;
 
+    const payload = {
+      project_id: Number(projectId),
+      sample_type: sampleType,
+      received_date: receivedDate,
+      received_by: receivedBy,
+      status,
+      notes,
+    };
+
     if (sample) {
       ({ error } = await supabase
         .from("samples")
-        .update({
-          project_name: projectName,
-          client_name: clientName,
-          sample_type: sampleType,
-          received_date: receivedDate,
-          received_by: receivedBy,
-          status,
-          notes,
-        })
+        .update(payload)
         .eq("id", sample.id));
     } else {
       ({ error } = await supabase
         .from("samples")
-        .insert([
-          {
-            project_name: projectName,
-            client_name: clientName,
-            sample_type: sampleType,
-            received_date: receivedDate,
-            received_by: receivedBy,
-            status,
-            notes,
-          },
-        ]));
+        .insert([payload]));
     }
 
     setLoading(false);
@@ -106,8 +94,7 @@ export default function AddSampleModal({
     onSaved();
     onClose();
   }
-
-  return (
+    return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-[600px] p-8">
 
@@ -118,28 +105,23 @@ export default function AddSampleModal({
         <div className="grid grid-cols-2 gap-4">
 
           <select
-            className="border rounded-lg p-3"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
+            className="border rounded-lg p-3 col-span-2"
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
           >
-            <option value="">Select Project</option>
+            <option value="">
+              Select Project
+            </option>
 
             {projects.map((project) => (
               <option
                 key={project.id}
-                value={project.project_name}
+                value={project.id}
               >
                 {project.project_name}
               </option>
             ))}
           </select>
-
-          <input
-            className="border rounded-lg p-3"
-            placeholder="Client Name"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-          />
 
           <input
             className="border rounded-lg p-3"
@@ -176,6 +158,7 @@ export default function AddSampleModal({
           <textarea
             className="border rounded-lg p-3 col-span-2"
             placeholder="Notes"
+            rows={4}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
