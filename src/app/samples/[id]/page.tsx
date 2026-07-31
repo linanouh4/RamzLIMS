@@ -3,19 +3,24 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import AddTestToSampleModal from "@/components/AddTestToSampleModal";
 
 export default function SampleDetailsPage() {
   const params = useParams();
   const id = params.id as string;
 
   const [sample, setSample] = useState<any>(null);
+  const [sampleTests, setSampleTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openAddTest, setOpenAddTest] = useState(false);
 
   useEffect(() => {
     loadSample();
   }, []);
 
   async function loadSample() {
+    setLoading(true);
+
     const { data, error } = await supabase
       .from("samples")
       .select("*")
@@ -29,6 +34,19 @@ export default function SampleDetailsPage() {
     }
 
     setSample(data);
+
+    const { data: tests } = await supabase
+      .from("sample_tests")
+      .select(`
+        *,
+        tests (
+          test_name
+        )
+      `)
+      .eq("sample_id", id);
+
+    setSampleTests(tests || []);
+
     setLoading(false);
   }
 
@@ -107,19 +125,10 @@ export default function SampleDetailsPage() {
           </h2>
 
           <button
+            onClick={() => setOpenAddTest(true)}
             className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
           >
             + Add Test
           </button>
 
         </div>
-
-        <p className="text-gray-500">
-          No tests added yet.
-        </p>
-
-      </div>
-
-    </div>
-  );
-}
