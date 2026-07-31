@@ -1,0 +1,142 @@
+"use client";
+
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+type Props = {
+  open: boolean;
+  sampleTestId: number;
+  onClose: () => void;
+  onSaved: () => void;
+};
+
+export default function AddResultModal({
+  open,
+  sampleTestId,
+  onClose,
+  onSaved,
+}: Props) {
+
+  const [resultValue, setResultValue] = useState("");
+  const [unit, setUnit] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+
+
+
+  if (!open) return null;
+
+
+
+  async function saveResult() {
+
+    setLoading(true);
+
+
+    const { error } = await supabase
+      .from("test_results")
+      .insert([
+        {
+          sample_test_id: sampleTestId,
+          result_value: resultValue,
+          unit: unit,
+          notes: notes,
+        },
+      ]);
+
+
+
+    setLoading(false);
+
+
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+
+    onSaved();
+
+    onClose();
+
+  }
+
+
+
+
+  return (
+
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+
+      <div className="bg-white rounded-xl p-8 w-[500px]">
+
+
+        <h2 className="text-2xl font-bold mb-5">
+          Add Result
+        </h2>
+
+
+
+        <input
+          className="w-full border rounded p-3 mb-3"
+          placeholder="Result Value"
+          value={resultValue}
+          onChange={(e)=>setResultValue(e.target.value)}
+        />
+
+
+
+        <input
+          className="w-full border rounded p-3 mb-3"
+          placeholder="Unit"
+          value={unit}
+          onChange={(e)=>setUnit(e.target.value)}
+        />
+
+
+
+        <textarea
+          className="w-full border rounded p-3 mb-5"
+          placeholder="Notes"
+          value={notes}
+          onChange={(e)=>setNotes(e.target.value)}
+        />
+
+
+
+        <div className="flex justify-end gap-3">
+
+
+          <button
+            onClick={onClose}
+            className="px-5 py-2 border rounded"
+          >
+            Cancel
+          </button>
+
+
+
+          <button
+            onClick={saveResult}
+            disabled={loading}
+            className="bg-blue-700 text-white px-5 py-2 rounded"
+          >
+
+            {loading ? "Saving..." : "Save"}
+
+          </button>
+
+
+        </div>
+
+
+      </div>
+
+
+    </div>
+
+  );
+
+}
