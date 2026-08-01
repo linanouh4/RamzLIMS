@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AddTestToSampleModal from "@/components/AddTestToSampleModal";
 import AddResultModal from "@/components/AddResultModal";
