@@ -1,408 +1,123 @@
-"use client";
+‏"use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import AddTestToSampleModal from "@/components/AddTestToSampleModal";
+‏import { useEffect, useState } from "react";
+‏import { supabase } from "@/lib/supabase";
 
-export default function SampleDetailsPage() {
-  const params = useParams();
-  const id = params.id as string;
+‏type Props = {
+‏  open: boolean;
+‏  sampleId: number;
+‏  onClose: () => void;
+‏  onSaved: () => void;
+};
 
-  const [sample, setSample] = useState<any>(null);
-  const [sampleTests, setSampleTests] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openAddTest, setOpenAddTest] = useState(false);
+‏export default function AddTestToSampleModal({
+‏  open,
+‏  sampleId,
+‏  onClose,
+‏  onSaved,
+‏}: Props) {
+‏  const [tests, setTests] = useState<any[]>([]);
+‏  const [testId, setTestId] = useState("");
+‏  const [loading, setLoading] = useState(false);
 
-
-  useEffect(() => {
-    if (id) {
-      loadSample();
+‏  useEffect(() => {
+‏    if (open) {
+‏      loadTests();
     }
-  }, [id]);
+‏  }, [open]);
 
+‏  async function loadTests() {
+‏    const { data, error } = await supabase
+‏      .from("tests")
+‏      .select("*")
+‏      .order("test_name");
 
-
-  async function loadSample() {
-    setLoading(true);
-
-
-    const { data, error } = await supabase
-      .from("samples")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-
-
-    if (error) {
-      alert(error.message);
-      setLoading(false);
-      return;
+‏    if (!error) {
+‏      setTests(data || []);
     }
-
-
-    setSample(data);
-
-
-
-    const { data: tests, error: testsError } = await supabase
-      .from("sample_tests")
-      .select(`
-        id,
-        status,
-        tests (
-          test_name
-        )
-      `)
-      .eq("sample_id", id);
-
-
-
-    if (testsError) {
-      alert(testsError.message);
-    }
-
-
-    setSampleTests(tests || []);
-
-    setLoading(false);
   }
 
-
-
-
-  async function updateStatus(
-    testId: number,
-    status: string
-  ) {
-
-    const { error } = await supabase
-      .from("sample_tests")
-      .update({
-        status: status,
-      })
-      .eq("id", testId);
-
-
-
-    if (error) {
-      alert(error.message);
-      return;
+‏  async function saveTest() {
+‏    if (!testId) {
+‏      alert("Please select a test");
+‏      return;
     }
 
+‏    setLoading(true);
 
-    loadSample();
-  }
+‏    const { error } = await supabase
+‏      .from("sample_tests")
+‏      .insert([
+        {
+‏          sample_id: sampleId,
+‏          test_id: Number(testId),
+‏          status: "Pending",
+        },
+      ]);
 
+‏    setLoading(false);
 
-
-
-  async function deleteTest(testId: number) {
-
-    const confirmDelete = confirm(
-      "Delete this test?"
-    );
-
-
-    if (!confirmDelete) return;
-
-
-
-    const { error } = await supabase
-      .from("sample_tests")
-      .delete()
-      .eq("id", testId);
-
-
-
-    if (error) {
-      alert(error.message);
-      return;
+‏    if (error) {
+‏      alert(error.message);
+‏      return;
     }
 
-
-    loadSample();
+‏    onSaved();
+‏    onClose();
   }
 
+‏  if (!open) return null;
 
+‏  return (
+‏    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
 
+‏      <div className="bg-white rounded-xl shadow-xl w-[500px] p-8">
 
+‏        <h2 className="text-2xl font-bold mb-6">
+‏          Add Test
+‏        </h2>
 
-  if (loading) {
-    return (
-      <div className="p-8 text-center">
-        Loading...
-      </div>
-    );
-  }
+‏        <select
+‏          className="w-full border rounded-lg p-3 mb-6"
+‏          value={testId}
+‏          onChange={(e) => setTestId(e.target.value)}
+        >
+‏          <option value="">
+‏            Select Test
+‏          </option>
 
+‏          {tests.map((test) => (
+‏            <option
+‏              key={test.id}
+‏              value={test.id}
+            >
+‏              {test.test_name}
+‏            </option>
+          ))}
 
+‏        </select>
 
+‏        <div className="flex justify-end gap-3">
 
-  if (!sample) {
-    return (
-      <div className="p-8 text-center">
-        Sample not found
-      </div>
-    );
-  }
-
-
-
-
-
-  return (
-
-    <div className="p-8">
-
-
-      <h1 className="text-3xl font-bold mb-8">
-        Sample Details
-      </h1>
-
-
-
-
-
-      <div className="bg-white rounded-xl shadow p-6 mb-8">
-
-
-        <div className="grid grid-cols-2 gap-4">
-
-
-          <div>
-            <strong>Sample Number:</strong>
-            <br />
-            {sample.sample_number}
-          </div>
-
-
-
-          <div>
-            <strong>Sample Type:</strong>
-            <br />
-            {sample.sample_type}
-          </div>
-
-
-
-          <div>
-            <strong>Received Date:</strong>
-            <br />
-            {sample.received_date}
-          </div>
-
-
-
-          <div>
-            <strong>Received By:</strong>
-            <br />
-            {sample.received_by}
-          </div>
-
-
-
-          <div>
-            <strong>Status:</strong>
-            <br />
-            {sample.status}
-          </div>
-
-
-
-          <div>
-            <strong>Condition:</strong>
-            <br />
-            {sample.received_condition}
-          </div>
-
-
-
-          <div className="col-span-2">
-
-            <strong>Notes:</strong>
-            <br />
-
-            {sample.notes || "-"}
-
-          </div>
-
-
-        </div>
-
-
-      </div>
-
-
-
-
-
-
-      <div className="bg-white rounded-xl shadow p-6">
-
-
-        <div className="flex justify-between items-center mb-5">
-
-
-          <h2 className="text-2xl font-bold">
-            Tests
-          </h2>
-
-
-
-          <button
-            onClick={() => setOpenAddTest(true)}
-            className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
+‏          <button
+‏            onClick={onClose}
+‏            className="px-5 py-2 border rounded-lg"
           >
-            + Add Test
-          </button>
+‏            Cancel
+‏          </button>
 
+‏          <button
+‏            onClick={saveTest}
+‏            disabled={loading}
+‏            className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
+          >
+‏            {loading ? "Saving..." : "Save"}
+‏          </button>
 
-        </div>
+‏        </div>
 
+‏      </div>
 
-
-
-
-        <div className="space-y-3">
-
-
-          {sampleTests.length === 0 ? (
-
-
-            <p className="text-gray-500">
-              No tests added yet
-            </p>
-
-
-          ) : (
-
-
-            sampleTests.map((item) => (
-
-
-              <div
-                key={item.id}
-                className="border rounded-lg p-4 flex justify-between items-center"
-              >
-
-
-
-                <div>
-
-
-                  <div className="font-semibold">
-
-                    {item.tests?.test_name || "Unknown Test"}
-
-                  </div>
-
-
-
-
-                  <select
-                    className="mt-2 border rounded p-2"
-                    value={item.status || "Pending"}
-
-                    onChange={(e) =>
-                      updateStatus(
-                        item.id,
-                        e.target.value
-                      )
-                    }
-
-                  >
-
-                    <option value="Pending">
-                      Pending
-                    </option>
-
-
-                    <option value="In Progress">
-                      In Progress
-                    </option>
-
-
-                    <option value="Completed">
-                      Completed
-                    </option>
-
-
-                  </select>
-
-
-
-                </div>
-
-
-
-
-
-                <button
-                  onClick={() =>
-                    deleteTest(item.id)
-                  }
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg"
-                >
-
-                  Delete
-
-                </button>
-
-
-
-              </div>
-
-
-            ))
-
-
-          )}
-
-
-
-        </div>
-
-
-
-      </div>
-
-
-
-
-
-
-      {openAddTest && (
-
-        <AddTestToSampleModal
-
-          open={openAddTest}
-
-          sampleId={Number(id)}
-
-          onClose={() =>
-            setOpenAddTest(false)
-          }
-
-
-          onSaved={() => {
-
-            setOpenAddTest(false);
-
-            loadSample();
-
-          }}
-
-        />
-
-      )}
-
-
-
-
-
-    </div>
-
+‏    </div>
   );
 }
