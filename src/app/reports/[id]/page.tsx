@@ -25,18 +25,20 @@ export default function ReportPage() {
       .select(`
         *,
         sample_tests (
-          id,
-          status,
-          tests (
-            test_name
-          ),
-          test_results (
-            id,
-            result_value,
-            unit,
-            notes
-          )
-        )
+  id,
+  status,
+  tests (
+    test_name
+  ),
+  results (
+    id,
+    result_value,
+    notes,
+    tested_by,
+    reviewed_by,
+    test_date
+  )
+)
       `)
       .eq("id", id)
       .single();
@@ -138,7 +140,7 @@ export default function ReportPage() {
 
             {sample.sample_tests?.map((test: any) => {
 
-              const result = test.test_results?.[0];
+const result = test.results?.[0];
 
               return (
 
