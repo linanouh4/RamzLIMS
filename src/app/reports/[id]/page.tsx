@@ -17,41 +17,62 @@ export default function ReportPage() {
     }
   }, [id]);
 
-  async function loadReport() {
-    setLoading(true);
+async function loadReport() {
+  setLoading(true);
 
-    const { data, error } = await supabase
-      .from("samples")
-      .select(`
-        *,
-        sample_tests (
-  id,
-  status,
-  tests (
-    test_name
-  ),
-  results (
-    id,
-    result_value,
-    notes,
-    tested_by,
-    reviewed_by,
-    test_date
-  )
-)
-      `)
-      .eq("id", id)
-      .single();
+  // تحميل بيانات العينة
+  const { data: sampleData, error: sampleError } = await supabase
+    .from("samples")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-    if (error) {
-      alert(error.message);
-      setLoading(false);
-      return;
-    }
-
-    setSample(data);
+  if (sampleError) {
+    alert(sampleError.message);
     setLoading(false);
+    return;
   }
+
+  // تحميل الفحوصات
+  const { data: sampleTests, error: testsError } = await supabase
+    .from("sample_tests")
+    .select("id, status, test_id")
+    .eq("sample_id", id);
+
+  if (testsError) {
+    alert(testsError.message);
+    setLoading(false);
+    return;
+  }
+
+  const testsWithResults = await Promise.all(
+    (sampleTests || []).map(async (item: any) => {
+      const { data: test } = await supabase
+        .from("tests")
+        .select("test_name")
+        .eq("id", item.test_id)
+        .single();
+
+      const { data: results } = await supabase
+        .from("results")
+        .select("*")
+        .eq("sample_test_id", item.id);
+
+      return {
+        ...item,
+        tests: test,
+        results: results || [],
+      };
+    })
+  );
+
+  setSample({
+    ...sampleData,
+    sample_tests: testsWithResults,
+  });
+
+  setLoading(false);
+}
 
   if (loading) {
     return (
