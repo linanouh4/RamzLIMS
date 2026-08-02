@@ -1,407 +1,153 @@
-"use client";
+return (
+  <div className="p-8 max-w-5xl mx-auto bg-gray-100 min-h-screen">
 
+    <div className="bg-white shadow-xl rounded-xl p-10">
 
+      <div className="text-center border-b-2 border-gray-300 pb-6 mb-8">
 
-import { useEffect, useState } from "react";
-
-import { useParams } from "next/navigation";
-
-import { supabase } from "@/lib/supabase";
-
-
-
-export default function ReportPage() {
-
-  const params = useParams();
-
-  const id = params.id as string;
-
-
-
-  const [sample, setSample] = useState<any>(null);
-
-  const [loading, setLoading] = useState(true);
-
-
-
-  useEffect(() => {
-
-    if (id) {
-
-      loadReport();
-
-    }
-
-  }, [id]);
-
-
-
-async function loadReport() {
-
-  setLoading(true);
-
-
-
-  // تحميل بيانات العينة
-
-  const { data: sampleData, error: sampleError } = await supabase
-
-    .from("samples")
-
-    .select("*")
-
-    .eq("id", id)
-
-    .single();
-
-
-
-  if (sampleError) {
-
-    alert(sampleError.message);
-
-    setLoading(false);
-
-    return;
-
-  }
-
-
-
-  // تحميل الفحوصات
-
-  const { data: sampleTests, error: testsError } = await supabase
-
-    .from("sample_tests")
-
-    .select("id, status, test_id")
-
-    .eq("sample_id", id);
-
-
-
-  if (testsError) {
-
-    alert(testsError.message);
-
-    setLoading(false);
-
-    return;
-
-  }
-
-
-
-  const testsWithResults = await Promise.all(
-
-    (sampleTests || []).map(async (item: any) => {
-
-      const { data: test } = await supabase
-
-        .from("tests")
-
-        .select("test_name")
-
-        .eq("id", item.test_id)
-
-        .single();
-
-
-
-      const { data: results } = await supabase
-
-        .from("results")
-
-        .select("*")
-
-        .eq("sample_test_id", item.id);
-
-
-
-      return {
-
-        ...item,
-
-        tests: test,
-
-        results: results || [],
-
-      };
-
-    })
-
-  );
-
-
-
-  setSample({
-
-    ...sampleData,
-
-    sample_tests: testsWithResults,
-
-  });
-
-
-
-  setLoading(false);
-
-}
-
-
-
-  if (loading) {
-
-    return (
-
-      <div className="p-8 text-center">
-
-        Loading Report...
-
-      </div>
-
-    );
-
-  }
-
-
-
-  if (!sample) {
-
-    return (
-
-      <div className="p-8 text-center">
-
-        Report not found
-
-      </div>
-
-    );
-
-  }
-
-
-
-  return (
-
-    <div className="p-8 max-w-5xl mx-auto">
-
-
-
-      <div className="bg-white shadow rounded-xl p-8">
-
-
-
-        <h1 className="text-3xl font-bold text-center mb-8">
-
-          Test Report
-
+        <h1 className="text-4xl font-bold tracking-wide">
+          RAMZ EMIRATES LABORATORY
         </h1>
 
+        <p className="text-lg text-gray-600 mt-2">
+          Soil & Concrete Testing Laboratory
+        </p>
 
+        <h2 className="text-2xl font-bold mt-6">
+          TEST REPORT
+        </h2>
 
-        <div className="grid grid-cols-2 gap-6 mb-8">
+      </div>
 
+      <div className="grid grid-cols-2 gap-6 mb-10">
 
+        <div>
+          <strong>Report Number</strong>
+          <br />
+          RPT-{sample.id}
+        </div>
 
-          <div>
+        <div>
+          <strong>Sample Number</strong>
+          <br />
+          {sample.sample_number}
+        </div>
 
-            <strong>Sample Number</strong>
+        <div>
+          <strong>Sample Type</strong>
+          <br />
+          {sample.sample_type}
+        </div>
 
-            <br />
+        <div>
+          <strong>Received Date</strong>
+          <br />
+          {sample.received_date}
+        </div>
 
-            {sample.sample_number}
+        <div>
+          <strong>Status</strong>
+          <br />
+          {sample.status}
+        </div>
 
-          </div>
+      </div>
 
+      <table className="w-full border border-gray-300">
 
+        <thead className="bg-gray-200">
 
-          <div>
+          <tr>
 
-            <strong>Sample Type</strong>
+            <th className="border p-3">Test</th>
 
-            <br />
+            <th className="border p-3">Status</th>
 
-            {sample.sample_type}
+            <th className="border p-3">Result</th>
 
-          </div>
+            <th className="border p-3">Unit</th>
 
+            <th className="border p-3">Notes</th>
 
+          </tr>
 
-          <div>
+        </thead>
 
-            <strong>Received Date</strong>
+        <tbody>
 
-            <br />
+          {sample.sample_tests?.map((test: any) => {
 
-            {sample.received_date}
+            const result = test.results?.[0];
 
-          </div>
+            return (
 
+              <tr key={test.id}>
 
+                <td className="border p-3">
+                  {test.tests?.test_name}
+                </td>
 
-          <div>
+                <td className="border p-3">
+                  {test.status}
+                </td>
 
-            <strong>Status</strong>
+                <td className="border p-3">
+                  {result?.result_value || "-"}
+                </td>
 
-            <br />
+                <td className="border p-3">
+                  {result?.unit || "-"}
+                </td>
 
-            {sample.status}
+                <td className="border p-3">
+                  {result?.notes || "-"}
+                </td>
 
-          </div>
+              </tr>
 
+            );
 
+          })}
+
+        </tbody>
+
+      </table>
+
+      <div className="grid grid-cols-3 gap-10 mt-20 border-t pt-10">
+
+        <div className="text-center">
+
+          <div className="border-b border-black h-12"></div>
+
+          <p className="mt-2 font-semibold">
+            Tested By
+          </p>
 
         </div>
 
+        <div className="text-center">
 
+          <div className="border-b border-black h-12"></div>
 
-        <table className="w-full border border-gray-300">
+          <p className="mt-2 font-semibold">
+            Reviewed By
+          </p>
 
+        </div>
 
+        <div className="text-center">
 
-          <thead className="bg-gray-100">
+          <div className="border-b border-black h-12"></div>
 
+          <p className="mt-2 font-semibold">
+            Approved By
+          </p>
 
-
-            <tr>
-
-
-
-              <th className="border p-3 text-left">
-
-                Test
-
-              </th>
-
-
-
-              <th className="border p-3 text-left">
-
-                Status
-
-              </th>
-
-
-
-              <th className="border p-3 text-left">
-
-                Result
-
-              </th>
-
-
-
-              <th className="border p-3 text-left">
-
-                Unit
-
-              </th>
-
-
-
-              <th className="border p-3 text-left">
-
-                Notes
-
-              </th>
-
-
-
-            </tr>
-
-
-
-          </thead>
-
-
-
-          <tbody>
-
-
-
-            {sample.sample_tests?.map((test: any) => {
-
-
-
-const result = test.results?.[0];
-
-
-
-              return (
-
-
-
-                <tr key={test.id}>
-
-
-
-                  <td className="border p-3">
-
-                    {test.tests?.test_name}
-
-                  </td>
-
-
-
-                  <td className="border p-3">
-
-                    {test.status}
-
-                  </td>
-
-
-
-                  <td className="border p-3">
-
-                    {result?.result_value || "-"}
-
-                  </td>
-
-
-
-                  <td className="border p-3">
-
-                    {result?.unit || "-"}
-
-                  </td>
-
-
-
-                  <td className="border p-3">
-
-                    {result?.notes || "-"}
-
-                  </td>
-
-
-
-                </tr>
-
-
-
-              );
-
-
-
-            })}
-
-
-
-          </tbody>
-
-
-
-        </table>
-
-
+        </div>
 
       </div>
 
-
-
     </div>
 
-  );
-
-}
+  </div>
+);
