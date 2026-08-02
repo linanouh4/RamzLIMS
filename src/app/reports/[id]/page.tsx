@@ -20,23 +20,23 @@ export default function ReportPage() {
   async function loadReport() {
     setLoading(true);
 
-    // Sample
-const { data: sampleData, error: sampleError } = await supabase
-  .from("samples")
-  .select("*")
-  .eq("id", id)
-  .single();
+    // Load Sample
+    const { data: sampleData, error: sampleError } = await supabase
+      .from("samples")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-if (sampleError) {
-  alert(sampleError.message);
-  setLoading(false);
-  return;
-}
+    if (sampleError) {
+      alert(sampleError.message);
+      setLoading(false);
+      return;
+    }
 
-    // Sample Tests
+    // Load Sample Tests
     const { data: sampleTests, error: testsError } = await supabase
       .from("sample_tests")
-      .select("id,status,test_id")
+      .select("*")
       .eq("sample_id", id);
 
     if (testsError) {
@@ -47,16 +47,17 @@ if (sampleError) {
 
     const testsWithResults = await Promise.all(
       (sampleTests || []).map(async (item: any) => {
+
         const { data: test } = await supabase
           .from("tests")
-          .select("test_name")
+          .select("*")
           .eq("id", item.test_id)
           .single();
 
         const { data: results } = await supabase
-         .from("test_results")
-         .select("*")
-         .eq("sample_test_id", item.id);
+          .from("test_results")
+          .select("*")
+          .eq("sample_test_id", item.id);
 
         return {
           ...item,
@@ -89,7 +90,8 @@ if (sampleError) {
       </div>
     );
   }
-    return (
+
+  return (
     <div className="bg-gray-100 min-h-screen p-8">
 
       <div className="flex justify-end max-w-5xl mx-auto mb-4">
@@ -176,21 +178,18 @@ if (sampleError) {
           </thead>
 
           <tbody>
-
-            {sample.sample_tests?.map((test: any) => {
-
+                        {sample.sample_tests?.map((test: any) => {
               const result = test.results?.[0];
 
               return (
-
                 <tr key={test.id}>
 
                   <td className="border p-3">
-                    {test.tests?.test_name}
+                    {test.tests?.test_name || "-"}
                   </td>
 
                   <td className="border p-3">
-                    {test.status}
+                    {test.status || "-"}
                   </td>
 
                   <td className="border p-3">
@@ -206,11 +205,8 @@ if (sampleError) {
                   </td>
 
                 </tr>
-
               );
-
             })}
-
           </tbody>
 
         </table>
@@ -219,9 +215,9 @@ if (sampleError) {
 
           <div className="text-center">
 
-            <div className="border-b border-black h-12"></div>
+            <div className="border-b border-black h-12 mb-2"></div>
 
-            <p className="mt-2 font-semibold">
+            <p className="font-semibold">
               Tested By
             </p>
 
@@ -229,9 +225,9 @@ if (sampleError) {
 
           <div className="text-center">
 
-            <div className="border-b border-black h-12"></div>
+            <div className="border-b border-black h-12 mb-2"></div>
 
-            <p className="mt-2 font-semibold">
+            <p className="font-semibold">
               Reviewed By
             </p>
 
@@ -239,9 +235,9 @@ if (sampleError) {
 
           <div className="text-center">
 
-            <div className="border-b border-black h-12"></div>
+            <div className="border-b border-black h-12 mb-2"></div>
 
-            <p className="mt-2 font-semibold">
+            <p className="font-semibold">
               Approved By
             </p>
 
@@ -252,5 +248,7 @@ if (sampleError) {
       </div>
 
     </div>
+
   );
-  }
+
+}
