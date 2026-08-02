@@ -21,16 +21,17 @@ export default function ReportPage() {
     setLoading(true);
 
     // Sample
-    const { data: results } = await supabase
-  .from("test_results")
+const { data: sampleData, error: sampleError } = await supabase
+  .from("samples")
   .select("*")
-  .eq("sample_test_id", item.id);
+  .eq("id", id)
+  .single();
 
-    if (sampleError) {
-      alert(sampleError.message);
-      setLoading(false);
-      return;
-    }
+if (sampleError) {
+  alert(sampleError.message);
+  setLoading(false);
+  return;
+}
 
     // Sample Tests
     const { data: sampleTests, error: testsError } = await supabase
@@ -53,9 +54,9 @@ export default function ReportPage() {
           .single();
 
         const { data: results } = await supabase
-          .from("results")
-          .select("*")
-          .eq("sample_test_id", item.id);
+         .from("test_results")
+         .select("*")
+         .eq("sample_test_id", item.id);
 
         return {
           ...item,
