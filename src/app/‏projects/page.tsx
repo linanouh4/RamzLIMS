@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function ProjectsPage() {
+  const router = useRouter();
+
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -170,15 +173,14 @@ export default function ProjectsPage() {
             </thead>
 
             <tbody>
-
-              {projects.map((project) => (
+                           {projects.map((project) => (
 
                 <tr
                   key={project.id}
                   className="border-t"
                 >
 
-                  <td className="p-3">
+                  <td className="p-3 font-semibold">
                     {project.project_name}
                   </td>
 
@@ -191,17 +193,42 @@ export default function ProjectsPage() {
                   </td>
 
                   <td className="p-3">
-                    {project.project_status}
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm text-white ${
+                        project.project_status === "Active"
+                          ? "bg-green-600"
+                          : project.project_status === "Completed"
+                          ? "bg-blue-600"
+                          : "bg-yellow-600"
+                      }`}
+                    >
+                      {project.project_status}
+                    </span>
                   </td>
 
                   <td className="p-3">
 
-                    <button
-                      onClick={() => deleteProject(project.id)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex gap-2">
+
+                      <button
+                        onClick={() =>
+                          router.push(`/projects/${project.id}`)
+                        }
+                        className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded"
+                      >
+                        Open
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          deleteProject(project.id)
+                        }
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                      >
+                        Delete
+                      </button>
+
+                    </div>
 
                   </td>
 
@@ -212,10 +239,11 @@ export default function ProjectsPage() {
             </tbody>
 
           </table>
+
         )}
 
       </div>
 
     </div>
   );
-}
+} 

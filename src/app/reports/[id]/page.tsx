@@ -21,11 +21,10 @@ export default function ReportPage() {
     setLoading(true);
 
     // Sample
-    const { data: sampleData, error: sampleError } = await supabase
-      .from("samples")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const { data: results } = await supabase
+  .from("test_results")
+  .select("*")
+  .eq("sample_test_id", item.id);
 
     if (sampleError) {
       alert(sampleError.message);
