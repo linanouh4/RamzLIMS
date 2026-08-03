@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import AddTestToSampleModal from "@/components/AddTestToSampleModal";
 import AddResultModal from "@/components/AddResultModal";
 
@@ -186,12 +187,11 @@ export default function SampleDetailsPage() {
   }
 
   return (
-
-    <div className="p-8">
-
-      <h1 className="text-3xl font-bold mb-8">
-        Sample Details
-      </h1>
+    <ProtectedRoute>
+      <div className="p-8">
+        <h1 className="text-3xl font-bold mb-8">
+          Sample Details
+        </h1>
 
       <div className="bg-white rounded-xl shadow p-6 mb-8">
 
@@ -504,6 +504,7 @@ export default function SampleDetailsPage() {
       )}
 
     </div>
+    </ProtectedRoute>
 
   );
 

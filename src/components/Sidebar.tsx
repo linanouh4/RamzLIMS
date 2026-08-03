@@ -16,6 +16,14 @@ export default function Sidebar({ user }: Props) {
         RamzLIMS
       </h1>
 
+      {user && (
+        <div className="mb-6 p-4 rounded-xl bg-blue-700">
+          <div className="text-sm text-slate-100">Logged in as</div>
+          <div className="font-semibold text-lg">{user.full_name}</div>
+          <div className="text-sm text-slate-200 capitalize">{user.role}</div>
+        </div>
+      )}
+
       <nav className="space-y-4">
 
         <Link

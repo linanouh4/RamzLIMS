@@ -2,45 +2,42 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getSavedUser, isAllowedRole, isAdmin } from "@/lib/auth";
 
 type Props = {
   children: React.ReactNode;
   adminOnly?: boolean;
+  allowedRoles?: string[];
 };
 
 export default function ProtectedRoute({
   children,
   adminOnly = false,
+  allowedRoles,
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = () => {
-      const savedUser = localStorage.getItem("user");
+    const user = getSavedUser();
 
-      if (!savedUser) {
-        router.push("/");
-        return;
-      }
+    if (!user) {
+      router.push("/");
+      return;
+    }
 
-      try {
-        const user = JSON.parse(savedUser);
+    if (adminOnly && !isAdmin(user)) {
+      router.push("/dashboard");
+      return;
+    }
 
-        if (adminOnly && user.role !== "admin") {
-          router.push("/dashboard");
-          return;
-        }
+    if (!isAllowedRole(user, allowedRoles)) {
+      router.push("/dashboard");
+      return;
+    }
 
-        setLoading(false);
-      } catch (error) {
-        localStorage.removeItem("user");
-        router.push("/");
-      }
-    };
-
-    checkUser();
-  }, [router, adminOnly]);
+    setLoading(false);
+  }, [router, adminOnly, allowedRoles]);
 
   if (loading) {
     return (

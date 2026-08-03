@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 import AddClientModal from "@/components/AddClientModal";
 
@@ -55,9 +56,10 @@ export default function ClientsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 p-8">
+    <ProtectedRoute>
+      <main className="min-h-screen bg-gray-100 p-8">
 
-      <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8">
 
         <h1 className="text-3xl font-bold">
           Clients
@@ -170,6 +172,7 @@ export default function ClientsPage() {
         onSaved={loadClients}
       />
 
-    </main>
+      </main>
+    </ProtectedRoute>
   );
 }

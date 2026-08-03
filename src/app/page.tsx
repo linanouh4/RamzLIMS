@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
+import { getSavedUser, saveUser } from "@/lib/auth";
 
 export default function Home() {
   const router = useRouter();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    const savedUser = getSavedUser();
+    if (savedUser) {
+      router.push("/dashboard");
+    }
+  }, [router]);
 
   const handleLogin = async () => {
     const { data, error } = await supabase
@@ -17,9 +25,6 @@ export default function Home() {
       .eq("username", username.trim())
       .eq("password", password.trim())
       .limit(1);
-
-    console.log("LOGIN DATA:", data);
-    console.log("LOGIN ERROR:", error);
 
     if (error) {
       alert(error.message);
@@ -31,11 +36,15 @@ export default function Home() {
       return;
     }
 
-    localStorage.setItem(
-      "user",
-      JSON.stringify(data[0])
-    );
+    const row = data[0];
+    const user = {
+      id: row.id,
+      username: row.username,
+      full_name: row.full_name || row.username,
+      role: row.role || "reception",
+    };
 
+    saveUser(user);
     router.push("/dashboard");
   };
 
