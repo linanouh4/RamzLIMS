@@ -129,6 +129,10 @@ async function saveApproval() {
   alert("Approval saved successfully");
 
   loadApproval();
+  function getUserName(userId: any) {
+  const user = users.find((u: any) => String(u.id) === String(userId));
+  return user?.full_name || "-";
+}
 }
   async function loadReport() {
     setLoading(true);
@@ -216,7 +220,10 @@ async function saveApproval() {
       <div className="p-8 text-center">Report not found</div>
     );
   }
-
+function getUserName(userId: any) {
+  const user = users.find((u: any) => String(u.id) === String(userId));
+  return user?.full_name || "-";
+}
   return (
     <ProtectedRoute>
       <div className="bg-gray-100 min-h-screen p-8">
@@ -357,12 +364,20 @@ async function saveApproval() {
         Reviewed By
       </label>
 
-      <input
-        className="w-full border rounded-lg p-3"
-        value={reviewedBy}
-        onChange={(e) => setReviewedBy(e.target.value)}
-        placeholder="Name"
-      />
+      <select
+  className="w-full border rounded-lg p-3"
+  value={reviewedBy}
+  onChange={(e) => setReviewedBy(e.target.value)}
+>
+  <option value="">Select User</option>
+
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.full_name}
+    </option>
+  ))}
+</select>
+
     </div>
 
 
@@ -371,12 +386,19 @@ async function saveApproval() {
         Approved By
       </label>
 
-      <input
-        className="w-full border rounded-lg p-3"
-        value={approvedBy}
-        onChange={(e) => setApprovedBy(e.target.value)}
-        placeholder="Name"
-      />
+      <select
+  className="w-full border rounded-lg p-3"
+  value={approvedBy}
+  onChange={(e) => setApprovedBy(e.target.value)}
+>
+  <option value="">Select User</option>
+
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.full_name}
+    </option>
+  ))}
+</select>
     </div>
 
   </div>
@@ -395,18 +417,17 @@ async function saveApproval() {
       <strong>Status:</strong> {approval.status}
     </p>
 
-    <p>
-      <strong>Prepared By:</strong> {approval.prepared_by || "-"}
-    </p>
+   <p>
+  <strong>Prepared By:</strong> {getUserName(approval.prepared_by)}
+</p>
 
-    <p>
-      <strong>Reviewed By:</strong> {approval.reviewed_by || "-"}
-    </p>
+<p>
+  <strong>Reviewed By:</strong> {getUserName(approval.reviewed_by)}
+</p>
 
-    <p>
-      <strong>Approved By:</strong> {approval.approved_by || "-"}
-    </p>
-
+<p>
+  <strong>Approved By:</strong> {getUserName(approval.approved_by)}
+</p>
   </div>
 )}
 </div>
