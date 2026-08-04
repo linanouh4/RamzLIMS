@@ -14,15 +14,20 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [uploadedReport, setUploadedReport] = useState<any>(null);
   const [companyProfile, setCompanyProfile] = useState<any>(null);
+  const [approval, setApproval] = useState<any>(null);
 
+  const [preparedBy, setPreparedBy] = useState("");
+  const [reviewedBy, setReviewedBy] = useState("");
+  const [approvedBy, setApprovedBy] = useState("");
   useEffect(() => {
-    if (id) {
-      loadReport();
-      loadUploadedReport();
-    }
-    loadCompanyProfile();
-  }, [id]);
+  if (id) {
+    loadReport();
+    loadUploadedReport();
+    loadApproval();
+  }
 
+  loadCompanyProfile();
+}, [id]);
   function loadCompanyProfile() {
     try {
       const saved = localStorage.getItem("ramzlims-company-profile");
@@ -48,7 +53,52 @@ export default function ReportPage() {
       setUploadedReport(null);
     }
   }
+async function loadApproval() {
+  const { data } = await supabase
+    .from("report_approvals")
+    .select("*")
+    .eq("sample_id", id)
+    .single();
 
+  if (data) {
+    setApproval(data);
+    setPreparedBy(data.prepared_by || "");
+    setReviewedBy(data.reviewed_by || "");
+    setApprovedBy(data.approved_by || "");
+  }
+}
+async function saveApproval() {
+
+  const approvalData = {
+    sample_id: Number(id),
+    prepared_by: preparedBy,
+    reviewed_by: reviewedBy,
+    approved_by: approvedBy,
+    status: "Approved",
+  };
+
+  let response;
+
+  if (approval) {
+    response = await supabase
+      .from("report_approvals")
+      .update(approvalData)
+      .eq("id", approval.id);
+  } else {
+    response = await supabase
+      .from("report_approvals")
+      .insert([approvalData]);
+  }
+
+  if (response.error) {
+    alert(response.error.message);
+    return;
+  }
+
+  alert("Approval saved successfully");
+
+  loadApproval();
+}
   async function loadReport() {
     setLoading(true);
 
@@ -241,7 +291,66 @@ export default function ReportPage() {
               })}
             </tbody>
           </table>
+<div className="mb-10 border rounded-xl p-6 bg-gray-50">
 
+  <h3 className="text-xl font-bold mb-5">
+    Quality Approval
+  </h3>
+
+  <div className="grid md:grid-cols-3 gap-4">
+
+    <div>
+      <label className="block text-sm font-semibold mb-2">
+        Prepared By
+      </label>
+
+      <input
+        className="w-full border rounded-lg p-3"
+        value={preparedBy}
+        onChange={(e) => setPreparedBy(e.target.value)}
+        placeholder="Name"
+      />
+    </div>
+
+
+    <div>
+      <label className="block text-sm font-semibold mb-2">
+        Reviewed By
+      </label>
+
+      <input
+        className="w-full border rounded-lg p-3"
+        value={reviewedBy}
+        onChange={(e) => setReviewedBy(e.target.value)}
+        placeholder="Name"
+      />
+    </div>
+
+
+    <div>
+      <label className="block text-sm font-semibold mb-2">
+        Approved By
+      </label>
+
+      <input
+        className="w-full border rounded-lg p-3"
+        value={approvedBy}
+        onChange={(e) => setApprovedBy(e.target.value)}
+        placeholder="Name"
+      />
+    </div>
+
+  </div>
+
+
+  <button
+    onClick={saveApproval}
+    className="mt-5 bg-blue-700 hover:bg-blue-800 text-white px-6 py-2 rounded-lg"
+  >
+    Save Approval
+  </button>
+
+</div>
           <div className="grid grid-cols-3 gap-10 mt-20 pt-10 border-t">
             <div className="text-center">
               {companyProfile?.signatureData ? (
