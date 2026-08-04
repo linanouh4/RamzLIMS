@@ -19,11 +19,13 @@ export default function ReportPage() {
   const [preparedBy, setPreparedBy] = useState("");
   const [reviewedBy, setReviewedBy] = useState("");
   const [approvedBy, setApprovedBy] = useState("");
+  const [users, setUsers] = useState<any[]>([]);
   useEffect(() => {
   if (id) {
     loadReport();
     loadUploadedReport();
     loadApproval();
+    loadUsers();
   }
 
   loadCompanyProfile();
@@ -53,29 +55,58 @@ export default function ReportPage() {
       setUploadedReport(null);
     }
   }
+  async function loadUsers() {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, full_name, role")
+    .order("full_name");
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setUsers(data || []);
+}
 async function loadApproval() {
-  const { data } = await supabase
+
+  const { data, error } = await supabase
     .from("report_approvals")
-    .select("*")
+    .select(`
+      *,
+      prepared_user:users!report_approvals_prepared_by_fkey(full_name),
+      reviewed_user:users!report_approvals_reviewed_by_fkey(full_name),
+      approved_user:users!report_approvals_approved_by_fkey(full_name)
+    `)
     .eq("sample_id", id)
     .single();
 
-  if (data) {
-    setApproval(data);
-    setPreparedBy(data.prepared_by || "");
-    setReviewedBy(data.reviewed_by || "");
-    setApprovedBy(data.approved_by || "");
+
+  if (error) {
+    return;
   }
+
+
+  if (data) {
+
+    setApproval(data);
+
+    setPreparedBy(String(data.prepared_by || ""));
+    setReviewedBy(String(data.reviewed_by || ""));
+    setApprovedBy(String(data.approved_by || ""));
+
+  }
+
 }
 async function saveApproval() {
 
   const approvalData = {
-    sample_id: Number(id),
-    prepared_by: preparedBy,
-    reviewed_by: reviewedBy,
-    approved_by: approvedBy,
-    status: "Approved",
-  };
+  sample_id: Number(id),
+  prepared_by: preparedBy ? Number(preparedBy) : null,
+  reviewed_by: reviewedBy ? Number(reviewedBy) : null,
+  approved_by: approvedBy ? Number(approvedBy) : null,
+  status: "Approved",
+};
 
   let response;
 
@@ -304,12 +335,20 @@ async function saveApproval() {
         Prepared By
       </label>
 
-      <input
-        className="w-full border rounded-lg p-3"
-        value={preparedBy}
-        onChange={(e) => setPreparedBy(e.target.value)}
-        placeholder="Name"
-      />
+     <select
+  className="w-full border rounded-lg p-3"
+  value={preparedBy}
+  onChange={(e) => setPreparedBy(e.target.value)}
+>
+  <option value="">Select User</option>
+
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.full_name}
+    </option>
+  ))}
+
+</select>
     </div>
 
 
