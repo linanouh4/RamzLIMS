@@ -100,11 +100,11 @@ export default function ReportPage() {
 
     const testsWithResults = await Promise.all(
       (sampleTests || []).map(async (item: any) => {
-        const { data: test } = await supabase
-          .from("tests")
-          .select("test_name")
-          .eq("id", item.test_id)
-          .single();
+       const { data: test } = await supabase
+      .from("tests")
+      .select("test_name, standard, unit")
+      .eq("id", item.test_id)
+      .single();
 
         return {
           ...item,
@@ -210,6 +210,7 @@ export default function ReportPage() {
             <thead className="bg-gray-200">
               <tr>
                 <th className="border p-3">Test</th>
+                <th className="border p-3">Standard</th>
                 <th className="border p-3">Status</th>
                 <th className="border p-3">Result</th>
                 <th className="border p-3">Unit</th>
@@ -221,8 +222,17 @@ export default function ReportPage() {
                 const result = test.results?.[0];
                 return (
                   <tr key={test.id}>
-                    <td className="border p-3">{test.tests?.test_name || "-"}</td>
-                    <td className="border p-3">{test.status || "-"}</td>
+                    <td className="border p-3">
+                   {test.tests?.test_name || "-"}
+                 </td>
+
+                  <td className="border p-3">
+                 {test.tests?.standard || "-"}
+                </td>
+
+                  <td className="border p-3">
+                {test.status || "-"}
+               </td>
                     <td className="border p-3">{result?.result_value || "-"}</td>
                     <td className="border p-3">{result?.unit || "-"}</td>
                     <td className="border p-3">{result?.notes || "-"}</td>
