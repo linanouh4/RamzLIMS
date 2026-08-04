@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [clientsCount, setClientsCount] = useState(0);
   const [projectsCount, setProjectsCount] = useState(0);
   const [testsCount, setTestsCount] = useState(0);
+  const [pendingSamplesCount, setPendingSamplesCount] = useState(0);
+  const [recentSamples, setRecentSamples] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,17 +36,23 @@ export default function Dashboard() {
         { count: clients },
         { count: projects },
         { count: tests },
+        { count: pendingSamples },
+        { data: recentSamplesData },
       ] = await Promise.all([
         supabase.from("samples").select("*", { count: "exact", head: true }),
         supabase.from("clients").select("*", { count: "exact", head: true }),
         supabase.from("projects").select("*", { count: "exact", head: true }),
         supabase.from("tests").select("*", { count: "exact", head: true }),
+        supabase.from("samples").select("*", { count: "exact", head: true }).eq("status", "Pending"),
+        supabase.from("samples").select("id, sample_number, sample_type, status, received_date").order("id", { ascending: false }).limit(5),
       ]);
 
       setSamplesCount(samples || 0);
       setClientsCount(clients || 0);
       setProjectsCount(projects || 0);
       setTestsCount(tests || 0);
+      setPendingSamplesCount(pendingSamples || 0);
+      setRecentSamples(recentSamplesData || []);
     } catch (error) {
       console.log(error);
     } finally {
@@ -85,7 +93,7 @@ export default function Dashboard() {
             <div className="bg-white p-8 rounded-xl shadow">Loading...</div>
           ) : (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 xl:grid-cols-5 gap-6">
                 <div className="bg-white rounded-xl shadow p-6">
                   <h3 className="text-gray-500 text-sm">👥 Clients</h3>
                   <p className="text-4xl font-bold mt-3">{clientsCount}</p>
@@ -102,26 +110,59 @@ export default function Dashboard() {
                   <h3 className="text-gray-500 text-sm">🔬 Tests</h3>
                   <p className="text-4xl font-bold mt-3">{testsCount}</p>
                 </div>
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h3 className="text-gray-500 text-sm">⏳ Pending</h3>
+                  <p className="text-4xl font-bold mt-3">{pendingSamplesCount}</p>
+                </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow mt-8 p-6">
-                <h3 className="text-xl font-bold mb-4">RamzLIMS Overview</h3>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="border rounded-lg p-4">
-                    <p className="text-gray-500">Registered Clients</p>
-                    <p className="text-2xl font-bold mt-2">{clientsCount}</p>
+              <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6 mt-8">
+                <div className="bg-white rounded-xl shadow p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold">Recent Samples</h3>
+                    <button
+                      onClick={() => router.push("/samples")}
+                      className="text-sm text-blue-700 font-semibold"
+                    >
+                      View all
+                    </button>
                   </div>
-                  <div className="border rounded-lg p-4">
-                    <p className="text-gray-500">Active Projects</p>
-                    <p className="text-2xl font-bold mt-2">{projectsCount}</p>
+
+                  <div className="space-y-3">
+                    {recentSamples.length === 0 ? (
+                      <p className="text-gray-500">No samples yet.</p>
+                    ) : (
+                      recentSamples.map((sample) => (
+                        <div key={sample.id} className="flex items-center justify-between border rounded-lg p-3">
+                          <div>
+                            <p className="font-semibold">{sample.sample_number || `Sample #${sample.id}`}</p>
+                            <p className="text-sm text-gray-500">{sample.sample_type || "Unknown type"}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium">{sample.status || "Pending"}</p>
+                            <p className="text-xs text-gray-400">{sample.received_date || "-"}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
-                  <div className="border rounded-lg p-4">
-                    <p className="text-gray-500">Samples Received</p>
-                    <p className="text-2xl font-bold mt-2">{samplesCount}</p>
-                  </div>
-                  <div className="border rounded-lg p-4">
-                    <p className="text-gray-500">Laboratory Tests</p>
-                    <p className="text-2xl font-bold mt-2">{testsCount}</p>
+                </div>
+
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h3 className="text-xl font-bold mb-4">Quick Actions</h3>
+                  <div className="space-y-3">
+                    <button onClick={() => router.push("/samples")} className="w-full text-left rounded-lg border p-3 hover:bg-blue-50">
+                      🧪 Manage Samples
+                    </button>
+                    <button onClick={() => router.push("/clients")} className="w-full text-left rounded-lg border p-3 hover:bg-blue-50">
+                      👥 Manage Clients
+                    </button>
+                    <button onClick={() => router.push("/projects")} className="w-full text-left rounded-lg border p-3 hover:bg-blue-50">
+                      📁 Manage Projects
+                    </button>
+                    <button onClick={() => router.push("/tests")} className="w-full text-left rounded-lg border p-3 hover:bg-blue-50">
+                      🔬 Manage Tests
+                    </button>
                   </div>
                 </div>
               </div>

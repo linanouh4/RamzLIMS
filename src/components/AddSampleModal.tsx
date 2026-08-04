@@ -19,9 +19,11 @@ export default function AddSampleModal({
   const [projects, setProjects] = useState<any[]>([]);
   const [projectId, setProjectId] = useState("");
 
+  const [sampleNumber, setSampleNumber] = useState("");
   const [sampleType, setSampleType] = useState("");
   const [receivedDate, setReceivedDate] = useState("");
   const [receivedBy, setReceivedBy] = useState("");
+  const [receivedCondition, setReceivedCondition] = useState("");
   const [status, setStatus] = useState("Pending");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,16 +44,20 @@ export default function AddSampleModal({
   useEffect(() => {
     if (sample) {
       setProjectId(sample.project_id?.toString() || "");
+      setSampleNumber(sample.sample_number || "");
       setSampleType(sample.sample_type || "");
       setReceivedDate(sample.received_date || "");
       setReceivedBy(sample.received_by || "");
+      setReceivedCondition(sample.received_condition || "");
       setStatus(sample.status || "Pending");
       setNotes(sample.notes || "");
     } else {
       setProjectId("");
+      setSampleNumber("");
       setSampleType("");
       setReceivedDate("");
       setReceivedBy("");
+      setReceivedCondition("");
       setStatus("Pending");
       setNotes("");
     }
@@ -64,11 +70,19 @@ export default function AddSampleModal({
 
     let error;
 
+    if (!projectId) {
+      alert("Please select a project");
+      setLoading(false);
+      return;
+    }
+
     const payload = {
       project_id: Number(projectId),
+      sample_number: sampleNumber,
       sample_type: sampleType,
       received_date: receivedDate,
       received_by: receivedBy,
+      received_condition: receivedCondition,
       status,
       notes,
     };
@@ -125,6 +139,13 @@ export default function AddSampleModal({
 
           <input
             className="border rounded-lg p-3"
+            placeholder="Sample Number"
+            value={sampleNumber}
+            onChange={(e) => setSampleNumber(e.target.value)}
+          />
+
+          <input
+            className="border rounded-lg p-3"
             placeholder="Sample Type"
             value={sampleType}
             onChange={(e) => setSampleType(e.target.value)}
@@ -142,6 +163,13 @@ export default function AddSampleModal({
             placeholder="Received By"
             value={receivedBy}
             onChange={(e) => setReceivedBy(e.target.value)}
+          />
+
+          <input
+            className="border rounded-lg p-3"
+            placeholder="Received Condition"
+            value={receivedCondition}
+            onChange={(e) => setReceivedCondition(e.target.value)}
           />
 
           <select

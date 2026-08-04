@@ -114,11 +114,19 @@ export default function Employees() {
     <ProtectedRoute adminOnly={true}>
       <main className="min-h-screen bg-gray-100 p-8">
         <div className="flex flex-col gap-6 mb-8 md:flex-row md:justify-between md:items-end">
-          <div>
-            <h1 className="text-3xl font-bold">Users</h1>
-            <p className="text-gray-500 mt-2">
-              Manage application users and roles.
-            </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.history.back()}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              ← Back
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold">Users</h1>
+              <p className="text-gray-500 mt-2">
+                Manage application users and roles.
+              </p>
+            </div>
           </div>
 
           <button

@@ -10,6 +10,8 @@ type Client = {
   city: string;
   email: string;
   address: string;
+  contact_person?: string;
+  company_type?: string;
   status: string;
 };
 
@@ -31,6 +33,8 @@ export default function AddClientModal({
   const [city, setCity] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [companyType, setCompanyType] = useState("");
 
   useEffect(() => {
     if (client) {
@@ -39,6 +43,8 @@ export default function AddClientModal({
       setCity(client.city);
       setEmail(client.email);
       setAddress(client.address);
+      setContactPerson(client.contact_person || "");
+      setCompanyType(client.company_type || "");
     } else {
       clearForm();
     }
@@ -50,6 +56,8 @@ export default function AddClientModal({
     setCity("");
     setEmail("");
     setAddress("");
+    setContactPerson("");
+    setCompanyType("");
   }
 
   if (!open) return null;
@@ -66,6 +74,8 @@ export default function AddClientModal({
           city,
           email,
           address,
+          contact_person: contactPerson,
+          company_type: companyType,
         })
         .eq("id", client.id);
 
@@ -78,6 +88,8 @@ export default function AddClientModal({
           city,
           email,
           address,
+          contact_person: contactPerson,
+          company_type: companyType,
           status: "Active",
         },
       ]);
@@ -133,6 +145,20 @@ export default function AddClientModal({
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <input
+            className="border border-gray-300 rounded-lg p-3 text-black"
+            placeholder="Contact Person"
+            value={contactPerson}
+            onChange={(e) => setContactPerson(e.target.value)}
+          />
+
+          <input
+            className="border border-gray-300 rounded-lg p-3 text-black"
+            placeholder="Company Type"
+            value={companyType}
+            onChange={(e) => setCompanyType(e.target.value)}
           />
 
           <input

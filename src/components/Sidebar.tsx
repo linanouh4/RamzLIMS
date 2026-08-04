@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type Props = {
   user?: {
@@ -10,6 +11,15 @@ type Props = {
 };
 
 export default function Sidebar({ user }: Props) {
+  const pathname = usePathname();
+
+  const linkClass = (href: string) =>
+    `block rounded-lg p-3 transition ${
+      pathname === href
+        ? "bg-blue-600 font-semibold shadow"
+        : "hover:bg-blue-700"
+    }`;
+
   return (
     <aside className="w-64 bg-blue-800 text-white p-6 min-h-screen">
       <h1 className="text-3xl font-bold mb-10">
@@ -28,42 +38,42 @@ export default function Sidebar({ user }: Props) {
 
         <Link
           href="/dashboard"
-          className="block hover:bg-blue-700 p-3 rounded-lg"
+          className={linkClass("/dashboard")}
         >
           🏠 Dashboard
         </Link>
 
         <Link
           href="/clients"
-          className="block hover:bg-blue-700 p-3 rounded-lg"
+          className={linkClass("/clients")}
         >
           👥 Clients
         </Link>
 
         <Link
           href="/projects"
-          className="block hover:bg-blue-700 p-3 rounded-lg"
+          className={linkClass("/projects")}
         >
           🏗 Projects
         </Link>
 
         <Link
           href="/samples"
-          className="block hover:bg-blue-700 p-3 rounded-lg"
+          className={linkClass("/samples")}
         >
           🧪 Samples
         </Link>
 
         <Link
           href="/tests"
-          className="block hover:bg-blue-700 p-3 rounded-lg"
+          className={linkClass("/tests")}
         >
           🔬 Tests
         </Link>
 
         <Link
           href="/reports"
-          className="block hover:bg-blue-700 p-3 rounded-lg"
+          className={linkClass("/reports")}
         >
           📑 Reports
         </Link>
@@ -72,14 +82,14 @@ export default function Sidebar({ user }: Props) {
           <>
             <Link
               href="/employees"
-              className="block hover:bg-blue-700 p-3 rounded-lg"
+              className={linkClass("/employees")}
             >
               👨‍🔬 Employees
             </Link>
 
             <Link
               href="/settings"
-              className="block hover:bg-blue-700 p-3 rounded-lg"
+              className={linkClass("/settings")}
             >
               ⚙️ Settings
             </Link>

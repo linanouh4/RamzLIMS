@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+const TESTS_STORAGE_KEY = "ramzlims-tests";
+
+function getStoredTests() {
+  try {
+    const raw = localStorage.getItem(TESTS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 type Props = {
   open: boolean;
   sampleId: number;
@@ -27,13 +38,19 @@ export default function AddTestToSampleModal({
   }, [open]);
 
   async function loadTests() {
-    const { data, error } = await supabase
-      .from("tests")
-      .select("*")
-      .order("test_name");
+    try {
+      const { data, error } = await supabase
+        .from("tests")
+        .select("*")
+        .order("test_name");
 
-    if (!error) {
-      setTests(data || []);
+      if (!error && data) {
+        setTests(data || []);
+      } else {
+        setTests(getStoredTests());
+      }
+    } catch {
+      setTests(getStoredTests());
     }
   }
 

@@ -1,22 +1,53 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 
 export default function ReportPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [sample, setSample] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [uploadedReport, setUploadedReport] = useState<any>(null);
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
       loadReport();
+      loadUploadedReport();
     }
+    loadCompanyProfile();
   }, [id]);
+
+  function loadCompanyProfile() {
+    try {
+      const saved = localStorage.getItem("ramzlims-company-profile");
+      if (saved) {
+        setCompanyProfile(JSON.parse(saved));
+      }
+    } catch {
+      // Ignore invalid data
+    }
+  }
+
+  function loadUploadedReport() {
+    try {
+      const raw = localStorage.getItem("ramzlims-report-uploads");
+      if (!raw) {
+        setUploadedReport(null);
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      setUploadedReport(parsed[id] || null);
+    } catch {
+      setUploadedReport(null);
+    }
+  }
 
   async function loadReport() {
     setLoading(true);
@@ -44,6 +75,29 @@ export default function ReportPage() {
       return;
     }
 
+    const sampleTestIds = (sampleTests || []).map((item: any) => item.id);
+    let resultsData: any[] = [];
+
+    if (sampleTestIds.length > 0) {
+      const { data: fetchedResults, error: resultsError } = await supabase
+        .from("test_results")
+        .select("*")
+        .in("sample_test_id", sampleTestIds);
+
+      if (resultsError) {
+        alert(resultsError.message);
+      }
+
+      resultsData = fetchedResults || [];
+    }
+
+    const resultsBySampleTestId = new Map<number, any[]>();
+    resultsData.forEach((result: any) => {
+      const list = resultsBySampleTestId.get(result.sample_test_id) || [];
+      list.push(result);
+      resultsBySampleTestId.set(result.sample_test_id, list);
+    });
+
     const testsWithResults = await Promise.all(
       (sampleTests || []).map(async (item: any) => {
         const { data: test } = await supabase
@@ -52,15 +106,10 @@ export default function ReportPage() {
           .eq("id", item.test_id)
           .single();
 
-        const { data: results } = await supabase
-          .from("test_results")
-          .select("*")
-          .eq("sample_test_id", item.id);
-
         return {
           ...item,
           tests: test,
-          results: results || [],
+          results: resultsBySampleTestId.get(item.id) || [],
         };
       })
     );
@@ -90,7 +139,13 @@ export default function ReportPage() {
   return (
     <ProtectedRoute>
       <div className="bg-gray-100 min-h-screen p-8">
-        <div className="flex justify-end max-w-5xl mx-auto mb-4">
+        <div className="flex justify-between items-center max-w-5xl mx-auto mb-4">
+          <button
+            onClick={() => router.back()}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            ← Back
+          </button>
           <button
             onClick={() => window.print()}
             className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-2 rounded-lg print:hidden"
@@ -100,11 +155,28 @@ export default function ReportPage() {
         </div>
 
         <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl p-10">
-          <div className="text-center border-b-2 pb-6 mb-8">
-            <h1 className="text-4xl font-bold">RAMZ EMIRATES LABORATORY</h1>
-            <p className="text-gray-600 mt-2">Soil & Concrete Testing Laboratory</p>
-            <h2 className="text-2xl font-bold mt-6">TEST REPORT</h2>
+          <div className="border-b-2 pb-6 mb-8">
+            <div className="flex flex-col items-center text-center">
+              {companyProfile?.logoData ? (
+                <img src={companyProfile.logoData} alt="Company logo" className="mb-3 h-20 w-auto object-contain" />
+              ) : null}
+              <h1 className="text-4xl font-bold">{companyProfile?.companyName || "شركة رمز الإمارات لفحص التربة والخرسانة"}</h1>
+              <p className="text-gray-600 mt-2">{companyProfile?.companyAddress || "RAMZ Emirates Laboratory for Soil & Concrete Testing"}</p>
+              <h2 className="text-2xl font-bold mt-6">TEST REPORT</h2>
+            </div>
           </div>
+
+          {uploadedReport ? (
+            <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <h3 className="mb-3 text-lg font-semibold">Uploaded Report File</h3>
+              <p className="mb-3 text-sm text-gray-600">{uploadedReport.name}</p>
+              {uploadedReport.type?.includes("pdf") ? (
+                <iframe src={uploadedReport.data} title="Uploaded report" className="h-[500px] w-full rounded-lg border" />
+              ) : (
+                <img src={uploadedReport.data} alt="Uploaded report" className="max-h-[500px] w-full rounded-lg border object-contain" />
+              )}
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-6 mb-10">
             <div>
@@ -162,15 +234,27 @@ export default function ReportPage() {
 
           <div className="grid grid-cols-3 gap-10 mt-20 pt-10 border-t">
             <div className="text-center">
-              <div className="border-b border-black h-12 mb-2" />
+              {companyProfile?.signatureData ? (
+                <img src={companyProfile.signatureData} alt="Signature" className="mx-auto mb-2 h-12 w-auto object-contain" />
+              ) : (
+                <div className="border-b border-black h-12 mb-2" />
+              )}
               <p className="font-semibold">Tested By</p>
             </div>
             <div className="text-center">
-              <div className="border-b border-black h-12 mb-2" />
+              {companyProfile?.signatureData ? (
+                <img src={companyProfile.signatureData} alt="Signature" className="mx-auto mb-2 h-12 w-auto object-contain" />
+              ) : (
+                <div className="border-b border-black h-12 mb-2" />
+              )}
               <p className="font-semibold">Reviewed By</p>
             </div>
             <div className="text-center">
-              <div className="border-b border-black h-12 mb-2" />
+              {companyProfile?.signatureData ? (
+                <img src={companyProfile.signatureData} alt="Signature" className="mx-auto mb-2 h-12 w-auto object-contain" />
+              ) : (
+                <div className="border-b border-black h-12 mb-2" />
+              )}
               <p className="font-semibold">Approved By</p>
             </div>
           </div>

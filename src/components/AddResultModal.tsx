@@ -11,6 +11,9 @@ type Props = {
     result_value?: string;
     unit?: string;
     notes?: string;
+    reference_value?: string;
+    min_value?: string;
+    max_value?: string;
   };
   onClose: () => void;
   onSaved: () => void;
@@ -29,6 +32,9 @@ export default function AddResultModal({
 
   const [resultValue, setResultValue] = useState("");
   const [unit, setUnit] = useState("");
+  const [referenceValue, setReferenceValue] = useState("");
+  const [minValue, setMinValue] = useState("");
+  const [maxValue, setMaxValue] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -46,6 +52,18 @@ export default function AddResultModal({
         initialData.unit || ""
       );
 
+      setReferenceValue(
+        initialData.reference_value || ""
+      );
+
+      setMinValue(
+        initialData.min_value || ""
+      );
+
+      setMaxValue(
+        initialData.max_value || ""
+      );
+
       setNotes(
         initialData.notes || ""
       );
@@ -57,6 +75,9 @@ export default function AddResultModal({
 
       setResultValue("");
       setUnit("");
+      setReferenceValue("");
+      setMinValue("");
+      setMaxValue("");
       setNotes("");
 
     }
@@ -94,6 +115,9 @@ export default function AddResultModal({
 
           result_value: resultValue,
           unit: unit,
+          reference_value: referenceValue,
+          min_value: minValue,
+          max_value: maxValue,
           notes: notes,
 
         })
@@ -117,6 +141,9 @@ export default function AddResultModal({
             sample_test_id: sampleTestId,
             result_value: resultValue,
             unit: unit,
+            reference_value: referenceValue,
+            min_value: minValue,
+            max_value: maxValue,
             notes: notes,
 
           }
@@ -212,9 +239,26 @@ export default function AddResultModal({
 
         />
 
-
-
-
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          <input
+            className="w-full border rounded p-3"
+            placeholder="Reference"
+            value={referenceValue}
+            onChange={(e) => setReferenceValue(e.target.value)}
+          />
+          <input
+            className="w-full border rounded p-3"
+            placeholder="Min"
+            value={minValue}
+            onChange={(e) => setMinValue(e.target.value)}
+          />
+          <input
+            className="w-full border rounded p-3"
+            placeholder="Max"
+            value={maxValue}
+            onChange={(e) => setMaxValue(e.target.value)}
+          />
+        </div>
 
         <textarea
 

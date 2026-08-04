@@ -85,7 +85,15 @@ export default function ProjectsPage() {
   return (
     <ProtectedRoute>
       <div className="p-8">
-        <h1 className="text-3xl font-bold mb-8">Projects</h1>
+        <div className="flex items-center gap-3 mb-8">
+          <button
+            onClick={() => window.history.back()}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            ← Back
+          </button>
+          <h1 className="text-3xl font-bold">Projects</h1>
+        </div>
 
         <div className="bg-white rounded-xl shadow p-6 mb-8">
           <div className="grid grid-cols-2 gap-4">
