@@ -349,7 +349,27 @@ async function saveApproval() {
   >
     Save Approval
   </button>
+{approval && (
+  <div className="mt-5 border-t pt-4 text-sm">
 
+    <p>
+      <strong>Status:</strong> {approval.status}
+    </p>
+
+    <p>
+      <strong>Prepared By:</strong> {approval.prepared_by || "-"}
+    </p>
+
+    <p>
+      <strong>Reviewed By:</strong> {approval.reviewed_by || "-"}
+    </p>
+
+    <p>
+      <strong>Approved By:</strong> {approval.approved_by || "-"}
+    </p>
+
+  </div>
+)}
 </div>
           <div className="grid grid-cols-3 gap-10 mt-20 pt-10 border-t">
             <div className="text-center">
