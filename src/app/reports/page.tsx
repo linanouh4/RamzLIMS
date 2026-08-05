@@ -33,10 +33,7 @@ export default function ReportsPage() {
     setReports(data || []);
     setLoading(false);
   }
-function getUserName(userId: any) {
-  const user = users.find((u: any) => String(u.id) === String(userId));
-  return user?.full_name || "-";
-}
+
   return (
     <ProtectedRoute>
       <div className="p-8 min-h-screen bg-gray-100">

@@ -74,9 +74,9 @@ async function loadApproval() {
     .from("report_approvals")
     .select(`
       *,
-      prepared_user:users!report_approvals_prepared_by_fkey(full_name),
-      reviewed_user:users!report_approvals_reviewed_by_fkey(full_name),
-      approved_user:users!report_approvals_approved_by_fkey(full_name)
+      prepared_user:users!report_approvals_prepared_by_fkey(full_name,signature),
+reviewed_user:users!report_approvals_reviewed_by_fkey(full_name,signature),
+approved_user:users!report_approvals_approved_by_fkey(full_name,signature)
     `)
     .eq("sample_id", id)
     .single();
@@ -220,10 +220,7 @@ async function saveApproval() {
       <div className="p-8 text-center">Report not found</div>
     );
   }
-function getUserName(userId: any) {
-  const user = users.find((u: any) => String(u.id) === String(userId));
-  return user?.full_name || "-";
-}
+
   return (
     <ProtectedRoute>
       <div className="bg-gray-100 min-h-screen p-8">
@@ -418,44 +415,65 @@ function getUserName(userId: any) {
     </p>
 
    <p>
-  <strong>Prepared By:</strong> {getUserName(approval.prepared_by)}
+  <strong>Prepared By:</strong> {approval.prepared_user?.full_name || "-"}
 </p>
 
 <p>
-  <strong>Reviewed By:</strong> {getUserName(approval.reviewed_by)}
+  <strong>Reviewed By:</strong> {approval.reviewed_user?.full_name || "-"}
 </p>
 
 <p>
-  <strong>Approved By:</strong> {getUserName(approval.approved_by)}
+  <strong>Approved By:</strong> {approval.approved_user?.full_name || "-"}
 </p>
   </div>
 )}
 </div>
           <div className="grid grid-cols-3 gap-10 mt-20 pt-10 border-t">
-            <div className="text-center">
-              {companyProfile?.signatureData ? (
-                <img src={companyProfile.signatureData} alt="Signature" className="mx-auto mb-2 h-12 w-auto object-contain" />
-              ) : (
-                <div className="border-b border-black h-12 mb-2" />
-              )}
-              <p className="font-semibold">Tested By</p>
-            </div>
-            <div className="text-center">
-              {companyProfile?.signatureData ? (
-                <img src={companyProfile.signatureData} alt="Signature" className="mx-auto mb-2 h-12 w-auto object-contain" />
-              ) : (
-                <div className="border-b border-black h-12 mb-2" />
-              )}
-              <p className="font-semibold">Reviewed By</p>
-            </div>
-            <div className="text-center">
-              {companyProfile?.signatureData ? (
-                <img src={companyProfile.signatureData} alt="Signature" className="mx-auto mb-2 h-12 w-auto object-contain" />
-              ) : (
-                <div className="border-b border-black h-12 mb-2" />
-              )}
-              <p className="font-semibold">Approved By</p>
-            </div>
+           <div className="text-center">
+  {approval?.prepared_user?.signature ? (
+    <img
+      src={approval.prepared_user.signature}
+      alt="Prepared Signature"
+      className="mx-auto mb-2 h-12 w-auto object-contain"
+    />
+  ) : (
+    <div className="border-b border-black h-12 mb-2" />
+  )}
+
+  <p className="font-semibold">
+    {approval?.prepared_user?.full_name || "Tested By"}
+  </p>
+</div>
+          <div className="text-center">
+  {approval?.reviewed_user?.signature ? (
+    <img
+      src={approval.reviewed_user.signature}
+      alt="Reviewed Signature"
+      className="mx-auto mb-2 h-12 w-auto object-contain"
+    />
+  ) : (
+    <div className="border-b border-black h-12 mb-2" />
+  )}
+
+  <p className="font-semibold">
+    {approval?.reviewed_user?.full_name || "Reviewed By"}
+  </p>
+</div>
+          <div className="text-center">
+  {approval?.approved_user?.signature ? (
+    <img
+      src={approval.approved_user.signature}
+      alt="Approved Signature"
+      className="mx-auto mb-2 h-12 w-auto object-contain"
+    />
+  ) : (
+    <div className="border-b border-black h-12 mb-2" />
+  )}
+
+  <p className="font-semibold">
+    {approval?.approved_user?.full_name || "Approved By"}
+  </p>
+</div>
           </div>
         </div>
       </div>

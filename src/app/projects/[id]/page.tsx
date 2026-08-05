@@ -13,7 +13,11 @@ export default function ProjectDetailsPage() {
   const [project, setProject] = useState<any>(null);
   const [samples, setSamples] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [technicians, setTechnicians] = useState<any[]>([]);
+const [technicianId, setTechnicianId] = useState("");
+const [taskName, setTaskName] = useState("");
+const [taskDescription, setTaskDescription] = useState("");
   useEffect(() => {
     if (id) {
       loadProject();
@@ -47,6 +51,17 @@ export default function ProjectDetailsPage() {
 
     setProject(projectData);
     setSamples(samplesData || []);
+    const { data: techData, error: techError } = await supabase
+  .from("users")
+  .select("id, full_name")
+  .eq("role", "technician")
+  .order("full_name");
+
+if (techError) {
+  alert(techError.message);
+} else {
+  setTechnicians(techData || []);
+}
     setLoading(false);
   }
 
@@ -105,7 +120,14 @@ export default function ProjectDetailsPage() {
             </div>
           </div>
         </div>
-
+<div className="flex justify-end mb-4">
+  <button
+    onClick={() => setShowTaskModal(true)}
+    className="bg-blue-700 text-white px-4 py-2 rounded-lg"
+  >
+    📋 إسناد مهمة
+  </button>
+</div>
         <div className="bg-white rounded-xl shadow p-6">
           <h3 className="text-xl font-bold mb-4">Associated Samples</h3>
 
@@ -129,6 +151,71 @@ export default function ProjectDetailsPage() {
           )}
         </div>
       </div>
+      {showTaskModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 w-full max-w-md">
+
+      <h2 className="text-2xl font-bold mb-4">
+        📋 إسناد مهمة
+      </h2>
+<div className="mb-4">
+  <label className="block mb-2 font-medium">
+    الفني
+  </label>
+
+  <select
+    value={technicianId}
+    onChange={(e) => setTechnicianId(e.target.value)}
+    className="w-full border rounded-lg p-3"
+  >
+    <option value="">
+      اختر الفني
+    </option>
+
+    {technicians.map((tech) => (
+      <option key={tech.id} value={tech.id}>
+        {tech.full_name}
+      </option>
+    ))}
+  </select>
+</div>
+<div className="mb-4">
+  <label className="block mb-2 font-medium">
+    اسم المهمة
+  </label>
+<div className="mb-4">
+  <label className="block mb-2 font-medium">
+    وصف المهمة
+  </label>
+
+  <textarea
+    value={taskDescription}
+    onChange={(e) => setTaskDescription(e.target.value)}
+    className="w-full border rounded-lg p-3"
+    rows={4}
+    placeholder="اكتب تفاصيل المهمة..."
+  />
+</div>
+  <input
+    type="text"
+    value={taskName}
+    onChange={(e) => setTaskName(e.target.value)}
+    className="w-full border rounded-lg p-3"
+    placeholder="مثال: أخذ عينات تربة"
+  />
+</div>
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowTaskModal(false)}
+          className="bg-red-600 text-white px-4 py-2 rounded-lg"
+        >
+          إغلاق
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
     </ProtectedRoute>
   );
 }

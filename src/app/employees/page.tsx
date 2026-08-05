@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 
-const roles = ["admin", "lab", "reception"];
-
+const roles = ["admin", "lab", "reception", "technician"];
 export default function Employees() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,16 +14,44 @@ export default function Employees() {
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("reception");
+  const [signature, setSignature] = useState("");
 
   useEffect(() => {
+    
     loadUsers();
   }, []);
+async function uploadSignature(
+  e: React.ChangeEvent<HTMLInputElement>
+) {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-  async function loadUsers() {
+  const extension = file.name.split(".").pop();
+  const fileName = `signature-${Date.now()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("signatures")
+    .upload(fileName, file);
+
+  if (uploadError) {
+    alert(uploadError.message);
+    return;
+  }
+
+  const { data } = supabase.storage
+    .from("signatures")
+    .getPublicUrl(fileName);
+
+  setSignature(data.publicUrl);
+
+  alert("Signature uploaded successfully");
+}
+
+async function loadUsers() {
     setLoading(true);
     const { data, error } = await supabase
       .from("users")
-      .select("id,username,full_name,role")
+      .select("id,username,full_name,role,signature")
       .order("id", { ascending: true });
 
     if (error) {
@@ -43,6 +70,7 @@ export default function Employees() {
     setFullName("");
     setPassword("");
     setRole("reception");
+    setSignature("");
     setOpenModal(true);
   }
 
@@ -52,6 +80,7 @@ export default function Employees() {
     setFullName(user.full_name || "");
     setPassword("");
     setRole(user.role || "reception");
+    setSignature(user.signature || "");
     setOpenModal(true);
   }
 
@@ -66,12 +95,14 @@ export default function Employees() {
       return;
     }
 
-    const payload: any = {
-      username: username.trim(),
-      full_name: fullName.trim(),
-      role,
-    };
+   const payload: any = {
+  username: username.trim(),
+  full_name: fullName.trim(),
+  role,
+  signature: "TEST_SIGNATURE",
+};
 
+console.log(payload);
     if (password.trim()) {
       payload.password = password.trim();
     }
@@ -90,9 +121,12 @@ export default function Employees() {
     }
 
     if (error) {
-      alert(error.message);
-      return;
-    }
+  alert("SAVE ERROR: " + error.message);
+  console.log(error);
+  return;
+}
+
+alert("User saved successfully");
 
     setOpenModal(false);
     loadUsers();
@@ -244,8 +278,48 @@ export default function Employees() {
                     placeholder={selectedUser ? "New password" : "Password"}
                   />
                 </div>
+<div>
+  <label className="block text-sm font-medium mb-2">
+    Role
+  </label>
 
-                <div className="flex justify-end gap-3 pt-4">
+  <select
+    value={role}
+    onChange={(e) => setRole(e.target.value)}
+    className="w-full border rounded-lg p-3"
+  >
+    {roles.map((r) => (
+      <option key={r} value={r}>
+        {r}
+      </option>
+    ))}
+  </select>
+</div>
+               <div>
+  <label className="block text-sm font-medium mb-2">
+    Signature
+  </label>
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={uploadSignature}
+    className="w-full border rounded-lg p-3"
+  />
+
+  {signature && (
+  <>
+    <img
+      src={signature}
+      alt="Signature"
+      className="mt-3 h-16 border rounded object-contain"
+    />
+    <p>{signature}</p>
+  </>
+)}
+</div>
+
+<div className="flex justify-end gap-3 pt-4">
                   <button
                     onClick={() => setOpenModal(false)}
                     className="px-5 py-3 rounded-lg border border-gray-300"

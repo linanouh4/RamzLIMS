@@ -43,59 +43,52 @@ export default function Sidebar({ user }: Props) {
           🏠 Dashboard
         </Link>
 
-        <Link
-          href="/clients"
-          className={linkClass("/clients")}
-        >
-          👥 Clients
-        </Link>
+  {user?.role === "admin" && (
+  <>
+    <Link
+      href="/clients"
+      className={linkClass("/clients")}
+    >
+      👥 Clients
+    </Link>
 
-        <Link
-          href="/projects"
-          className={linkClass("/projects")}
-        >
-          🏗 Projects
-        </Link>
+    <Link
+      href="/projects"
+      className={linkClass("/projects")}
+    >
+      🏗 Projects
+    </Link>
 
-        <Link
-          href="/samples"
-          className={linkClass("/samples")}
-        >
-          🧪 Samples
-        </Link>
+    <Link
+      href="/samples"
+      className={linkClass("/samples")}
+    >
+      🧪 Samples
+    </Link>
 
-        <Link
-          href="/tests"
-          className={linkClass("/tests")}
-        >
-          🔬 Tests
-        </Link>
+    <Link
+      href="/tests"
+      className={linkClass("/tests")}
+    >
+      🔬 Tests
+    </Link>
 
-        <Link
-          href="/reports"
-          className={linkClass("/reports")}
-        >
-          📑 Reports
-        </Link>
-
-        {user?.role === "admin" && (
-          <>
-            <Link
-              href="/employees"
-              className={linkClass("/employees")}
-            >
-              👨‍🔬 Employees
-            </Link>
-
-            <Link
-              href="/settings"
-              className={linkClass("/settings")}
-            >
-              ⚙️ Settings
-            </Link>
-          </>
-        )}
-
+    <Link
+      href="/reports"
+      className={linkClass("/reports")}
+    >
+      📑 Reports
+    </Link>
+  </>
+)}
+{user?.role === "technician" && (
+  <Link
+    href="/technician"
+    className={linkClass("/technician")}
+  >
+    👷 Technician
+  </Link>
+)}
       </nav>
     </aside>
   );
