@@ -45,7 +45,12 @@ export default function Home() {
     };
 
     saveUser(user);
-    router.push("/dashboard");
+
+if (user.role === "technician") {
+  router.push("/technician");
+} else {
+  router.push("/dashboard");
+}
   };
 
   return (

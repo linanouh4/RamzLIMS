@@ -18,12 +18,46 @@ export default function ProjectDetailsPage() {
 const [technicianId, setTechnicianId] = useState("");
 const [taskName, setTaskName] = useState("");
 const [taskDescription, setTaskDescription] = useState("");
+const [priority, setPriority] = useState("عادي");
   useEffect(() => {
     if (id) {
       loadProject();
     }
   }, [id]);
+async function saveTask() {
+  if (!technicianId) {
+    alert("الرجاء اختيار الفني");
+    return;
+  }
 
+  if (!taskName.trim()) {
+    alert("الرجاء إدخال اسم المهمة");
+    return;
+  }
+
+  const { error } = await supabase.from("tasks").insert([
+    {
+      project_id: Number(id),
+      technician_id: Number(technicianId),
+      task_name: taskName,
+      task_description: taskDescription,
+      priority: priority,
+    },
+  ]);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("تم إسناد المهمة بنجاح");
+
+  setShowTaskModal(false);
+  setTechnicianId("");
+  setTaskName("");
+  setTaskDescription("");
+  setPriority("عادي");
+}
   async function loadProject() {
     setLoading(true);
 
@@ -151,65 +185,91 @@ if (techError) {
           )}
         </div>
       </div>
-      {showTaskModal && (
+     {showTaskModal && (
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl p-6 w-full max-w-md">
+    <div className="bg-white rounded-xl p-6 w-full max-w-lg">
 
-      <h2 className="text-2xl font-bold mb-4">
-        📋 إسناد مهمة
+      <h2 className="text-2xl font-bold mb-6">
+        📋 إسناد مهمة لفني
       </h2>
-<div className="mb-4">
-  <label className="block mb-2 font-medium">
-    الفني
-  </label>
 
-  <select
-    value={technicianId}
-    onChange={(e) => setTechnicianId(e.target.value)}
-    className="w-full border rounded-lg p-3"
-  >
-    <option value="">
-      اختر الفني
-    </option>
+      <div className="mb-4">
+        <label className="block mb-2 font-medium">
+          الفني
+        </label>
 
-    {technicians.map((tech) => (
-      <option key={tech.id} value={tech.id}>
-        {tech.full_name}
-      </option>
-    ))}
-  </select>
-</div>
-<div className="mb-4">
-  <label className="block mb-2 font-medium">
-    اسم المهمة
-  </label>
-<div className="mb-4">
-  <label className="block mb-2 font-medium">
-    وصف المهمة
-  </label>
+        <select
+          value={technicianId}
+          onChange={(e) => setTechnicianId(e.target.value)}
+          className="w-full border rounded-lg p-3"
+        >
+          <option value="">اختر الفني</option>
 
-  <textarea
-    value={taskDescription}
-    onChange={(e) => setTaskDescription(e.target.value)}
-    className="w-full border rounded-lg p-3"
-    rows={4}
-    placeholder="اكتب تفاصيل المهمة..."
-  />
-</div>
-  <input
-    type="text"
-    value={taskName}
-    onChange={(e) => setTaskName(e.target.value)}
-    className="w-full border rounded-lg p-3"
-    placeholder="مثال: أخذ عينات تربة"
-  />
-</div>
-      <div className="flex justify-end">
+          {technicians.map((tech) => (
+            <option key={tech.id} value={tech.id}>
+              {tech.full_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-4">
+        <label className="block mb-2 font-medium">
+          اسم المهمة
+        </label>
+
+        <input
+          type="text"
+          value={taskName}
+          onChange={(e) => setTaskName(e.target.value)}
+          className="w-full border rounded-lg p-3"
+          placeholder="مثال: أخذ عينات تربة"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label className="block mb-2 font-medium">
+          وصف المهمة
+        </label>
+
+        <textarea
+          value={taskDescription}
+          onChange={(e) => setTaskDescription(e.target.value)}
+          className="w-full border rounded-lg p-3"
+          rows={4}
+          placeholder="اكتب تفاصيل المهمة..."
+        />
+      </div>
+
+      <div className="mb-6">
+        <label className="block mb-2 font-medium">
+          الأولوية
+        </label>
+
+        <select
+          value={priority}
+          onChange={(e) => setPriority(e.target.value)}
+          className="w-full border rounded-lg p-3"
+        >
+          <option value="منخفضة">منخفضة</option>
+          <option value="عادي">عادي</option>
+          <option value="عالية">عالية</option>
+        </select>
+      </div>
+
+      <div className="flex justify-end gap-3">
         <button
           onClick={() => setShowTaskModal(false)}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg"
+          className="border border-gray-300 px-5 py-2 rounded-lg"
         >
-          إغلاق
+          إلغاء
+        </button>
+
+        <button
+          onClick={saveTask}
+          className="bg-blue-700 text-white px-5 py-2 rounded-lg"
+        >
+          حفظ المهمة
         </button>
       </div>
 
