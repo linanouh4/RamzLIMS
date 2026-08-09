@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 
 export default function TaskResultsPage() {
+  const router = useRouter();
   const [tasks, setTasks] = useState<any[]>([]);
   const [images, setImages] = useState<any[]>([]);
 
@@ -58,7 +60,16 @@ async function loadImages(taskId: number) {
   return (
     <ProtectedRoute>
       <div className="p-6">
+<button
+  onClick={() => router.back()}
+  className="flex items-center gap-2 text-gray-600 hover:text-blue-700 mb-5 font-medium"
+>
+  ← رجوع
+</button>
 
+<h1 className="text-3xl font-bold mb-6">
+  📋 نتائج المهام المنجزة
+</h1>
         <h1 className="text-3xl font-bold mb-6">
           📋 نتائج المهام المنجزة
         </h1>

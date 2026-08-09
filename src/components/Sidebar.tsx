@@ -28,9 +28,20 @@ export default function Sidebar({ user }: Props) {
 
       {user && (
         <div className="mb-6 p-4 rounded-xl bg-blue-700">
-          <div className="text-sm text-slate-100">Logged in as</div>
-          <div className="font-semibold text-lg">{user.full_name}</div>
-          <div className="text-sm text-slate-200 capitalize">{user.role}</div>
+          <div className="text-sm text-slate-100">
+            Logged in as
+          </div>
+
+          <div className="font-semibold text-lg">
+            {user.full_name}
+          </div>
+
+          <div className="text-sm text-slate-200 capitalize">
+            {user.role}
+          </div>
+          <div className="text-yellow-300 text-xs mt-2">
+  ROLE TEST: [{user.role}]
+</div>
         </div>
       )}
 
@@ -43,57 +54,70 @@ export default function Sidebar({ user }: Props) {
           🏠 Dashboard
         </Link>
 
-  {user?.role === "admin" && (
-  <>
-    <Link
-      href="/clients"
-      className={linkClass("/clients")}
-    >
-      👥 Clients
-    </Link>
+        {user?.role === "admin" && (
+          <>
+            <Link
+              href="/clients"
+              className={linkClass("/clients")}
+            >
+              👥 Clients
+            </Link>
 
-    <Link
-      href="/projects"
-      className={linkClass("/projects")}
-    >
-      🏗 Projects
-    </Link>
-<Link
-  href="/task-results"
-  className={linkClass("/task-results")}
->
-  📋 Task Results
-</Link>
-    <Link
-      href="/samples"
-      className={linkClass("/samples")}
-    >
-      🧪 Samples
-    </Link>
+            <Link
+              href="/projects"
+              className={linkClass("/projects")}
+            >
+              🏗 Projects
+            </Link>
 
-    <Link
-      href="/tests"
-      className={linkClass("/tests")}
-    >
-      🔬 Tests
-    </Link>
+            <Link
+              href="/task-results"
+              className={linkClass("/task-results")}
+            >
+              📋 Task Results
+            </Link>
 
-    <Link
-      href="/reports"
-      className={linkClass("/reports")}
-    >
-      📑 Reports
-    </Link>
-  </>
-)}
-{user?.role === "technician" && (
-  <Link
-    href="/technician"
-    className={linkClass("/technician")}
-  >
-    👷 Technician
-  </Link>
-)}
+            <Link
+              href="/samples"
+              className={linkClass("/samples")}
+            >
+              🧪 Samples
+            </Link>
+
+            <Link
+              href="/tests"
+              className={linkClass("/tests")}
+            >
+              🔬 Tests
+            </Link>
+
+            <Link
+              href="/reports"
+              className={linkClass("/reports")}
+            >
+              📑 Reports
+            </Link>
+          </>
+        )}
+
+        {user?.role === "technician" && (
+          <>
+            <Link
+              href="/technician/tests"
+              className={linkClass("/technician/tests")}
+            >
+              🔬 My Tests
+            </Link>
+
+            <Link
+              href="/task-results"
+              className={linkClass("/task-results")}
+            >
+              📋 Task Results
+            </Link>
+          </>
+        )}
+
       </nav>
     </aside>
   );

@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ReportHeader from "@/components/reports/ReportHeader";
 
 export default function ConcreteTestPage() {
   const params = useParams();
+  const router = useRouter();
   const taskId = Number(params.id);
 
   const [user, setUser] = useState<any>(null);
+  const [draftId, setDraftId] = useState<number | null>(null);
 const [samples, setSamples] = useState([
   {
     sample_no: 1,
@@ -58,14 +60,15 @@ const [samples, setSamples] = useState([
     notes: "",
   });
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem("user");
+useEffect(() => {
+  const savedUser = localStorage.getItem("user");
 
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
+  if (savedUser) {
+    setUser(JSON.parse(savedUser));
+  }
 
+  loadDraft();
+}, []);
 
   function updateField(
     field: string,
@@ -77,6 +80,7 @@ const [samples, setSamples] = useState([
     });
   }
 function updateSample(
+  
   index:number,
   field:string,
   value:string
@@ -92,47 +96,158 @@ function updateSample(
   setSamples(updated);
 
 }
+async function loadDraft() {
+  const { data: draft, error } = await supabase
+    .from("concrete_tests")
+    .select("*")
+    .eq("task_id", taskId)
+    .eq("status", "Draft")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  async function saveTest() {
-    console.log("CURRENT USER:", user);
-console.log("TASK ID:", taskId);
+  if (error) {
+    console.log("DRAFT ERROR:", error);
     
-console.log({
-  taskId,
-  userId: user?.id,
-  form
+    return;
+  }
+
+  if (!draft) {
+    console.log("No draft found");
+    return;
+  }
+
+  setDraftId(draft.id);
+
+setForm({
+  sample_code: draft.sample_code || "",
+  sample_location: draft.sample_location || "",
+  sampling_date: draft.sampling_date || "",
+  test_date: draft.test_date || "",
+  design_strength: draft.design_strength?.toString() || "",
+  cement_content: draft.cement_content?.toString() || "",
+  concrete_temperature:
+    draft.concrete_temperature?.toString() || "",
+  curing_temperature:
+    draft.curing_temperature?.toString() || "",
+  specimen_type: draft.specimen_type || "Cube",
+  protection_capping: draft.protection_capping || "",
+  sampled_by: draft.sampled_by || "",
+  notes: draft.notes || "",
 });
-   const { data: testData, error: testError } = await supabase
-  .from("concrete_tests")
-  .insert({
-    task_id: taskId,
 
-    sample_code: form.sample_code,
-    sample_location: form.sample_location,
+console.log("DRAFT FOUND:", draft);
+async function loadDraft() {
+  const { data: draft, error } = await supabase
+    .from("concrete_tests")
+    .select("*")
+    .eq("task_id", taskId)
+    .eq("status", "Draft")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-    sampling_date: form.sampling_date || null,
-test_date: form.test_date || null,
+  if (error) {
+    console.log("DRAFT ERROR:", error);
+    return;
+  }
 
-    design_strength: Number(form.design_strength),
-    cement_content: Number(form.cement_content),
+  if (!draft) {
+    console.log("No draft found");
+    return;
+  }
 
-    concrete_temperature: Number(form.concrete_temperature),
-    curing_temperature: Number(form.curing_temperature),
+  setDraftId(draft.id);
 
-    specimen_type: form.specimen_type,
+  setForm({
+    sample_code: draft.sample_code || "",
+    sample_location: draft.sample_location || "",
+    sampling_date: draft.sampling_date || "",
+    test_date: draft.test_date || "",
+    design_strength: draft.design_strength?.toString() || "",
+    cement_content: draft.cement_content?.toString() || "",
+    concrete_temperature:
+      draft.concrete_temperature?.toString() || "",
+    curing_temperature:
+      draft.curing_temperature?.toString() || "",
+    specimen_type: draft.specimen_type || "Cube",
+    protection_capping: draft.protection_capping || "",
+    sampled_by: draft.sampled_by || "",
+    notes: draft.notes || "",
+  });
 
-    protection_capping: form.protection_capping,
+  console.log("DRAFT FOUND:", draft);
+}
+}
+  async function saveTest() {
+  console.log("CURRENT USER:", user);
+  console.log("TASK ID:", taskId);
+  console.log("DRAFT ID:", draftId);
 
-    sampled_by: form.sampled_by,
+  console.log({
+    taskId,
+    userId: user?.id,
+    form
+  });
 
-    tested_by: null,
+ let testData;
+let testError;
 
-    notes: form.notes,
+const testValues = {
+  task_id: taskId,
 
-    status: "Draft",
-  })
-  .select()
-  .single();
+  sample_code: form.sample_code,
+  sample_location: form.sample_location,
+
+  sampling_date: form.sampling_date || null,
+  test_date: form.test_date || null,
+
+  design_strength: Number(form.design_strength) || null,
+  cement_content: Number(form.cement_content) || null,
+
+  concrete_temperature:
+    Number(form.concrete_temperature) || null,
+
+  curing_temperature:
+    Number(form.curing_temperature) || null,
+
+  specimen_type: form.specimen_type,
+
+  protection_capping: form.protection_capping,
+
+  sampled_by: form.sampled_by,
+
+  tested_by: null,
+
+  notes: form.notes,
+
+  status: "Draft",
+};
+
+if (draftId) {
+  const result = await supabase
+    .from("concrete_tests")
+    .update(testValues)
+    .eq("id", draftId)
+    .select()
+    .single();
+
+  testData = result.data;
+  testError = result.error;
+} else {
+  const result = await supabase
+    .from("concrete_tests")
+    .insert(testValues)
+    .select()
+    .single();
+
+  testData = result.data;
+  testError = result.error;
+
+  if (testData) {
+    setDraftId(testData.id);
+  }
+}
 
 
 if (testError) {
@@ -188,7 +303,15 @@ alert("تم حفظ نموذج الفحص والعينات بنجاح");
     <ProtectedRoute>
 
       <div className="p-6">
-        <ReportHeader />
+
+  <button
+    onClick={() => router.back()}
+    className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-700 font-semibold"
+  >
+    ← رجوع
+  </button>
+
+  <ReportHeader />
 
         <h1 className="text-2xl font-bold mb-6">
           🧪 نموذج فحص قوة الخرسانة
