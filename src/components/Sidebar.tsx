@@ -58,7 +58,12 @@ export default function Sidebar({ user }: Props) {
     >
       🏗 Projects
     </Link>
-
+<Link
+  href="/task-results"
+  className={linkClass("/task-results")}
+>
+  📋 Task Results
+</Link>
     <Link
       href="/samples"
       className={linkClass("/samples")}
