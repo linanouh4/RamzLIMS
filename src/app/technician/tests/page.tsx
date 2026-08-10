@@ -22,7 +22,7 @@ export default function TechnicianTestsPage() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-
+const [printingTask, setPrintingTask] = useState<number | null>(null);
   useEffect(() => {
     loadTasks();
   }, []);
@@ -51,11 +51,17 @@ export default function TechnicianTestsPage() {
     setTasks((data || []) as Task[]);
     setLoading(false);
   }
+function printTask(taskId: number) {
+  setPrintingTask(taskId);
 
-  function printTask() {
+  setTimeout(() => {
     window.print();
-  }
 
+    setTimeout(() => {
+      setPrintingTask(null);
+    }, 500);
+  }, 100);
+}
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-100 p-6">
@@ -102,8 +108,12 @@ export default function TechnicianTestsPage() {
               {tasks.map((task) => (
 
                 <div
-                  key={task.id}
-                  className="bg-white border rounded-xl shadow p-5"
+              key={task.id}
+              className={`bg-white border rounded-xl shadow p-5 ${
+              printingTask !== null && printingTask !== task.id
+              ? "hidden print:hidden"
+              : ""
+             }`}
                 >
 
                   {/* معلومات المهمة */}
@@ -152,11 +162,11 @@ export default function TechnicianTestsPage() {
                     </button>
 
                     <button
-                      onClick={printTask}
-                      className="bg-green-700 hover:bg-green-800 text-white px-5 py-3 rounded-lg"
-                    >
-                      🖨️ طباعة المهمة
-                    </button>
+  onClick={() => printTask(task.id)}
+  className="bg-green-700 hover:bg-green-800 text-white px-5 py-3 rounded-lg"
+>
+  🖨️ طباعة المهمة
+</button>
 
                   </div>
 
