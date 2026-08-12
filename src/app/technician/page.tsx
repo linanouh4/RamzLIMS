@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 import { getSavedUser } from "@/lib/auth";
-
+import { useRouter } from "next/navigation";
 type Task = {
+  test_type?: string | null;
 id: number;
 task_name: string;
 task_description?: string | null;
@@ -24,8 +25,8 @@ id: number;
 task_id: number;
 image_url: string;
 };
-
 export default function TechnicianPage() {
+const router = useRouter();
 const [tasks, setTasks] = useState<Task[]>([]);
 const [taskImages, setTaskImages] = useState<TaskImage[]>([]);
 const [printingTask, setPrintingTask] = useState<number | null>(null);
@@ -52,7 +53,7 @@ if (error) {
 }
 
 const loadedTasks = (data || []) as Task[];
-
+console.log("TECHNICIAN TASKS:", data);
 setTasks(loadedTasks);
 
 const images: TaskImage[] = [];
@@ -236,12 +237,20 @@ setTimeout(() => {
 }, 100);
 
 }
+return (
+  <ProtectedRoute>
+    <div className="p-6">
 
-return ( <ProtectedRoute> <div className="p-6">
+      <button
+        onClick={() => router.back()}
+        className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
+      >
+        ← رجوع
+      </button>
 
-    <h1 className="text-3xl font-bold">
-      👷 Technician Dashboard
-    </h1>
+      <h1 className="text-3xl font-bold">
+        👷 Technician Dashboard
+      </h1>
 
     <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -327,11 +336,15 @@ return ( <ProtectedRoute> <div className="p-6">
                     </label>
 
                     <a
-                      href={`/technician/tests/${task.id}`}
-                      className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg block text-center"
-                    >
-                      🧪 تعبئة نموذج الفحص
-                    </a>
+  href={
+    task.test_type === "field-density"
+      ? `/technician/tests/${task.id}/field-density`
+      : `/technician/tests/${task.id}`
+  }
+  className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg block text-center"
+>
+  🧪 تعبئة نموذج الفحص
+</a>
 
                     <input
                       id={`result-${task.id}`}

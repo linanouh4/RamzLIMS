@@ -51,7 +51,12 @@ export default function TechnicianTasksPage() {
   return (
     <ProtectedRoute>
       <div className="p-6">
-
+<button
+  onClick={() => router.back()}
+  className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
+>
+  ← رجوع
+</button>
         <h1 className="text-3xl font-bold mb-6">
           🛠️ مهامي
         </h1>
@@ -107,14 +112,17 @@ export default function TechnicianTasksPage() {
                   </div>
 
                   <button
-                    onClick={() =>
-                      router.push(`/technician/tests/${task.id}`)
-                    }
-                    className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg whitespace-nowrap"
-                  >
-                    فتح الفحص
-                  </button>
-
+  onClick={() => {
+    if (task.task_name === "Field Density") {
+      router.push(`/technician/tests/${task.id}/field-density`);
+    } else {
+      router.push(`/technician/tests/${task.id}`);
+    }
+  }}
+  className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg whitespace-nowrap"
+>
+  فتح الفحص
+</button>
                 </div>
 
               </div>
@@ -125,5 +133,6 @@ export default function TechnicianTasksPage() {
 
       </div>
     </ProtectedRoute>
+    
   );
 }

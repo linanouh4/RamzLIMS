@@ -47,13 +47,6 @@ export default function Sidebar({ user }: Props) {
 
       <nav className="space-y-4">
 
-        <Link
-          href="/dashboard"
-          className={linkClass("/dashboard")}
-        >
-          🏠 Dashboard
-        </Link>
-
         {user?.role === "admin" && (
           <>
             <Link
@@ -101,22 +94,36 @@ export default function Sidebar({ user }: Props) {
         )}
 
         {user?.role === "technician" && (
-          <>
-            <Link
-              href="/technician/tests"
-              className={linkClass("/technician/tests")}
-            >
-              🔬 My Tests
-            </Link>
+  <>
+    <Link
+      href="/technician"
+      className={linkClass("/technician")}
+    >
+      🏠 Dashboard
+    </Link>
 
-            <Link
-              href="/task-results"
-              className={linkClass("/task-results")}
-            >
-              📋 Task Results
-            </Link>
-          </>
-        )}
+    <Link
+      href="/technician/tasks"
+      className={linkClass("/technician/tasks")}
+    >
+      🛠️ My Tasks
+    </Link>
+
+    <Link
+      href="/technician/tests"
+      className={linkClass("/technician/tests")}
+    >
+      🔬 My Tests
+    </Link>
+
+    <Link
+      href="/task-results"
+      className={linkClass("/task-results")}
+    >
+      📋 Task Results
+    </Link>
+  </>
+)}
 
       </nav>
     </aside>

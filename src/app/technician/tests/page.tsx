@@ -65,7 +65,12 @@ function printTask(taskId: number) {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-100 p-6">
-
+<button
+  onClick={() => router.back()}
+  className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
+>
+  ← رجوع
+</button>
         <div className="max-w-7xl mx-auto">
 
           {/* العنوان */}

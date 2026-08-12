@@ -1,14 +1,22 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ReportHeader from "@/components/reports/ReportHeader";
 
+type User = {
+  id: number;
+  username?: string | null;
+  full_name?: string | null;
+};
+
 type Sample = {
   sample_no: number;
+  field_sample_no: string;
+  structure_part: string;
+  date_sampled: string;
   slump: string;
   age_days: string;
   length: string;
@@ -16,7 +24,25 @@ type Sample = {
   height: string;
   weight: string;
   load_kn: string;
+  break_type: string;
+  remarks: string;
 };
+
+const emptySample = (sample_no: number): Sample => ({
+  sample_no,
+  field_sample_no: "",
+  structure_part: "",
+  date_sampled: "",
+  slump: "",
+  age_days: "",
+  length: "",
+  width: "",
+  height: "",
+  weight: "",
+  load_kn: "",
+  break_type: "",
+  remarks: "",
+});
 
 export default function ConcreteTestPage() {
   const params = useParams();
@@ -24,45 +50,21 @@ export default function ConcreteTestPage() {
 
   const taskId = Number(params.id);
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [draftId, setDraftId] = useState<number | null>(null);
+
+  // اسم الفني للعرض فقط
+  const [testedByName, setTestedByName] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [samples, setSamples] = useState<Sample[]>([
-    {
-      sample_no: 1,
-      slump: "",
-      age_days: "",
-      length: "",
-      width: "",
-      height: "",
-      weight: "",
-      load_kn: "",
-    },
-    {
-      sample_no: 2,
-      slump: "",
-      age_days: "",
-      length: "",
-      width: "",
-      height: "",
-      weight: "",
-      load_kn: "",
-    },
-    {
-      sample_no: 3,
-      slump: "",
-      age_days: "",
-      length: "",
-      width: "",
-      height: "",
-      weight: "",
-      load_kn: "",
-    },
-  ]);
+  const [samples, setSamples] = useState<Sample[]>(
+    Array.from({ length: 12 }, (_, i) => emptySample(i + 1))
+  );
 
   const [form, setForm] = useState({
+    order_no: "",
     sample_code: "",
     sample_location: "",
     sampling_date: "",
@@ -71,24 +73,61 @@ export default function ConcreteTestPage() {
     cement_content: "",
     concrete_temperature: "",
     curing_temperature: "",
-    specimen_type: "Cube",
     protection_capping: "",
+    specimen_type: "Cube",
+    test_specification: "ASTM C39",
+
+    // هذا يبقى ID فقط وليس اسم
+    tested_by: "",
+
     sampled_by: "",
+    checked_by: "",
     notes: "",
   });
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
+    const initialize = async () => {
+      try {
+        const savedUser = localStorage.getItem("user");
 
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+        let parsedUser: User | null = null;
 
-    if (!Number.isNaN(taskId)) {
-      loadDraft();
-    } else {
-      setLoading(false);
-    }
+        if (savedUser) {
+          try {
+            parsedUser = JSON.parse(savedUser);
+          } catch (error) {
+            console.error("USER PARSE ERROR:", error);
+          }
+        }
+
+        if (parsedUser) {
+          setUser(parsedUser);
+
+          // الفني الحالي هو الافتراضي
+          setTestedByName(
+            parsedUser.full_name ||
+              parsedUser.username ||
+              ""
+          );
+
+          setForm((prev) => ({
+            ...prev,
+            tested_by:
+              parsedUser?.id != null
+                ? String(parsedUser.id)
+                : "",
+          }));
+        }
+
+        if (!Number.isNaN(taskId)) {
+          await loadDraft(parsedUser);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initialize();
   }, [taskId]);
 
   function updateField(field: string, value: string) {
@@ -115,13 +154,91 @@ export default function ConcreteTestPage() {
     });
   }
 
-  async function loadDraft() {
-    setLoading(true);
+  function calculateArea(sample: Sample) {
+    const length = Number(sample.length);
+    const width = Number(sample.width);
 
+    if (!length || !width) return null;
+
+    return (length * width) / 100;
+  }
+
+  function calculateVolume(sample: Sample) {
+    const length = Number(sample.length);
+    const width = Number(sample.width);
+    const height = Number(sample.height);
+
+    if (!length || !width || !height) return null;
+
+    return (length * width * height) / 1000;
+  }
+
+  function calculateUnitWeight(sample: Sample) {
+    const volume = calculateVolume(sample);
+    const weight = Number(sample.weight);
+
+    if (!volume || !weight) return null;
+
+    return weight / volume;
+  }
+
+  function calculateLoadKg(sample: Sample) {
+    const loadKn = Number(sample.load_kn);
+
+    if (!loadKn) return null;
+
+    return loadKn * 101.9716;
+  }
+
+  function calculateStrength(sample: Sample) {
+    const area = calculateArea(sample);
+    const loadKg = calculateLoadKg(sample);
+
+    if (!area || !loadKg) return null;
+
+    return loadKg / area;
+  }
+
+  const averageStrength = useMemo(() => {
+    const strengths = samples
+      .map(calculateStrength)
+      .filter(
+        (value): value is number =>
+          value !== null && Number.isFinite(value)
+      );
+
+    if (strengths.length === 0) return null;
+
+    return (
+      strengths.reduce((sum, value) => sum + value, 0) /
+      strengths.length
+    );
+  }, [samples]);
+
+  const acceptanceStatus = useMemo(() => {
+    if (averageStrength === null) return "";
+
+    const designStrength = Number(form.design_strength);
+
+    if (!designStrength) return "";
+
+    return averageStrength >= designStrength
+      ? "Accepted"
+      : "Not Accepted";
+  }, [averageStrength, form.design_strength]);
+
+  async function loadDraft(currentUser: User | null) {
     try {
       const { data: draft, error } = await supabase
         .from("concrete_tests")
-        .select("*")
+        .select(`
+          *,
+          tested_by_user:users!tested_by (
+            id,
+            full_name,
+            username
+          )
+        `)
         .eq("task_id", taskId)
         .eq("status", "Draft")
         .order("id", { ascending: false })
@@ -136,12 +253,37 @@ export default function ConcreteTestPage() {
 
       if (!draft) {
         console.log("No draft found");
+
+        // لا يوجد Draft، استخدم الفني الحالي
+        if (currentUser?.id != null) {
+          setForm((prev) => ({
+            ...prev,
+            tested_by: String(currentUser.id),
+          }));
+
+          setTestedByName(
+            currentUser.full_name ||
+              currentUser.username ||
+              ""
+          );
+        }
+
         return;
       }
 
       setDraftId(draft.id);
 
+      // -----------------------------------------
+      // tested_by = ID فقط
+      // -----------------------------------------
+
+      const draftTestedById =
+        draft.tested_by != null
+          ? String(draft.tested_by)
+          : "";
+
       setForm({
+        order_no: draft.order_no || "",
         sample_code: draft.sample_code || "",
         sample_location: draft.sample_location || "",
         sampling_date: draft.sampling_date || "",
@@ -154,85 +296,212 @@ export default function ConcreteTestPage() {
           draft.concrete_temperature?.toString() || "",
         curing_temperature:
           draft.curing_temperature?.toString() || "",
-        specimen_type: draft.specimen_type || "Cube",
         protection_capping:
           draft.protection_capping || "",
+        specimen_type:
+          draft.specimen_type || "Cube",
+        test_specification:
+          draft.test_specification || "ASTM C39",
+
+        // مهم جدًا:
+        // لا نحط اسم الفني هنا
+        tested_by: draftTestedById,
+
         sampled_by: draft.sampled_by || "",
+        checked_by: draft.checked_by || "",
         notes: draft.notes || "",
       });
 
-      const { data: results, error: resultsError } =
-        await supabase
-          .from("concrete_test_results")
-          .select("*")
-          .eq("test_id", draft.id)
-          .order("sample_no", { ascending: true });
+      // -----------------------------------------
+      // اسم الفني للعرض فقط
+      // -----------------------------------------
+
+      const testedUser = Array.isArray(draft.tested_by_user)
+        ? draft.tested_by_user[0]
+        : draft.tested_by_user;
+
+      if (testedUser) {
+        setTestedByName(
+          testedUser.full_name ||
+            testedUser.username ||
+            ""
+        );
+      } else if (
+        draftTestedById &&
+        currentUser?.id != null &&
+        Number(draftTestedById) === Number(currentUser.id)
+      ) {
+        setTestedByName(
+          currentUser.full_name ||
+            currentUser.username ||
+            ""
+        );
+      } else {
+        setTestedByName("");
+      }
+
+      // -----------------------------------------
+      // تحميل نتائج العينات
+      // -----------------------------------------
+
+      const {
+        data: results,
+        error: resultsError,
+      } = await supabase
+        .from("concrete_test_results")
+        .select("*")
+        .eq("test_id", draft.id)
+        .order("sample_no", {
+          ascending: true,
+        });
 
       if (resultsError) {
         console.error(
           "LOAD SAMPLE RESULTS ERROR:",
           resultsError
         );
-          return false;
 
+        alert(
+          "خطأ في تحميل نتائج العينات:\n" +
+            resultsError.message
+        );
+
+        return;
       }
 
       if (results && results.length > 0) {
-        const loadedSamples: Sample[] = [1, 2, 3].map(
-          (sampleNo) => {
-            const result = results.find(
-              (item) => item.sample_no === sampleNo
-            );
+        const loadedSamples: Sample[] =
+          Array.from(
+            { length: 12 },
+            (_, index) => {
+              const sampleNo = index + 1;
 
-            return {
-              sample_no: sampleNo,
-              slump: result?.slump?.toString() || "",
-              age_days:
-                result?.age_days?.toString() || "",
-              length:
-                result?.length?.toString() || "",
-              width:
-                result?.width?.toString() || "",
-              height:
-                result?.height?.toString() || "",
-              weight:
-                result?.weight?.toString() || "",
-              load_kn:
-                result?.load_kn?.toString() || "",
-            };
-          }
-        );
+              const result = results.find(
+                (item) =>
+                  Number(item.sample_no) ===
+                  sampleNo
+              );
+
+              return {
+                sample_no: sampleNo,
+
+                field_sample_no:
+                  result?.field_sample_no || "",
+
+                structure_part:
+                  result?.structure_part || "",
+
+                date_sampled:
+                  result?.date_sampled || "",
+
+                slump:
+                  result?.slump != null
+                    ? String(result.slump)
+                    : "",
+
+                age_days:
+                  result?.age_days != null
+                    ? String(result.age_days)
+                    : "",
+
+                length:
+                  result?.length != null
+                    ? String(result.length)
+                    : "",
+
+                width:
+                  result?.width != null
+                    ? String(result.width)
+                    : "",
+
+                height:
+                  result?.height != null
+                    ? String(result.height)
+                    : "",
+
+                weight:
+                  result?.weight != null
+                    ? String(result.weight)
+                    : "",
+
+                load_kn:
+                  result?.load_kn != null
+                    ? String(result.load_kn)
+                    : "",
+
+                break_type:
+                  result?.break_type || "",
+
+                remarks:
+                  result?.remarks || "",
+              };
+            }
+          );
 
         setSamples(loadedSamples);
       }
-
-      console.log("DRAFT FOUND:", draft);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error("LOAD DRAFT UNEXPECTED ERROR:", error);
     }
   }
 
   async function saveTest(): Promise<boolean> {
     if (!taskId) {
       alert("رقم المهمة غير صحيح");
-     return false;
+      return false;
     }
 
     setSaving(true);
 
     try {
+      // -----------------------------------------
+      // تحديد ID الفني فقط
+      // -----------------------------------------
+
+      const testedById =
+        user?.id != null
+          ? Number(user.id)
+          : form.tested_by
+          ? Number(form.tested_by)
+          : null;
+
       console.log("CURRENT USER:", user);
-      console.log("TASK ID:", taskId);
-      console.log("DRAFT ID:", draftId);
+      console.log("TESTED BY ID:", testedById);
+      console.log("TESTED BY NAME:", testedByName);
+
+      // حماية إضافية:
+      // إذا كانت القيمة ليست رقمًا، لا نرسلها
+      if (
+        testedById !== null &&
+        !Number.isFinite(testedById)
+      ) {
+        console.error(
+          "INVALID TESTED BY:",
+          testedById
+        );
+
+        alert(
+          "خطأ: رقم الفني غير صحيح. لم يتم الحفظ."
+        );
+
+        return false;
+      }
 
       const testValues = {
         task_id: taskId,
 
-        sample_code: form.sample_code,
-        sample_location: form.sample_location,
+        order_no: form.order_no || null,
 
-        sampling_date: form.sampling_date || null,
-        test_date: form.test_date || null,
+        sample_code: form.sample_code || null,
+
+        sample_location:
+          form.sample_location || null,
+
+        sampling_date:
+          form.sampling_date || null,
+
+        test_date:
+          form.test_date || null,
 
         design_strength:
           Number(form.design_strength) || null,
@@ -246,23 +515,58 @@ export default function ConcreteTestPage() {
         curing_temperature:
           Number(form.curing_temperature) || null,
 
-        specimen_type: form.specimen_type,
-
         protection_capping:
-          form.protection_capping,
+          form.protection_capping || null,
+
+        specimen_type:
+          form.specimen_type,
+
+        test_specification:
+          form.test_specification || null,
+
+        // =====================================
+        // أهم سطر في الملف كله
+        // قاعدة البيانات تريد bigint
+        // لذلك نحفظ ID الفني فقط
+        // =====================================
+        tested_by:
+          testedById !== null
+            ? testedById
+            : null,
 
         sampled_by:
-          form.sampled_by,
+          form.sampled_by || null,
 
-        tested_by: user?.id || null,
+        checked_by:
+          form.checked_by || null,
 
-        notes: form.notes,
+        notes:
+          form.notes || null,
+
+        average_strength:
+          averageStrength !== null
+            ? Number(
+                averageStrength.toFixed(2)
+              )
+            : null,
+
+        acceptance_status:
+          acceptanceStatus || null,
 
         status: "Draft",
       };
 
+      console.log(
+        "TEST VALUES:",
+        testValues
+      );
+
       let testData: any = null;
       let testError: any = null;
+
+      // -----------------------------------------
+      // تحديث Draft موجود
+      // -----------------------------------------
 
       if (draftId) {
         const result = await supabase
@@ -274,7 +578,13 @@ export default function ConcreteTestPage() {
 
         testData = result.data;
         testError = result.error;
-      } else {
+      }
+
+      // -----------------------------------------
+      // إنشاء Draft جديد
+      // -----------------------------------------
+
+      else {
         const result = await supabase
           .from("concrete_tests")
           .insert(testValues)
@@ -290,76 +600,215 @@ export default function ConcreteTestPage() {
       }
 
       if (testError) {
-        console.error("SAVE TEST ERROR:", testError);
-        alert(testError.message);
-          return false;
+        console.error(
+          "SAVE TEST ERROR:",
+          JSON.stringify(
+            testError,
+            null,
+            2
+          )
+        );
 
-      }
+        alert(
+          "خطأ في حفظ الفحص:\n" +
+            testError.message
+        );
 
-      if (!testData) {
-        alert("لم يتم إنشاء نموذج الفحص");
         return false;
       }
 
-      /*
-       * حذف النتائج القديمة أولاً.
-       * هذا يمنع تكرار نفس العينات عند الضغط على حفظ أكثر من مرة.
-       */
-      const { error: deleteError } = await supabase
+      if (!testData) {
+        alert(
+          "لم يتم إنشاء نموذج الفحص"
+        );
+
+        return false;
+      }
+
+      // -----------------------------------------
+      // حذف النتائج القديمة
+      // -----------------------------------------
+
+      const {
+        error: deleteResultsError,
+      } = await supabase
         .from("concrete_test_results")
         .delete()
         .eq("test_id", testData.id);
 
-      if (deleteError) {
+      if (deleteResultsError) {
         console.error(
-          "DELETE OLD RESULTS ERROR:",
-          deleteError
+          "DELETE RESULTS ERROR:",
+          deleteResultsError
         );
-        alert(deleteError.message);
+
+        alert(
+          "خطأ في حذف النتائج القديمة:\n" +
+            deleteResultsError.message
+        );
+
         return false;
       }
 
-      const results = samples.map((sample) => ({
-        test_id: testData.id,
+      // -----------------------------------------
+      // تجهيز نتائج العينات
+      // -----------------------------------------
 
-        sample_no: sample.sample_no,
+      const sampleResults = samples.map(
+        (sample) => {
+          const area =
+            calculateArea(sample);
 
-        slump: Number(sample.slump) || null,
+          const volume =
+            calculateVolume(sample);
 
-        age_days:
-          Number(sample.age_days) || null,
+          const unitWeight =
+            calculateUnitWeight(sample);
 
-        length:
-          Number(sample.length) || null,
+          const loadKg =
+            calculateLoadKg(sample);
 
-        width:
-          Number(sample.width) || null,
+          const strength =
+            calculateStrength(sample);
 
-        height:
-          Number(sample.height) || null,
+          return {
+            test_id: testData.id,
 
-        weight:
-          Number(sample.weight) || null,
+            sample_no:
+              sample.sample_no,
 
-        load_kn:
-          Number(sample.load_kn) || null,
-      }));
+            field_sample_no:
+              sample.field_sample_no ||
+              null,
 
-      const { error: resultError } = await supabase
+            structure_part:
+              sample.structure_part ||
+              null,
+
+            date_sampled:
+              sample.date_sampled ||
+              null,
+
+            slump:
+              Number(sample.slump) ||
+              null,
+
+            age_days:
+              Number(sample.age_days) ||
+              null,
+
+            length:
+              Number(sample.length) ||
+              null,
+
+            width:
+              Number(sample.width) ||
+              null,
+
+            height:
+              Number(sample.height) ||
+              null,
+
+            area:
+              area !== null
+                ? Number(
+                    area.toFixed(2)
+                  )
+                : null,
+
+            volume:
+              volume !== null
+                ? Number(
+                    volume.toFixed(2)
+                  )
+                : null,
+
+            weight:
+              Number(sample.weight) ||
+              null,
+
+            unit_weight:
+              unitWeight !== null
+                ? Number(
+                    unitWeight.toFixed(3)
+                  )
+                : null,
+
+            load_kn:
+              Number(sample.load_kn) ||
+              null,
+
+            load_kg:
+              loadKg !== null
+                ? Number(
+                    loadKg.toFixed(1)
+                  )
+                : null,
+
+            strength:
+              strength !== null
+                ? Number(
+                    strength.toFixed(1)
+                  )
+                : null,
+
+            break_type:
+              sample.break_type ||
+              null,
+
+            remarks:
+              sample.remarks ||
+              null,
+          };
+        }
+      );
+
+      // -----------------------------------------
+      // حفظ نتائج العينات
+      // -----------------------------------------
+
+      const {
+        error: insertResultsError,
+      } = await supabase
         .from("concrete_test_results")
-        .insert(results);
+        .insert(sampleResults);
 
-      if (resultError) {
+      if (insertResultsError) {
         console.error(
-          "SAVE SAMPLE RESULTS ERROR:",
-          resultError
+          "INSERT SAMPLE RESULTS ERROR:",
+          JSON.stringify(
+            insertResultsError,
+            null,
+            2
+          )
         );
-        alert(resultError.message);
+
+        alert(
+          "خطأ في حفظ نتائج العينات:\n" +
+            insertResultsError.message
+        );
+
         return false;
       }
 
-      alert("تم حفظ نموذج الفحص والعينات بنجاح");
+      alert(
+        "تم حفظ المسودة بنجاح"
+      );
+
       return true;
+    } catch (error: any) {
+      console.error(
+        "UNEXPECTED SAVE ERROR:",
+        error
+      );
+
+      alert(
+        "حدث خطأ غير متوقع:\n" +
+          (error?.message ||
+            "خطأ غير معروف")
+      );
+
+      return false;
     } finally {
       setSaving(false);
     }
@@ -373,9 +822,13 @@ export default function ConcreteTestPage() {
     return (
       <ProtectedRoute>
         <div className="p-6">
-          <div className="bg-white rounded-xl shadow p-6">
-            جاري تحميل نموذج الفحص...
-          </div>
+          <button
+  onClick={() => router.back()}
+  className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
+>
+  ← رجوع
+</button>
+          جاري تحميل نموذج الفحص...
         </div>
       </ProtectedRoute>
     );
@@ -383,358 +836,757 @@ export default function ConcreteTestPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-6">
+      <div className="min-h-screen bg-gray-100 p-4 md:p-6">
 
-        {/* زر الرجوع */}
-        <button
-          onClick={() => router.back()}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-blue-700 font-semibold print:hidden"
-        >
-          ← رجوع
-        </button>
+        {/* التحكم */}
+        <div className="flex flex-wrap gap-3 mb-4 print:hidden">
 
-        {/* رأس التقرير */}
-        <ReportHeader />
-
-        {/* عنوان النموذج */}
-        <h1 className="text-2xl font-bold mb-6">
-          🧪 نموذج فحص قوة الخرسانة
-        </h1>
-
-        {/* بيانات الفحص */}
-        <div className="grid md:grid-cols-2 gap-4">
-
-          <input
-            placeholder="كود العينة"
-            className="border p-3 rounded"
-            value={form.sample_code}
-            onChange={(e) =>
-              updateField(
-                "sample_code",
-                e.target.value
-              )
-            }
-          />
-
-          <input
-            placeholder="موقع العينة"
-            className="border p-3 rounded"
-            value={form.sample_location}
-            onChange={(e) =>
-              updateField(
-                "sample_location",
-                e.target.value
-              )
-            }
-          />
-
-          <input
-            type="date"
-            className="border p-3 rounded"
-            value={form.sampling_date}
-            onChange={(e) =>
-              updateField(
-                "sampling_date",
-                e.target.value
-              )
-            }
-          />
-
-          <input
-            type="date"
-            className="border p-3 rounded"
-            value={form.test_date}
-            onChange={(e) =>
-              updateField(
-                "test_date",
-                e.target.value
-              )
-            }
-          />
-
-          <input
-            placeholder="مقاومة التصميم Kg/cm2"
-            className="border p-3 rounded"
-            value={form.design_strength}
-            onChange={(e) =>
-              updateField(
-                "design_strength",
-                e.target.value
-              )
-            }
-          />
-
-          <input
-            placeholder="محتوى الاسمنت Kg/m3"
-            className="border p-3 rounded"
-            value={form.cement_content}
-            onChange={(e) =>
-              updateField(
-                "cement_content",
-                e.target.value
-              )
-            }
-          />
-
-          <input
-            placeholder="حرارة الخرسانة °C"
-            className="border p-3 rounded"
-            value={form.concrete_temperature}
-            onChange={(e) =>
-              updateField(
-                "concrete_temperature",
-                e.target.value
-              )
-            }
-          />
-
-          <input
-            placeholder="حرارة المعالجة °C"
-            className="border p-3 rounded"
-            value={form.curing_temperature}
-            onChange={(e) =>
-              updateField(
-                "curing_temperature",
-                e.target.value
-              )
-            }
-          />
-
-          <select
-            className="border p-3 rounded"
-            value={form.specimen_type}
-            onChange={(e) =>
-              updateField(
-                "specimen_type",
-                e.target.value
-              )
-            }
+          <button
+            onClick={() => router.back()}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg"
           >
-            <option value="Cube">
-              Cube
-            </option>
+            ← رجوع
+          </button>
 
-            <option value="Cylinder">
-              Cylinder
-            </option>
+          <button
+            onClick={saveTest}
+            disabled={saving}
+            className="bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white px-5 py-2 rounded-lg"
+          >
+            {saving
+              ? "جاري الحفظ..."
+              : "💾 حفظ المسودة"}
+          </button>
 
-            <option value="Concrete Core">
-              Concrete Core
-            </option>
-          </select>
+          <button
+            onClick={async () => {
+              const success =
+                await saveTest();
 
-          <input
-            placeholder="الحماية والتغطية"
-            className="border p-3 rounded"
-            value={form.protection_capping}
-            onChange={(e) =>
-              updateField(
-                "protection_capping",
-                e.target.value
-              )
-            }
-          />
+              if (success) {
+                router.back();
+              }
+            }}
+            disabled={saving}
+            className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-5 py-2 rounded-lg"
+          >
+            💾 حفظ المسودة والخروج
+          </button>
 
-          <input
-            placeholder="أخذ العينة بواسطة"
-            className="border p-3 rounded"
-            value={form.sampled_by}
-            onChange={(e) =>
-              updateField(
-                "sampled_by",
-                e.target.value
-              )
-            }
-          />
-
-          <textarea
-            placeholder="ملاحظات"
-            className="border p-3 rounded md:col-span-2"
-            value={form.notes}
-            onChange={(e) =>
-              updateField(
-                "notes",
-                e.target.value
-              )
-            }
-          />
+          <button
+            onClick={printReport}
+            className="bg-green-700 hover:bg-green-800 text-white px-5 py-2 rounded-lg"
+          >
+            🖨️ طباعة التقرير
+          </button>
 
         </div>
 
-        {/* نتائج العينات */}
-        <div className="mt-8">
+        {/* التقرير */}
+        <div className="bg-white p-4 md:p-6 shadow-sm print:shadow-none">
 
-          <h2 className="text-xl font-bold mb-4">
-            📋 نتائج العينات
-          </h2>
+          <ReportHeader />
 
-          <div className="overflow-x-auto">
+          {/* العنوان */}
+          <div className="border border-black mt-4">
 
-            <table className="min-w-full border">
+            <div className="text-center font-bold text-lg p-3 border-b border-black">
+              WORKSHEET FOR COMPRESSIVE STRENGTH OF CONCRETE / MORTAR SAMPLES
+            </div>
+
+            <div className="text-center font-bold text-lg p-2">
+              نموذج فحص قوة عينات الخرسانة الأسمنتية
+            </div>
+
+          </div>
+
+          {/* بيانات النموذج */}
+          <div className="border-l border-r border-b border-black">
+
+            <div className="grid grid-cols-2">
+
+              <Field
+                label="Sampling Date"
+                value={form.sampling_date}
+                type="date"
+                onChange={(v) =>
+                  updateField(
+                    "sampling_date",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Date Tested"
+                value={form.test_date}
+                type="date"
+                onChange={(v) =>
+                  updateField(
+                    "test_date",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Order No."
+                value={form.order_no}
+                onChange={(v) =>
+                  updateField(
+                    "order_no",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Sample Code"
+                value={form.sample_code}
+                onChange={(v) =>
+                  updateField(
+                    "sample_code",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Sample Location"
+                value={form.sample_location}
+                onChange={(v) =>
+                  updateField(
+                    "sample_location",
+                    v
+                  )
+                }
+              />
+
+              {/* ================================= */}
+              {/* Tested By */}
+              {/* الاسم فقط للعرض */}
+              {/* ================================= */}
+
+              <div className="border-t border-black p-2">
+                <div className="font-bold text-xs mb-1">
+                  Tested By
+                </div>
+
+                <input
+                  type="text"
+                  className="w-full border p-2 bg-gray-100"
+                  value={testedByName}
+                  readOnly
+                />
+              </div>
+
+              <Field
+                label="Strength Specified / Design Strength (Kg/cm²)"
+                value={form.design_strength}
+                type="number"
+                onChange={(v) =>
+                  updateField(
+                    "design_strength",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Sampled By"
+                value={form.sampled_by}
+                onChange={(v) =>
+                  updateField(
+                    "sampled_by",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Cement Content (Kg/m³ - Portland)"
+                value={form.cement_content}
+                type="number"
+                onChange={(v) =>
+                  updateField(
+                    "cement_content",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Concrete Temperature (°C)"
+                value={
+                  form.concrete_temperature
+                }
+                type="number"
+                onChange={(v) =>
+                  updateField(
+                    "concrete_temperature",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Protection & Capping or No"
+                value={
+                  form.protection_capping
+                }
+                onChange={(v) =>
+                  updateField(
+                    "protection_capping",
+                    v
+                  )
+                }
+              />
+
+              <Field
+                label="Curing Temperature (°C)"
+                value={
+                  form.curing_temperature
+                }
+                type="number"
+                onChange={(v) =>
+                  updateField(
+                    "curing_temperature",
+                    v
+                  )
+                }
+              />
+
+              <div className="border-t border-black p-2">
+
+                <div className="font-bold text-xs mb-2">
+                  Specimens Desc. / Type
+                </div>
+
+                <select
+                  className="w-full border p-2"
+                  value={form.specimen_type}
+                  onChange={(e) =>
+                    updateField(
+                      "specimen_type",
+                      e.target.value
+                    )
+                  }
+                >
+                  <option value="Cube">
+                    CUBE
+                  </option>
+
+                  <option value="Cylinder">
+                    CYLINDER
+                  </option>
+
+                  <option value="Concrete Core">
+                    Concrete Cores
+                  </option>
+                </select>
+
+              </div>
+
+              <Field
+                label="Test Specification"
+                value={
+                  form.test_specification
+                }
+                onChange={(v) =>
+                  updateField(
+                    "test_specification",
+                    v
+                  )
+                }
+              />
+
+            </div>
+
+          </div>
+
+          {/* الجدول */}
+          <div className="overflow-x-auto mt-5">
+
+            <table className="w-full border-collapse border border-black text-[10px]">
 
               <thead>
-                <tr className="bg-gray-100">
 
-                  <th className="border p-2">
-                    رقم العينة
+                <tr className="bg-gray-200">
+
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Test No.
+                    <br />
+                    <span dir="rtl">
+                      رقم العينة
+                    </span>
                   </th>
 
-                  <th className="border p-2">
-                    Slump
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Field Sample No.
+                    <br />
+                    <span dir="rtl">
+                      رقم العينة في الحقل
+                    </span>
                   </th>
 
-                  <th className="border p-2">
-                    العمر يوم
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2 min-w-[150px]"
+                  >
+                    Part of Structure or Station Represented
+                    <br />
+                    <span dir="rtl">
+                      أي جزء من الإنشاء تمثله
+                    </span>
                   </th>
 
-                  <th className="border p-2">
-                    الطول
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Date Sampled
+                    <br />
+                    <span dir="rtl">
+                      تاريخ أخذ العينة
+                    </span>
                   </th>
 
-                  <th className="border p-2">
-                    العرض
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    SLUMP
+                    <br />
+                    (mm)
+                    <br />
+                    <span dir="rtl">
+                      الهبوط
+                    </span>
                   </th>
 
-                  <th className="border p-2">
-                    الارتفاع
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Age
+                    <br />
+                    (Days)
+                    <br />
+                    <span dir="rtl">
+                      عمر العينة بالأيام
+                    </span>
                   </th>
 
-                  <th className="border p-2">
-                    الوزن
+                  <th
+                    colSpan={3}
+                    className="border border-black p-2"
+                  >
+                    Sample Dimensions
+                    <br />
+                    (mm)
+                    <br />
+                    <span dir="rtl">
+                      أبعاد العينة (مليمتر)
+                    </span>
                   </th>
 
-                  <th className="border p-2">
-                    الحمل KN
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    X-Sectional
+                    <br />
+                    Area cm²
+                    <br />
+                    <span dir="rtl">
+                      المساحة سم²
+                    </span>
+                  </th>
+
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Volume
+                    <br />
+                    cm³
+                    <br />
+                    <span dir="rtl">
+                      الحجم سم³
+                    </span>
+                  </th>
+
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Weight
+                    <br />
+                    g
+                    <br />
+                    <span dir="rtl">
+                      الوزن غم
+                    </span>
+                  </th>
+
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Unit Wt
+                    <br />
+                    g/cm³
+                    <br />
+                    <span dir="rtl">
+                      الوزن النوعي
+                    </span>
+                  </th>
+
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Total Load
+                    <br />
+                    KN
+                    <br />
+                    <span dir="rtl">
+                      التحميل الكلي KN
+                    </span>
+                  </th>
+
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Total Load
+                    <br />
+                    Kg
+                    <br />
+                    <span dir="rtl">
+                      التحميل الكلي كغم
+                    </span>
+                  </th>
+
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2"
+                  >
+                    Unit Strength
+                    <br />
+                    Kg/cm²
+                    <br />
+                    <span dir="rtl">
+                      وحدة القوة كغم/سم²
+                    </span>
+                  </th>
+
+                  <th
+                    rowSpan={2}
+                    className="border border-black p-2 min-w-[120px]"
+                  >
+                    Type of Break
+                    <br />
+                    Remarks
+                    <br />
+                    <span dir="rtl">
+                      نوع الكسر والملاحظات
+                    </span>
                   </th>
 
                 </tr>
+
+                <tr className="bg-gray-200">
+
+                  <th className="border border-black p-1">
+                    L
+                  </th>
+
+                  <th className="border border-black p-1">
+                    W
+                  </th>
+
+                  <th className="border border-black p-1">
+                    H
+                  </th>
+
+                </tr>
+
               </thead>
 
               <tbody>
 
-                {[1, 2, 3].map((row) => (
+                {samples.map(
+                  (sample, index) => {
+                    const area =
+                      calculateArea(sample);
 
-                  <tr key={row}>
+                    const volume =
+                      calculateVolume(sample);
 
-                    <td className="border p-2 text-center">
-                      {row}
-                    </td>
+                    const unitWeight =
+                      calculateUnitWeight(
+                        sample
+                      );
 
-                    <td className="border p-2">
-                      <input
-                        className="border w-20 p-1"
-                        value={
-                          samples[row - 1].slump
-                        }
-                        onChange={(e) =>
-                          updateSample(
-                            row - 1,
-                            "slump",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </td>
+                    const loadKg =
+                      calculateLoadKg(
+                        sample
+                      );
 
-                    <td className="border p-2">
-                      <input
-                        className="border w-20 p-1"
-                        value={
-                          samples[row - 1].age_days
-                        }
-                        onChange={(e) =>
-                          updateSample(
-                            row - 1,
-                            "age_days",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </td>
+                    const strength =
+                      calculateStrength(
+                        sample
+                      );
 
-                    <td className="border p-2">
-                      <input
-                        className="border w-20 p-1"
-                        value={
-                          samples[row - 1].length
+                    return (
+                      <tr
+                        key={
+                          sample.sample_no
                         }
-                        onChange={(e) =>
-                          updateSample(
-                            row - 1,
-                            "length",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </td>
+                      >
 
-                    <td className="border p-2">
-                      <input
-                        className="border w-20 p-1"
-                        value={
-                          samples[row - 1].width
-                        }
-                        onChange={(e) =>
-                          updateSample(
-                            row - 1,
-                            "width",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </td>
+                        <td className="border border-black p-1 text-center font-bold">
+                          {sample.sample_no}
+                        </td>
 
-                    <td className="border p-2">
-                      <input
-                        className="border w-20 p-1"
-                        value={
-                          samples[row - 1].height
-                        }
-                        onChange={(e) =>
-                          updateSample(
-                            row - 1,
-                            "height",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </td>
+                        <td className="border border-black p-1">
+                          <input
+                            className="w-full min-w-[70px] p-1 border"
+                            value={
+                              sample.field_sample_no
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "field_sample_no",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
 
-                    <td className="border p-2">
-                      <input
-                        className="border w-20 p-1"
-                        value={
-                          samples[row - 1].weight
-                        }
-                        onChange={(e) =>
-                          updateSample(
-                            row - 1,
-                            "weight",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </td>
+                        <td className="border border-black p-1">
+                          <input
+                            className="w-full min-w-[130px] p-1 border"
+                            value={
+                              sample.structure_part
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "structure_part",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
 
-                    <td className="border p-2">
-                      <input
-                        className="border w-20 p-1"
-                        value={
-                          samples[row - 1].load_kn
-                        }
-                        onChange={(e) =>
-                          updateSample(
-                            row - 1,
-                            "load_kn",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </td>
+                        <td className="border border-black p-1">
+                          <input
+                            type="date"
+                            className="w-full min-w-[110px] p-1 border"
+                            value={
+                              sample.date_sampled
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "date_sampled",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
 
-                  </tr>
+                        <td className="border border-black p-1">
+                          <input
+                            type="number"
+                            className="w-full min-w-[55px] p-1 border"
+                            value={
+                              sample.slump
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "slump",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
 
-                ))}
+                        <td className="border border-black p-1">
+                          <input
+                            type="number"
+                            className="w-full min-w-[50px] p-1 border"
+                            value={
+                              sample.age_days
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "age_days",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
+
+                        <DimensionInput
+                          value={
+                            sample.length
+                          }
+                          onChange={(v) =>
+                            updateSample(
+                              index,
+                              "length",
+                              v
+                            )
+                          }
+                        />
+
+                        <DimensionInput
+                          value={
+                            sample.width
+                          }
+                          onChange={(v) =>
+                            updateSample(
+                              index,
+                              "width",
+                              v
+                            )
+                          }
+                        />
+
+                        <DimensionInput
+                          value={
+                            sample.height
+                          }
+                          onChange={(v) =>
+                            updateSample(
+                              index,
+                              "height",
+                              v
+                            )
+                          }
+                        />
+
+                        <td className="border border-black p-1 text-center bg-gray-50">
+                          {area !== null
+                            ? area.toFixed(2)
+                            : ""}
+                        </td>
+
+                        <td className="border border-black p-1 text-center bg-gray-50">
+                          {volume !== null
+                            ? volume.toFixed(2)
+                            : ""}
+                        </td>
+
+                        <td className="border border-black p-1">
+                          <input
+                            type="number"
+                            className="w-full min-w-[65px] p-1 border"
+                            value={
+                              sample.weight
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "weight",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
+
+                        <td className="border border-black p-1 text-center bg-gray-50">
+                          {unitWeight !== null
+                            ? unitWeight.toFixed(
+                                3
+                              )
+                            : ""}
+                        </td>
+
+                        <td className="border border-black p-1">
+                          <input
+                            type="number"
+                            step="0.1"
+                            className="w-full min-w-[70px] p-1 border"
+                            value={
+                              sample.load_kn
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "load_kn",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
+
+                        <td className="border border-black p-1 text-center bg-gray-50">
+                          {loadKg !== null
+                            ? loadKg.toFixed(
+                                0
+                              )
+                            : ""}
+                        </td>
+
+                        <td className="border border-black p-1 text-center bg-gray-50 font-semibold">
+                          {strength !== null
+                            ? strength.toFixed(
+                                1
+                              )
+                            : ""}
+                        </td>
+
+                        <td className="border border-black p-1">
+
+                          <input
+                            placeholder="Break"
+                            className="w-full p-1 border mb-1"
+                            value={
+                              sample.break_type
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "break_type",
+                                e.target.value
+                              )
+                            }
+                          />
+
+                          <input
+                            placeholder="Remarks"
+                            className="w-full p-1 border"
+                            value={
+                              sample.remarks
+                            }
+                            onChange={(e) =>
+                              updateSample(
+                                index,
+                                "remarks",
+                                e.target.value
+                              )
+                            }
+                          />
+
+                        </td>
+
+                      </tr>
+                    );
+                  }
+                )}
 
               </tbody>
 
@@ -742,44 +1594,172 @@ export default function ConcreteTestPage() {
 
           </div>
 
+          {/* النتائج النهائية */}
+          <div className="mt-4 border border-black">
+
+            <div className="grid md:grid-cols-5">
+
+              <div className="border-b md:border-b-0 md:border-r border-black p-3">
+                <strong>
+                  AVG
+                </strong>
+
+                <div className="text-xl font-bold mt-1">
+                  {averageStrength !== null
+                    ? averageStrength.toFixed(
+                        1
+                      )
+                    : "-"}
+                </div>
+              </div>
+
+              <div className="border-b md:border-b-0 md:border-r border-black p-3">
+
+                <strong>
+                  Acceptance
+                </strong>
+
+                <div
+                  className={`text-xl font-bold mt-1 ${
+                    acceptanceStatus ===
+                    "Accepted"
+                      ? "text-green-700"
+                      : acceptanceStatus ===
+                        "Not Accepted"
+                      ? "text-red-700"
+                      : ""
+                  }`}
+                >
+                  {acceptanceStatus ||
+                    "-"}
+                </div>
+
+              </div>
+
+              {/* ================================= */}
+              {/* Tested By النهائي */}
+              {/* ================================= */}
+
+              <div className="border-b md:border-b-0 md:border-r border-black p-3">
+
+                <strong>
+                  Tested By (L.T)
+                </strong>
+
+                <input
+                  type="text"
+                  className="w-full border p-2 mt-2 bg-gray-100"
+                  value={testedByName}
+                  readOnly
+                />
+
+              </div>
+
+              <div className="border-b md:border-b-0 md:border-r border-black p-3">
+
+                <strong>
+                  Checked By (M.E)
+                </strong>
+
+                <input
+                  className="w-full border p-2 mt-2"
+                  value={
+                    form.checked_by
+                  }
+                  onChange={(e) =>
+                    updateField(
+                      "checked_by",
+                      e.target.value
+                    )
+                  }
+                />
+
+              </div>
+
+              <div className="p-3">
+
+                <strong>
+                  Notes
+                </strong>
+
+                <textarea
+                  className="w-full border p-2 mt-2"
+                  value={form.notes}
+                  onChange={(e) =>
+                    updateField(
+                      "notes",
+                      e.target.value
+                    )
+                  }
+                />
+
+              </div>
+
+            </div>
+
+          </div>
+
         </div>
 
-        {/* أزرار التحكم */}
-       <div className="flex flex-wrap gap-3 mt-6 print:hidden">
-
-  <button
-    onClick={saveTest}
-    disabled={saving}
-    className="bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg"
-  >
-    {saving
-      ? "جاري الحفظ..."
-      : "💾 حفظ المسودة"}
-  </button>
-
- <button
-  onClick={async () => {
-    const success = await saveTest();
-
-    if (success) {
-      router.back();
-    }
-  }}
-  disabled={saving}
-  className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg"
->
-  💾 حفظ المسودة والخروج
-</button>
-
-  <button
-    onClick={printReport}
-    className="bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-lg"
-  >
-    🖨️ طباعة التقرير
-  </button>
-
-</div>
       </div>
     </ProtectedRoute>
+  );
+}
+
+/* =========================
+   Components
+========================= */
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  return (
+    <div className="border-t border-black p-2">
+
+      <div className="font-bold text-xs mb-1">
+        {label}
+      </div>
+
+      <input
+        type={type}
+        className="w-full border p-2"
+        value={value}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
+      />
+
+    </div>
+  );
+}
+
+function DimensionInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <td className="border border-black p-1">
+
+      <input
+        type="number"
+        className="w-full min-w-[50px] p-1 border"
+        value={value}
+        onChange={(e) =>
+          onChange(e.target.value)
+        }
+      />
+
+    </td>
   );
 }

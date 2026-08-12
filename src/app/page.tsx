@@ -18,40 +18,47 @@ export default function Home() {
     }
   }, [router]);
 
-  const handleLogin = async () => {
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("username", username.trim())
-      .eq("password", password.trim())
-      .limit(1);
+ const handleLogin = async () => {
+  // البحث عن المستخدم في جدول users
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("username", username.trim())
+    .eq("password", password.trim())
+    .limit(1);
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  if (error) {
+    console.error("USER LOGIN ERROR:", error);
+    alert(error.message);
+    return;
+  }
 
-    if (!data || data.length === 0) {
-      alert("اسم المستخدم أو كلمة المرور غير صحيحة");
-      return;
-    }
+  if (!data || data.length === 0) {
+    alert("اسم المستخدم أو كلمة المرور غير صحيحة");
+    return;
+  }
 
-    const row = data[0];
-    const user = {
-      id: row.id,
-      username: row.username,
-      full_name: row.full_name || row.username,
-      role: row.role || "reception",
-    };
+  const row = data[0];
 
-    saveUser(user);
-
-if (user.role === "technician") {
-  router.push("/technician");
-} else {
-  router.push("/dashboard");
-}
+  // حفظ المستخدم بالطريقة القديمة
+  const user = {
+    id: row.id,
+    username: row.username,
+    full_name: row.full_name || row.username,
+    role: row.role || "reception",
   };
+
+  console.log("LOGGED IN USER:", user);
+
+  saveUser(user);
+
+  // التوجيه حسب الصلاحية
+  if (user.role === "technician") {
+    router.push("/technician");
+  } else {
+    router.push("/dashboard");
+  }
+};
 
   return (
     <main className="min-h-screen bg-slate-100 flex items-center justify-center">
