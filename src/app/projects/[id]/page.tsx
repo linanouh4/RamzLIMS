@@ -19,6 +19,7 @@ const [technicianId, setTechnicianId] = useState("");
 const [taskName, setTaskName] = useState("");
 const [taskDescription, setTaskDescription] = useState("");
 const [priority, setPriority] = useState("عادي");
+const [testType, setTestType] = useState("");
   useEffect(() => {
     if (id) {
       loadProject();
@@ -34,7 +35,6 @@ async function saveTask() {
     alert("الرجاء إدخال اسم المهمة");
     return;
   }
-
   const { error } = await supabase.from("tasks").insert([
     {
       project_id: Number(id),
@@ -42,6 +42,7 @@ async function saveTask() {
       task_name: taskName,
       task_description: taskDescription,
       priority: priority,
+      test_type: testType,
     },
   ]);
 
@@ -57,6 +58,7 @@ async function saveTask() {
   setTaskName("");
   setTaskDescription("");
   setPriority("عادي");
+  setTestType("");
 }
   async function loadProject() {
     setLoading(true);
@@ -212,7 +214,25 @@ if (techError) {
           ))}
         </select>
       </div>
+<div className="mb-4">
+  <label className="block mb-2 font-medium">
+    نوع الفحص
+  </label>
 
+  <select
+    value={testType}
+    onChange={(e) => setTestType(e.target.value)}
+    className="w-full border rounded-lg p-3"
+  >
+    <option value="">اختر نوع الفحص</option>
+<option value="concrete-strength">
+  فحص قوة عينات الخرسانة الأسمنتية
+</option>
+<option value="field-density">
+  اختبار الكثافة الحقلية بطريقة المخروط الرملي
+</option>
+  </select>
+</div>
       <div className="mb-4">
         <label className="block mb-2 font-medium">
           اسم المهمة

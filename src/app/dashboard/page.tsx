@@ -19,14 +19,23 @@ export default function Dashboard() {
   const [recentSamples, setRecentSamples] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-const savedUser = getSavedUser();
+ useEffect(() => {
+  const savedUser = getSavedUser();
 
-if (savedUser) {
+  if (!savedUser) {
+    router.push("/");
+    return;
+  }
+
+  // الفني لا يدخل Dashboard المدير
+  if (savedUser.role === "technician") {
+    router.push("/technician");
+    return;
+  }
+
   setUser(savedUser);
-}
-    loadDashboard();
-  }, []);
+  loadDashboard();
+}, [router]);
 
   async function loadDashboard() {
     try {

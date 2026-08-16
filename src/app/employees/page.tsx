@@ -84,66 +84,107 @@ async function loadUsers() {
     setOpenModal(true);
   }
 
-  async function saveUser() {
-    if (!username.trim() || !fullName.trim()) {
-      alert("Please enter username and full name");
-      return;
-    }
+async function saveUser() {
+  if (!username.trim() || !fullName.trim()) {
+    alert("Please enter username and full name");
+    return;
+  }
 
-    if (!selectedUser && !password.trim()) {
-      alert("Please enter a password for the new user");
-      return;
-    }
+  if (!selectedUser && !password.trim()) {
+    alert("Please enter a password for the new user");
+    return;
+  }
 
-   const payload: any = {
-  username: username.trim(),
-  full_name: fullName.trim(),
-  role,
-  signature: "TEST_SIGNATURE",
-};
-
-console.log(payload);
-    if (password.trim()) {
-      payload.password = password.trim();
-    }
-
-    let error = null;
-
+  try {
     if (selectedUser) {
-      const result = await supabase
+      // بيانات المستخدم الذي سيتم تعديله
+      const updateData: any = {
+        username: username.trim(),
+        full_name: fullName.trim(),
+        role: role,
+        signature: signature || null,
+      };
+
+      // تغيير كلمة المرور فقط إذا أدخلنا كلمة جديدة
+      if (password.trim()) {
+        updateData.password = password.trim();
+      }
+
+      console.log("UPDATING USER ID:", selectedUser.id);
+      console.log("UPDATE DATA:", updateData);
+
+      const { data: updatedUser, error } = await supabase
         .from("users")
-        .update(payload)
-        .eq("id", selectedUser.id);
-      error = result.error;
+        .update(updateData)
+        .eq("id", selectedUser.id)
+        .select("id, username, full_name, role, signature");
+
+      console.log("UPDATED USER:", updatedUser);
+      console.log("UPDATE ERROR:", error);
+
+      if (error) {
+        alert("SAVE ERROR: " + error.message);
+        return;
+      }
+
+      if (!updatedUser || updatedUser.length === 0) {
+        alert(
+          "لم يتم تعديل المستخدم. تحقق من صلاحيات UPDATE في Supabase."
+        );
+        return;
+      }
+
+      alert("تم تعديل المستخدم بنجاح");
+
     } else {
-      const result = await supabase.from("users").insert([payload]);
-      error = result.error;
+      // إنشاء مستخدم جديد
+      const { data: newUser, error } = await supabase
+        .from("users")
+        .insert([
+          {
+            username: username.trim(),
+            full_name: fullName.trim(),
+            password: password.trim(),
+            role: role,
+            signature: signature || null,
+          },
+        ])
+        .select("id, username, full_name, role, signature");
+
+      console.log("CREATED USER:", newUser);
+      console.log("CREATE ERROR:", error);
+
+      if (error) {
+        alert("SAVE ERROR: " + error.message);
+        return;
+      }
+
+      alert("تم إنشاء المستخدم بنجاح");
     }
-
-    if (error) {
-  alert("SAVE ERROR: " + error.message);
-  console.log(error);
-  return;
-}
-
-alert("User saved successfully");
 
     setOpenModal(false);
-    loadUsers();
+    await loadUsers();
+
+  } catch (err) {
+    console.error("SAVE USER ERROR:", err);
+    alert("حدث خطأ أثناء حفظ المستخدم");
+  }
+}
+async function deleteUser(id: number) {
+  if (!confirm("Delete this user?")) return;
+
+  const { error } = await supabase
+    .from("users")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
   }
 
-  async function deleteUser(id: number) {
-    if (!confirm("Delete this user?")) return;
-
-    const { error } = await supabase.from("users").delete().eq("id", id);
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    loadUsers();
-  }
-
+  await loadUsers();
+}
   return (
     <ProtectedRoute adminOnly={true}>
       <main className="min-h-screen bg-gray-100 p-8">

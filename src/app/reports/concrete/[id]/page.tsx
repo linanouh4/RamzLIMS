@@ -24,12 +24,23 @@ export default function ConcreteReportPage() {
 
   async function loadReport() {
     setLoading(true);
-
-    const { data: testData, error: testError } = await supabase
-      .from("concrete_tests")
-      .select("*")
-      .eq("id", id)
-      .single();
+const { data: testData, error: testError } = await supabase
+  .from("concrete_tests")
+  .select(`
+    *,
+    reviewed_by_user:reviewed_by (
+      id,
+      full_name,
+      username
+    ),
+    tested_by_user:tested_by (
+      id,
+      full_name,
+      username
+    )
+  `)
+  .eq("id", id)
+  .single();
 
     if (testError) {
       alert(testError.message);
@@ -73,7 +84,7 @@ export default function ConcreteReportPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-100 p-8">
+      <div className="min-h-screen bg-gray-100 p-8 print:bg-white print:p-0">
 
         {/* أزرار التحكم */}
         <div className="max-w-6xl mx-auto mb-4 flex justify-between print:hidden">
@@ -95,7 +106,7 @@ export default function ConcreteReportPage() {
         </div>
 
         {/* التقرير */}
-        <div className="max-w-6xl mx-auto bg-white p-10 shadow-xl">
+        <div className="report-page max-w-6xl mx-auto bg-white p-10 shadow-xl print:shadow-none print:p-8">
 
           <ReportHeader />
 
@@ -216,8 +227,65 @@ export default function ConcreteReportPage() {
                 </td>
               </tr>
 
-            </tbody>
+            
+<tr>
+  <td className="border border-black p-2 font-bold">
+    Order No.
+  </td>
 
+  <td className="border border-black p-2">
+    {test.order_no || "-"}
+  </td>
+
+  <td className="border border-black p-2 font-bold">
+    Test Specification
+  </td>
+
+  <td className="border border-black p-2">
+    {test.test_specification || "-"}
+  </td>
+</tr>
+
+<tr>
+  <td className="border border-black p-2 font-bold">
+    Average Strength
+  </td>
+
+  <td className="border border-black p-2">
+    {test.average_strength ?? "-"} Kg/cm²
+  </td>
+
+  <td className="border border-black p-2 font-bold">
+    Acceptance Status
+  </td>
+
+  <td className="border border-black p-2">
+    {test.acceptance_status || "-"}
+  </td>
+</tr>
+
+<tr>
+  <td className="border border-black p-2 font-bold">
+    Checked By
+  </td>
+
+  <td className="border border-black p-2">
+    {test.checked_by || "-"}
+  </td>
+
+  <td className="border border-black p-2 font-bold">
+    Tested By
+  </td>
+
+  <td className="border border-black p-2">
+    {test.tested_by_user?.full_name ||
+      test.tested_by_user?.username ||
+      test.tested_by ||
+      "-"}
+  </td>
+</tr>
+
+            </tbody>
           </table>
 
           {/* نتائج العينات */}
@@ -230,46 +298,79 @@ export default function ConcreteReportPage() {
             <table className="w-full border-collapse border border-black text-sm">
 
               <thead>
+<tr className="bg-gray-100">
 
-                <tr className="bg-gray-100">
+  <th className="border border-black p-2">
+    Sample No.
+  </th>
 
-                  <th className="border border-black p-2">
-                    Sample No.
-                  </th>
+  <th className="border border-black p-2">
+    Field Sample No.
+  </th>
 
-                  <th className="border border-black p-2">
-                    Slump
-                  </th>
+  <th className="border border-black p-2">
+    Structure Part
+  </th>
 
-                  <th className="border border-black p-2">
-                    Age
-                    <br />
-                    Days
-                  </th>
+  <th className="border border-black p-2">
+    Date Sampled
+  </th>
 
-                  <th className="border border-black p-2">
-                    Length
-                  </th>
+  <th className="border border-black p-2">
+    Slump
+  </th>
 
-                  <th className="border border-black p-2">
-                    Width
-                  </th>
+  <th className="border border-black p-2">
+    Age
+    <br />
+    Days
+  </th>
 
-                  <th className="border border-black p-2">
-                    Height
-                  </th>
+  <th className="border border-black p-2">
+    Length
+  </th>
 
-                  <th className="border border-black p-2">
-                    Weight
-                  </th>
+  <th className="border border-black p-2">
+    Width
+  </th>
 
-                  <th className="border border-black p-2">
-                    Load
-                    <br />
-                    kN
-                  </th>
+  <th className="border border-black p-2">
+    Height
+  </th>
 
-                </tr>
+  <th className="border border-black p-2">
+    Weight
+  </th>
+
+  <th className="border border-black p-2">
+    Unit Weight
+  </th>
+
+  <th className="border border-black p-2">
+    Load
+    <br />
+    kN
+  </th>
+
+  <th className="border border-black p-2">
+    Load
+    <br />
+    Kg
+  </th>
+
+  <th className="border border-black p-2">
+    Strength
+  </th>
+
+  <th className="border border-black p-2">
+    Break Type
+  </th>
+
+  <th className="border border-black p-2">
+    Remarks
+  </th>
+
+</tr>
 
               </thead>
 
@@ -294,39 +395,71 @@ export default function ConcreteReportPage() {
 
                     <tr key={result.id}>
 
-                      <td className="border border-black p-2 text-center">
-                        {result.sample_no ?? "-"}
-                      </td>
+  <td className="border border-black p-2 text-center">
+    {result.sample_no ?? "-"}
+  </td>
 
-                      <td className="border border-black p-2 text-center">
-                        {result.slump ?? "-"}
-                      </td>
+  <td className="border border-black p-2 text-center">
+    {result.field_sample_no || "-"}
+  </td>
 
-                      <td className="border border-black p-2 text-center">
-                        {result.age_days ?? "-"}
-                      </td>
+  <td className="border border-black p-2 text-center">
+    {result.structure_part || "-"}
+  </td>
 
-                      <td className="border border-black p-2 text-center">
-                        {result.length ?? "-"}
-                      </td>
+  <td className="border border-black p-2 text-center">
+    {result.date_sampled || "-"}
+  </td>
 
-                      <td className="border border-black p-2 text-center">
-                        {result.width ?? "-"}
-                      </td>
+  <td className="border border-black p-2 text-center">
+    {result.slump ?? "-"}
+  </td>
 
-                      <td className="border border-black p-2 text-center">
-                        {result.height ?? "-"}
-                      </td>
+  <td className="border border-black p-2 text-center">
+    {result.age_days ?? "-"}
+  </td>
 
-                      <td className="border border-black p-2 text-center">
-                        {result.weight ?? "-"}
-                      </td>
+  <td className="border border-black p-2 text-center">
+    {result.length ?? "-"}
+  </td>
 
-                      <td className="border border-black p-2 text-center">
-                        {result.load_kn ?? "-"}
-                      </td>
+  <td className="border border-black p-2 text-center">
+    {result.width ?? "-"}
+  </td>
 
-                    </tr>
+  <td className="border border-black p-2 text-center">
+    {result.height ?? "-"}
+  </td>
+
+  <td className="border border-black p-2 text-center">
+    {result.weight ?? "-"}
+  </td>
+
+  <td className="border border-black p-2 text-center">
+    {result.unit_weight ?? "-"}
+  </td>
+
+  <td className="border border-black p-2 text-center">
+    {result.load_kn ?? "-"}
+  </td>
+
+  <td className="border border-black p-2 text-center">
+    {result.load_kg ?? "-"}
+  </td>
+
+  <td className="border border-black p-2 text-center font-bold">
+    {result.strength ?? "-"}
+  </td>
+
+  <td className="border border-black p-2 text-center">
+    {result.break_type || "-"}
+  </td>
+
+  <td className="border border-black p-2">
+    {result.remarks || "-"}
+  </td>
+
+</tr>
 
                   ))
 
@@ -368,9 +501,28 @@ export default function ConcreteReportPage() {
 
               <div className="h-12 border-b border-black mb-2" />
 
-              <p className="font-semibold">
-                Reviewed By
-              </p>
+             <p className="font-semibold">
+  Reviewed By
+</p>
+
+<p className="text-sm mt-2">
+  {test.reviewed_by_user?.full_name ||
+    test.reviewed_by_user?.username ||
+    "Not Reviewed"}
+</p>
+
+{test.reviewed_at && (
+  <p className="text-xs text-gray-600 mt-1">
+    {new Date(test.reviewed_at).toLocaleString("en-SA", {
+      timeZone: "Asia/Riyadh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })}
+  </p>
+)}
 
             </div>
 
@@ -386,9 +538,45 @@ export default function ConcreteReportPage() {
 
           </div>
 
-        </div>
-
       </div>
+            </div>
+
+      <style jsx global>{`
+        @page {
+          size: A4 portrait;
+          margin: 10mm;
+        }
+
+        @media print {
+          body {
+            background: white !important;
+            margin: 0;
+            padding: 0;
+          }
+
+          .report-page {
+            width: 100%;
+            max-width: none !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+          }
+
+          table {
+            page-break-inside: auto;
+          }
+
+          tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+
+          thead {
+            display: table-header-group;
+          }
+        }
+      `}</style>
+
     </ProtectedRoute>
   );
 }
+ 

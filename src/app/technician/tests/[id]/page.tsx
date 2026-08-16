@@ -1,7 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  useParams,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ReportHeader from "@/components/reports/ReportHeader";
@@ -11,7 +20,11 @@ type User = {
   username?: string | null;
   full_name?: string | null;
 };
-
+type Reviewer = {
+  id: number;
+  full_name?: string | null;
+  username?: string | null;
+};
 type Sample = {
   sample_no: number;
   field_sample_no: string;
@@ -46,12 +59,22 @@ const emptySample = (sample_no: number): Sample => ({
 
 export default function ConcreteTestPage() {
   const params = useParams();
-  const router = useRouter();
+const router = useRouter();
 
-  const taskId = Number(params.id);
+const taskId = Number(params.id);
+
+const searchParams = new URLSearchParams(
+  typeof window !== "undefined"
+    ? window.location.search
+    : ""
+);
+
+const shouldPrint = searchParams.get("print") === "true";
 
   const [user, setUser] = useState<User | null>(null);
   const [draftId, setDraftId] = useState<number | null>(null);
+  const [reviewer, setReviewer] = useState<Reviewer | null>(null);
+const [reviewedAt, setReviewedAt] = useState<string | null>(null);
 
   // اسم الفني للعرض فقط
   const [testedByName, setTestedByName] = useState("");
@@ -129,7 +152,19 @@ export default function ConcreteTestPage() {
 
     initialize();
   }, [taskId]);
+useEffect(() => {
+  if (!loading && shouldPrint) {
+    const timer = setTimeout(() => {
+      makePrintReadOnly();
 
+      setTimeout(() => {
+        window.print();
+      }, 300);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }
+}, [loading, shouldPrint]);
   function updateField(field: string, value: string) {
     setForm((prev) => ({
       ...prev,
@@ -234,10 +269,15 @@ export default function ConcreteTestPage() {
         .select(`
           *,
           tested_by_user:users!tested_by (
-            id,
-            full_name,
-            username
-          )
+  id,
+  full_name,
+  username
+),
+reviewed_by_user:users!reviewed_by (
+  id,
+  full_name,
+  username
+)
         `)
         .eq("task_id", taskId)
         .eq("status", "Draft")
@@ -339,7 +379,27 @@ export default function ConcreteTestPage() {
       } else {
         setTestedByName("");
       }
+const reviewedUser = Array.isArray(
+  draft.reviewed_by_user
+)
+  ? draft.reviewed_by_user[0]
+  : draft.reviewed_by_user;
 
+if (reviewedUser) {
+  setReviewer({
+    id: Number(reviewedUser.id),
+    full_name:
+      reviewedUser.full_name || null,
+    username:
+      reviewedUser.username || null,
+  });
+} else {
+  setReviewer(null);
+}
+
+setReviewedAt(
+  draft.reviewed_at || null
+);
       // -----------------------------------------
       // تحميل نتائج العينات
       // -----------------------------------------
@@ -812,32 +872,62 @@ export default function ConcreteTestPage() {
     } finally {
       setSaving(false);
     }
+  
   }
+function printReport() {
+  window.print();
+}
 
-  function printReport() {
-    window.print();
-  }
+function makePrintReadOnly() {
+  if (!shouldPrint) return;
 
-  if (loading) {
-    return (
-      <ProtectedRoute>
-        <div className="p-6">
-          <button
-  onClick={() => router.back()}
-  className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
->
-  ← رجوع
-</button>
-          جاري تحميل نموذج الفحص...
-        </div>
-      </ProtectedRoute>
-    );
-  }
+  document
+    .querySelectorAll<HTMLInputElement>("input")
+    .forEach((input) => {
+      input.readOnly = true;
+      input.disabled = true;
+    });
 
+  document
+    .querySelectorAll<HTMLSelectElement>("select")
+    .forEach((select) => {
+      select.disabled = true;
+    });
+
+  document
+    .querySelectorAll<HTMLTextAreaElement>("textarea")
+    .forEach((textarea) => {
+      textarea.readOnly = true;
+      textarea.disabled = true;
+    });
+}
+
+ if (loading) {
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-100 p-4 md:p-6">
+      <div className="p-6">
+        <button
+          onClick={() => router.back()}
+          className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
+        >
+          ← رجوع
+        </button>
 
+        جاري تحميل نموذج الفحص...
+      </div>
+    </ProtectedRoute>
+  );
+}
+
+return (
+  <ProtectedRoute>
+    <div
+      className={`min-h-screen ${
+        shouldPrint
+          ? "bg-white p-0"
+          : "bg-gray-100 p-4 md:p-6"
+      }`}
+    >
         {/* التحكم */}
         <div className="flex flex-wrap gap-3 mb-4 print:hidden">
 
@@ -883,7 +973,13 @@ export default function ConcreteTestPage() {
         </div>
 
         {/* التقرير */}
-        <div className="bg-white p-4 md:p-6 shadow-sm print:shadow-none">
+        <div
+  className={`bg-white ${
+    shouldPrint
+      ? "p-0 shadow-none"
+      : "p-4 md:p-6 shadow-sm"
+  } print:shadow-none`}
+>
 
           <ReportHeader />
 
@@ -906,61 +1002,15 @@ export default function ConcreteTestPage() {
             <div className="grid grid-cols-2">
 
               <Field
-                label="Sampling Date"
-                value={form.sampling_date}
-                type="date"
-                onChange={(v) =>
-                  updateField(
-                    "sampling_date",
-                    v
-                  )
-                }
-              />
+  label="Sampling Date"
+  value={form.sampling_date}
+  type="date"
+  readOnly={shouldPrint}
+  onChange={(v) =>
+    updateField("sampling_date", v)
+  }
+/>
 
-              <Field
-                label="Date Tested"
-                value={form.test_date}
-                type="date"
-                onChange={(v) =>
-                  updateField(
-                    "test_date",
-                    v
-                  )
-                }
-              />
-
-              <Field
-                label="Order No."
-                value={form.order_no}
-                onChange={(v) =>
-                  updateField(
-                    "order_no",
-                    v
-                  )
-                }
-              />
-
-              <Field
-                label="Sample Code"
-                value={form.sample_code}
-                onChange={(v) =>
-                  updateField(
-                    "sample_code",
-                    v
-                  )
-                }
-              />
-
-              <Field
-                label="Sample Location"
-                value={form.sample_location}
-                onChange={(v) =>
-                  updateField(
-                    "sample_location",
-                    v
-                  )
-                }
-              />
 
               {/* ================================= */}
               {/* Tested By */}
@@ -1362,6 +1412,7 @@ export default function ConcreteTestPage() {
                             value={
                               sample.field_sample_no
                             }
+                            readOnly={shouldPrint}
                             onChange={(e) =>
                               updateSample(
                                 index,
@@ -1378,6 +1429,7 @@ export default function ConcreteTestPage() {
                             value={
                               sample.structure_part
                             }
+                            readOnly={shouldPrint}
                             onChange={(e) =>
                               updateSample(
                                 index,
@@ -1395,6 +1447,7 @@ export default function ConcreteTestPage() {
                             value={
                               sample.date_sampled
                             }
+                            readOnly={shouldPrint}
                             onChange={(e) =>
                               updateSample(
                                 index,
@@ -1412,6 +1465,7 @@ export default function ConcreteTestPage() {
                             value={
                               sample.slump
                             }
+                            readOnly={shouldPrint}
                             onChange={(e) =>
                               updateSample(
                                 index,
@@ -1429,6 +1483,7 @@ export default function ConcreteTestPage() {
                             value={
                               sample.age_days
                             }
+                            readOnly={shouldPrint}
                             onChange={(e) =>
                               updateSample(
                                 index,
@@ -1439,44 +1494,29 @@ export default function ConcreteTestPage() {
                           />
                         </td>
 
-                        <DimensionInput
-                          value={
-                            sample.length
-                          }
-                          onChange={(v) =>
-                            updateSample(
-                              index,
-                              "length",
-                              v
-                            )
-                          }
-                        />
+                       <DimensionInput
+  value={sample.length}
+  readOnly={shouldPrint}
+  onChange={(v) =>
+    updateSample(index, "length", v)
+  }
+/>
 
-                        <DimensionInput
-                          value={
-                            sample.width
-                          }
-                          onChange={(v) =>
-                            updateSample(
-                              index,
-                              "width",
-                              v
-                            )
-                          }
-                        />
+<DimensionInput
+  value={sample.width}
+  readOnly={shouldPrint}
+  onChange={(v) =>
+    updateSample(index, "width", v)
+  }
+/>
 
-                        <DimensionInput
-                          value={
-                            sample.height
-                          }
-                          onChange={(v) =>
-                            updateSample(
-                              index,
-                              "height",
-                              v
-                            )
-                          }
-                        />
+<DimensionInput
+  value={sample.height}
+  readOnly={shouldPrint}
+  onChange={(v) =>
+    updateSample(index, "height", v)
+  }
+/>
 
                         <td className="border border-black p-1 text-center bg-gray-50">
                           {area !== null
@@ -1595,6 +1635,48 @@ export default function ConcreteTestPage() {
           </div>
 
           {/* النتائج النهائية */}
+          <div className="mt-4 border border-black">
+  <div className="grid md:grid-cols-2">
+
+    <div className="border-b md:border-b-0 md:border-r border-black p-3">
+      <strong>
+        Reviewed By
+      </strong>
+
+      <div className="mt-2 font-semibold">
+        {reviewer
+          ? reviewer.full_name ||
+            reviewer.username ||
+            "مستخدم غير معروف"
+          : "لم تتم المراجعة بعد"}
+      </div>
+    </div>
+
+    <div className="p-3">
+      <strong>
+        Review Date
+      </strong>
+
+      <div className="mt-2 font-semibold">
+        {reviewedAt
+          ? new Date(reviewedAt).toLocaleString(
+              "en-SA",
+              {
+                timeZone: "Asia/Riyadh",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              }
+            )
+          : "-"}
+      </div>
+    </div>
+
+  </div>
+</div>
           <div className="mt-4 border border-black">
 
             <div className="grid md:grid-cols-5">
@@ -1715,11 +1797,13 @@ function Field({
   value,
   onChange,
   type = "text",
+  readOnly = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  readOnly?: boolean;
 }) {
   return (
     <div className="border-t border-black p-2">
@@ -1732,6 +1816,7 @@ function Field({
         type={type}
         className="w-full border p-2"
         value={value}
+        readOnly={readOnly}
         onChange={(e) =>
           onChange(e.target.value)
         }
@@ -1744,9 +1829,11 @@ function Field({
 function DimensionInput({
   value,
   onChange,
+  readOnly = false,
 }: {
   value: string;
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }) {
   return (
     <td className="border border-black p-1">
@@ -1755,6 +1842,7 @@ function DimensionInput({
         type="number"
         className="w-full min-w-[50px] p-1 border"
         value={value}
+        readOnly={readOnly}
         onChange={(e) =>
           onChange(e.target.value)
         }

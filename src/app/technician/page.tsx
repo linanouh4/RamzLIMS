@@ -5,6 +5,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 import { getSavedUser } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import Sidebar from "@/components/Sidebar";
 type Task = {
   test_type?: string | null;
 id: number;
@@ -44,7 +45,6 @@ if (!user) return;
 const { data, error } = await supabase
   .from("tasks")
   .select("*")
-  .eq("technician_id", user.id)
   .order("id", { ascending: false });
 
 if (error) {
@@ -114,23 +114,61 @@ if (error) {
 await loadTasks();
 
 }
-
 async function confirmArrival(taskId: number) {
-const { error } = await supabase
-.from("tasks")
-.update({
-status: "تم الوصول للموقع",
-arrival_time: new Date().toISOString(),
-})
-.eq("id", taskId);
+  if (!navigator.geolocation) {
+    alert("المتصفح لا يدعم تحديد الموقع");
+    return;
+  }
 
-if (error) {
-  alert(error.message);
-  return;
-}
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
 
-await loadTasks();
+      console.log("TECHNICIAN LOCATION:", {
+        latitude,
+        longitude,
+      });
 
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          status: "تم الوصول للموقع",
+          arrival_time: new Date().toISOString(),
+          arrival_latitude: latitude,
+          arrival_longitude: longitude,
+        })
+        .eq("id", taskId);
+
+      if (error) {
+        console.error("CONFIRM ARRIVAL ERROR:", error);
+        alert(error.message);
+        return;
+      }
+
+      alert("تم تأكيد الوصول وتسجيل الموقع 📍");
+
+      await loadTasks();
+    },
+    (error) => {
+      console.error("LOCATION ERROR:", error);
+
+      if (error.code === 1) {
+        alert("يجب السماح بالوصول إلى الموقع لتأكيد الوصول");
+      } else if (error.code === 2) {
+        alert("تعذر تحديد موقعك الحالي");
+      } else if (error.code === 3) {
+        alert("انتهى وقت الحصول على الموقع، حاول مرة أخرى");
+      } else {
+        alert("حدث خطأ أثناء تحديد الموقع");
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    }
+  );
 }
 
 async function saveFieldResult(
@@ -239,7 +277,11 @@ setTimeout(() => {
 }
 return (
   <ProtectedRoute>
-    <div className="p-6">
+    <main className="flex min-h-screen bg-gray-100">
+
+      <Sidebar user={user} />
+
+      <section className="flex-1 p-6">
 
       <button
         onClick={() => router.back()}
@@ -455,8 +497,8 @@ return (
       </div>
 
     </div>
-  </div>
-</ProtectedRoute>
-
+        </section>
+    </main>
+  </ProtectedRoute>
 );
 }

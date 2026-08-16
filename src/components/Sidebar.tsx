@@ -2,17 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { clearSavedUser } from "@/lib/auth";
 
 type Props = {
   user?: {
     role?: string;
     full_name?: string;
-  };
+  } | null;
 };
-
 export default function Sidebar({ user }: Props) {
   const pathname = usePathname();
+const router = useRouter();
 
+const logout = () => {
+  clearSavedUser();
+  router.push("/");
+};
   const linkClass = (href: string) =>
     `block rounded-lg p-3 transition ${
       pathname === href
@@ -39,16 +45,22 @@ export default function Sidebar({ user }: Props) {
           <div className="text-sm text-slate-200 capitalize">
             {user.role}
           </div>
-          <div className="text-yellow-300 text-xs mt-2">
-  ROLE TEST: [{user.role}]
-</div>
         </div>
       )}
 
       <nav className="space-y-4">
 
+        {/* ================= ADMIN ================= */}
+
         {user?.role === "admin" && (
           <>
+            <Link
+              href="/employees"
+              className={linkClass("/employees")}
+            >
+              👤 Users / Employees
+            </Link>
+
             <Link
               href="/clients"
               className={linkClass("/clients")}
@@ -93,38 +105,45 @@ export default function Sidebar({ user }: Props) {
           </>
         )}
 
+        {/* ================= TECHNICIAN ================= */}
+
         {user?.role === "technician" && (
-  <>
-    <Link
-      href="/technician"
-      className={linkClass("/technician")}
-    >
-      🏠 Dashboard
-    </Link>
+          <>
+            <Link
+              href="/technician"
+              className={linkClass("/technician")}
+            >
+              🏠 Dashboard
+            </Link>
 
-    <Link
-      href="/technician/tasks"
-      className={linkClass("/technician/tasks")}
-    >
-      🛠️ My Tasks
-    </Link>
+            <Link
+              href="/technician/tasks"
+              className={linkClass("/technician/tasks")}
+            >
+              🛠️ My Tasks
+            </Link>
 
-    <Link
-      href="/technician/tests"
-      className={linkClass("/technician/tests")}
-    >
-      🔬 My Tests
-    </Link>
+            <Link
+              href="/technician/tests"
+              className={linkClass("/technician/tests")}
+            >
+              🔬 My Tests
+            </Link>
 
-    <Link
-      href="/task-results"
-      className={linkClass("/task-results")}
-    >
-      📋 Task Results
-    </Link>
-  </>
-)}
-
+            <Link
+              href="/task-results"
+              className={linkClass("/task-results")}
+            >
+              📋 My Results
+            </Link>
+          </>
+        )}
+<button
+  onClick={logout}
+  className="w-full text-right rounded-lg p-3 mt-6 bg-red-600 hover:bg-red-700 transition"
+>
+  🚪 Logout
+</button>
       </nav>
     </aside>
   );
