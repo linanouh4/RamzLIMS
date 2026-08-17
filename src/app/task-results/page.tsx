@@ -136,7 +136,10 @@ type TaskImage = {
 
 export default function TaskResultsPage() {
   const router = useRouter();
-  const currentUser = getSavedUser();
+ const [currentUser, setCurrentUser] = useState<any>(null);
+
+console.log("👤 CURRENT USER:", currentUser);
+  console.log("👤 CURRENT USER:", currentUser);
   const [reviewers, setReviewers] = useState<
   Record<number, string>
 >({});
@@ -146,10 +149,16 @@ export default function TaskResultsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("🔥 TASK RESULTS PAGE LOADED");
-    loadResults();
-  }, []);
+  const user = getSavedUser();
 
+  console.log("🔥 CURRENT LOGGED USER:", user);
+
+  setCurrentUser(user);
+
+  console.log("🔥 TASK RESULTS PAGE LOADED");
+
+  loadResults();
+}, []);
   async function loadResults() {
     console.log("🔥 LOAD RESULTS RUNNING");
 
@@ -354,10 +363,11 @@ console.log("REVIEWER IDS:", reviewerIds);
       );
 
       alert("حدث خطأ أثناء تحميل النتائج");
-    } finally {
-      setLoading(false);
-    }
+      } finally {
+    setLoading(false);
   }
+}
+
 async function reviewConcreteTest(testId: number) {
   if (!currentUser?.id) {
     alert("لم يتم التعرف على المستخدم الحالي");
@@ -387,6 +397,35 @@ async function reviewConcreteTest(testId: number) {
   alert("تم تسجيل المراجعة بنجاح ✅");
 
   await loadResults();
+}
+async function deleteTask(taskId: number) {
+  if (currentUser?.role !== "admin") {
+    alert("ليس لديك صلاحية حذف المهام");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "هل أنت متأكد من حذف هذه المهمة نهائيًا؟"
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("tasks")
+    .delete()
+    .eq("id", taskId);
+
+  if (error) {
+    console.error("DELETE TASK ERROR:", error);
+    alert("حدث خطأ أثناء حذف المهمة:\n" + error.message);
+    return;
+  }
+
+  setTasks((prev) =>
+    prev.filter((task) => task.id !== taskId)
+  );
+
+  alert("تم حذف المهمة بنجاح 🗑️");
 }
   async function loadImages(taskId: number) {
     const { data, error } = await supabase
@@ -481,6 +520,22 @@ async function reviewConcreteTest(testId: number) {
                   <h2 className="text-xl font-bold">
                     {task.task_name}
                   </h2>
+                  {currentUser?.role === "admin" && (
+  <button
+    onClick={() => deleteTask(task.id)}
+    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-3 print:hidden"
+  >
+    🗑️ حذف المهمة
+  </button>
+)}
+                  {currentUser?.role === "admin" && (
+  <button
+    onClick={() => deleteTask(task.id)}
+    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-3 print:hidden"
+  >
+    🗑️ حذف المهمة
+  </button>
+)}
 <div className="flex justify-end mb-4 print:hidden">
   <button
     onClick={() => {
