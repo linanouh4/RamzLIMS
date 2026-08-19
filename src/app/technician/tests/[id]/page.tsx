@@ -104,10 +104,7 @@ export default function ConcreteTestPage() {
     protection_capping: "",
     specimen_type: "Cube",
     test_specification: "ASTM C39",
-
-    // Database stores ID only
     tested_by: "",
-
     sampled_by: "",
     checked_by: "",
     notes: "",
@@ -148,13 +145,13 @@ export default function ConcreteTestPage() {
           setForm((prev) => ({
             ...prev,
             tested_by:
-              parsedUser?.id != null
+              parsedUser.id != null
                 ? String(parsedUser.id)
                 : "",
           }));
         }
 
-        if (!Number.isNaN(taskId)) {
+        if (!Number.isNaN(taskId) && taskId > 0) {
           await loadDraft(parsedUser);
         }
       } catch (error) {
@@ -223,43 +220,33 @@ export default function ConcreteTestPage() {
   // CALCULATIONS
   // =========================================================
 
-function calculateArea(sample: Sample) {
-  const length = Number(sample.length);
-  const width = Number(sample.width);
+  function calculateArea(sample: Sample) {
+    const length = Number(sample.length);
+    const width = Number(sample.width);
 
-  if (!length || !width) {
-    return null;
-  }
+    if (!length || !width) {
+      return null;
+    }
 
-  // CUBE
-  if (form.specimen_type === "Cube") {
+    if (form.specimen_type === "Cube") {
+      return (length * width) / 100;
+    }
+
+    if (
+      form.specimen_type === "Cylinder" ||
+      form.specimen_type === "Concrete Core"
+    ) {
+      const diameter = width;
+
+      return (
+        (Math.PI * diameter * diameter) /
+        4 /
+        100
+      );
+    }
+
     return (length * width) / 100;
   }
-
-  // CYLINDER
-  if (form.specimen_type === "Cylinder") {
-    const diameter = width;
-
-    return (
-      (Math.PI * diameter * diameter) /
-      4 /
-      100
-    );
-  }
-
-  // CONCRETE CORE
-  if (form.specimen_type === "Concrete Core") {
-    const diameter = width;
-
-    return (
-      (Math.PI * diameter * diameter) /
-      4 /
-      100
-    );
-  }
-
-  return (length * width) / 100;
-}
 
   function calculateVolume(sample: Sample) {
     const length = Number(sample.length);
@@ -332,7 +319,7 @@ function calculateArea(sample: Sample) {
         0
       ) / strengths.length
     );
-  }, [samples]);
+  }, [samples, form.specimen_type]);
 
   // =========================================================
   // ACCEPTANCE
@@ -366,6 +353,11 @@ function calculateArea(sample: Sample) {
     currentUser: User | null
   ) {
     try {
+      console.log(
+        "🔎 Loading concrete test for task:",
+        taskId
+      );
+
       const {
         data: draft,
         error,
@@ -385,7 +377,6 @@ function calculateArea(sample: Sample) {
           )
         `)
         .eq("task_id", taskId)
-        .eq("status", "Draft")
         .order("id", {
           ascending: false,
         })
@@ -394,24 +385,31 @@ function calculateArea(sample: Sample) {
 
       if (error) {
         console.error(
-          "DRAFT ERROR:",
+          "LOAD CONCRETE TEST ERROR:",
           error
         );
 
         alert(
-          "خطأ في تحميل المسودة:\n" +
+          "خطأ في تحميل نموذج الفحص:\n" +
             error.message
         );
 
         return;
       }
 
+      console.log(
+        "📋 CONCRETE TEST:",
+        draft
+      );
+
       // =====================================================
-      // NO DRAFT
+      // NO TEST
       // =====================================================
 
       if (!draft) {
-        console.log("No draft found");
+        console.log(
+          "No concrete test found for task"
+        );
 
         if (currentUser?.id != null) {
           setForm((prev) => ({
@@ -432,23 +430,19 @@ function calculateArea(sample: Sample) {
       }
 
       // =====================================================
-      // DRAFT ID
+      // TEST ID
       // =====================================================
 
       setDraftId(draft.id);
 
       // =====================================================
-      // TESTED BY ID
+      // FORM
       // =====================================================
 
       const draftTestedById =
         draft.tested_by != null
           ? String(draft.tested_by)
           : "";
-
-      // =====================================================
-      // FORM
-      // =====================================================
 
       setForm({
         order_no:
@@ -507,8 +501,6 @@ function calculateArea(sample: Sample) {
           draft.test_specification ||
           "ASTM C39",
 
-        // IMPORTANT:
-        // Store ID only
         tested_by:
           draftTestedById,
 
@@ -523,7 +515,7 @@ function calculateArea(sample: Sample) {
       });
 
       // =====================================================
-      // TESTED BY NAME
+      // TESTED BY
       // =====================================================
 
       const testedUser =
@@ -615,6 +607,11 @@ function calculateArea(sample: Sample) {
 
         return;
       }
+
+      console.log(
+        "🧪 SAMPLE RESULTS:",
+        results
+      );
 
       if (
         results &&
@@ -728,7 +725,7 @@ function calculateArea(sample: Sample) {
   // =========================================================
 
   async function saveTest(): Promise<boolean> {
-    if (!taskId) {
+    if (!taskId || Number.isNaN(taskId)) {
       alert(
         "رقم المهمة غير صحيح"
       );
@@ -739,10 +736,6 @@ function calculateArea(sample: Sample) {
     setSaving(true);
 
     try {
-      // =====================================================
-      // TESTED BY ID
-      // =====================================================
-
       const testedById =
         user?.id != null
           ? Number(user.id)
@@ -750,42 +743,18 @@ function calculateArea(sample: Sample) {
           ? Number(form.tested_by)
           : null;
 
-      console.log(
-        "CURRENT USER:",
-        user
-      );
-
-      console.log(
-        "TESTED BY ID:",
-        testedById
-      );
-
-      console.log(
-        "TESTED BY NAME:",
-        testedByName
-      );
-
       if (
         testedById !== null &&
         !Number.isFinite(
           testedById
         )
       ) {
-        console.error(
-          "INVALID TESTED BY:",
-          testedById
-        );
-
         alert(
-          "خطأ: رقم الفني غير صحيح. لم يتم الحفظ."
+          "خطأ: رقم الفني غير صحيح."
         );
 
         return false;
       }
-
-      // =====================================================
-      // TEST VALUES
-      // =====================================================
 
       const testValues = {
         task_id: taskId,
@@ -808,24 +777,34 @@ function calculateArea(sample: Sample) {
           form.test_date || null,
 
         design_strength:
-          Number(
-            form.design_strength
-          ) || null,
+          form.design_strength !== ""
+            ? Number(
+                form.design_strength
+              )
+            : null,
 
         cement_content:
-          Number(
-            form.cement_content
-          ) || null,
+          form.cement_content !== ""
+            ? Number(
+                form.cement_content
+              )
+            : null,
 
         concrete_temperature:
-          Number(
-            form.concrete_temperature
-          ) || null,
+          form.concrete_temperature !==
+          ""
+            ? Number(
+                form.concrete_temperature
+              )
+            : null,
 
         curing_temperature:
-          Number(
-            form.curing_temperature
-          ) || null,
+          form.curing_temperature !==
+          ""
+            ? Number(
+                form.curing_temperature
+              )
+            : null,
 
         protection_capping:
           form.protection_capping ||
@@ -838,8 +817,6 @@ function calculateArea(sample: Sample) {
           form.test_specification ||
           null,
 
-        // DATABASE:
-        // ID ONLY
         tested_by:
           testedById !== null
             ? testedById
@@ -871,7 +848,7 @@ function calculateArea(sample: Sample) {
       };
 
       console.log(
-        "TEST VALUES:",
+        "💾 SAVING TEST:",
         testValues
       );
 
@@ -879,7 +856,7 @@ function calculateArea(sample: Sample) {
       let testError: any = null;
 
       // =====================================================
-      // UPDATE EXISTING DRAFT
+      // UPDATE
       // =====================================================
 
       if (draftId) {
@@ -901,7 +878,7 @@ function calculateArea(sample: Sample) {
       }
 
       // =====================================================
-      // CREATE NEW DRAFT
+      // INSERT
       // =====================================================
 
       else {
@@ -927,18 +904,10 @@ function calculateArea(sample: Sample) {
         }
       }
 
-      // =====================================================
-      // TEST ERROR
-      // =====================================================
-
       if (testError) {
         console.error(
           "SAVE TEST ERROR:",
-          JSON.stringify(
-            testError,
-            null,
-            2
-          )
+          testError
         );
 
         alert(
@@ -989,7 +958,7 @@ function calculateArea(sample: Sample) {
       }
 
       // =====================================================
-      // PREPARE SAMPLE RESULTS
+      // PREPARE RESULTS
       // =====================================================
 
       const sampleResults =
@@ -1040,29 +1009,39 @@ function calculateArea(sample: Sample) {
                 null,
 
               slump:
-                Number(
-                  sample.slump
-                ) || null,
+                sample.slump !== ""
+                  ? Number(
+                      sample.slump
+                    )
+                  : null,
 
               age_days:
-                Number(
-                  sample.age_days
-                ) || null,
+                sample.age_days !== ""
+                  ? Number(
+                      sample.age_days
+                    )
+                  : null,
 
               length:
-                Number(
-                  sample.length
-                ) || null,
+                sample.length !== ""
+                  ? Number(
+                      sample.length
+                    )
+                  : null,
 
               width:
-                Number(
-                  sample.width
-                ) || null,
+                sample.width !== ""
+                  ? Number(
+                      sample.width
+                    )
+                  : null,
 
               height:
-                Number(
-                  sample.height
-                ) || null,
+                sample.height !== ""
+                  ? Number(
+                      sample.height
+                    )
+                  : null,
 
               area:
                 area !== null
@@ -1083,9 +1062,11 @@ function calculateArea(sample: Sample) {
                   : null,
 
               weight:
-                Number(
-                  sample.weight
-                ) || null,
+                sample.weight !== ""
+                  ? Number(
+                      sample.weight
+                    )
+                  : null,
 
               unit_weight:
                 unitWeight !== null
@@ -1097,9 +1078,11 @@ function calculateArea(sample: Sample) {
                   : null,
 
               load_kn:
-                Number(
-                  sample.load_kn
-                ) || null,
+                sample.load_kn !== ""
+                  ? Number(
+                      sample.load_kn
+                    )
+                  : null,
 
               load_kg:
                 loadKg !== null
@@ -1131,7 +1114,7 @@ function calculateArea(sample: Sample) {
         );
 
       // =====================================================
-      // INSERT SAMPLE RESULTS
+      // INSERT RESULTS
       // =====================================================
 
       const {
@@ -1150,11 +1133,7 @@ function calculateArea(sample: Sample) {
       ) {
         console.error(
           "INSERT SAMPLE RESULTS ERROR:",
-          JSON.stringify(
-            insertResultsError,
-            null,
-            2
-          )
+          insertResultsError
         );
 
         alert(
@@ -1166,7 +1145,7 @@ function calculateArea(sample: Sample) {
       }
 
       alert(
-        "تم حفظ المسودة بنجاح"
+        "تم حفظ المسودة بنجاح ✅"
       );
 
       return true;
@@ -1236,11 +1215,13 @@ function calculateArea(sample: Sample) {
             : "min-h-screen bg-gray-100 p-4 md:p-6"
         }
       >
+
         {/* =================================================
             CONTROL BUTTONS
         ================================================= */}
 
         <div className="flex flex-wrap gap-3 mb-4 print:hidden">
+
           <button
             onClick={() =>
               router.back()
@@ -1283,6 +1264,7 @@ function calculateArea(sample: Sample) {
           >
             🖨️ طباعة التقرير
           </button>
+
         </div>
 
         {/* =================================================
@@ -1296,13 +1278,13 @@ function calculateArea(sample: Sample) {
               : "bg-white p-4 md:p-6 shadow-sm print:shadow-none"
           }
         >
+
           <ReportHeader />
 
-          {/* =================================================
-              TITLE
-          ================================================= */}
+          {/* TITLE */}
 
           <div className="border border-black mt-4">
+
             <div className="text-center font-bold text-lg p-3 border-b border-black">
               WORKSHEET FOR COMPRESSIVE STRENGTH OF CONCRETE / MORTAR SAMPLES
             </div>
@@ -1310,16 +1292,17 @@ function calculateArea(sample: Sample) {
             <div className="text-center font-bold text-lg p-2">
               نموذج فحص قوة عينات الخرسانة الأسمنتية
             </div>
+
           </div>
 
-          {/* =================================================
-              FORM DATA
-          ================================================= */}
+          {/* FORM DATA */}
 
           <div className="border-l border-r border-b border-black">
+
             <div className="grid grid-cols-2">
+
               <Field
-  label="Sampling Date / تاريخ أخذ العينة"
+                label="Sampling Date / تاريخ أخذ العينة"
                 value={
                   form.sampling_date
                 }
@@ -1338,8 +1321,9 @@ function calculateArea(sample: Sample) {
               {/* TESTED BY */}
 
               <div className="border-t border-black p-2">
+
                 <div className="font-bold text-xs mb-1">
-                  Tested By
+                  Tested By / الفاحص
                 </div>
 
                 <input
@@ -1350,6 +1334,7 @@ function calculateArea(sample: Sample) {
                   }
                   readOnly
                 />
+
               </div>
 
               <Field
@@ -1370,7 +1355,7 @@ function calculateArea(sample: Sample) {
               />
 
               <Field
-label="Sampled By / أخذ العينة بواسطة"
+                label="Sampled By / أخذ العينة بواسطة"
                 value={
                   form.sampled_by
                 }
@@ -1386,7 +1371,7 @@ label="Sampled By / أخذ العينة بواسطة"
               />
 
               <Field
-label="Cement Content (Kg/m³ - Portland) / محتوى الأسمنت"
+                label="Cement Content (Kg/m³ - Portland) / محتوى الأسمنت"
                 value={
                   form.cement_content
                 }
@@ -1403,7 +1388,7 @@ label="Cement Content (Kg/m³ - Portland) / محتوى الأسمنت"
               />
 
               <Field
-label="Concrete Temperature (°C) / درجة حرارة الخرسانة"
+                label="Concrete Temperature (°C) / درجة حرارة الخرسانة"
                 value={
                   form.concrete_temperature
                 }
@@ -1420,7 +1405,7 @@ label="Concrete Temperature (°C) / درجة حرارة الخرسانة"
               />
 
               <Field
-label="Protection & Capping or No / الحماية والتغطية"
+                label="Protection & Capping or No / الحماية والتغطية"
                 value={
                   form.protection_capping
                 }
@@ -1436,7 +1421,7 @@ label="Protection & Capping or No / الحماية والتغطية"
               />
 
               <Field
-label="Curing Temperature (°C) / درجة حرارة المعالجة"
+                label="Curing Temperature (°C) / درجة حرارة المعالجة"
                 value={
                   form.curing_temperature
                 }
@@ -1455,8 +1440,11 @@ label="Curing Temperature (°C) / درجة حرارة المعالجة"
               {/* SPECIMEN TYPE */}
 
               <div className="border-t border-black p-2">
+
                 <div className="font-bold text-xs mb-2">
                   Specimens Desc. / Type
+                  <br />
+                  وصف / نوع العينة
                 </div>
 
                 <select
@@ -1474,22 +1462,23 @@ label="Curing Temperature (°C) / درجة حرارة المعالجة"
                     )
                   }
                 >
-          <option value="Cube">
-  CUBE / مكعب
-</option>
+                  <option value="Cube">
+                    CUBE / مكعب
+                  </option>
 
-<option value="Cylinder">
-  CYLINDER / أسطوانة
-</option>
+                  <option value="Cylinder">
+                    CYLINDER / أسطوانة
+                  </option>
 
-<option value="Concrete Core">
-  CONCRETE CORE / لبّة خرسانية
-</option>
+                  <option value="Concrete Core">
+                    CONCRETE CORE / لبّة خرسانية
+                  </option>
                 </select>
+
               </div>
 
               <Field
-label="Test Specification / مواصفة الاختبار"
+                label="Test Specification / مواصفة الاختبار"
                 value={
                   form.test_specification
                 }
@@ -1503,7 +1492,9 @@ label="Test Specification / مواصفة الاختبار"
                   )
                 }
               />
+
             </div>
+
           </div>
 
           {/* =================================================
@@ -1511,9 +1502,13 @@ label="Test Specification / مواصفة الاختبار"
           ================================================= */}
 
           <div className="overflow-x-auto mt-5">
+
             <table className="w-full border-collapse border border-black text-[10px]">
+
               <thead>
+
                 <tr className="bg-gray-200">
+
                   <th
                     rowSpan={2}
                     className="border border-black p-2"
@@ -1700,9 +1695,11 @@ label="Test Specification / مواصفة الاختبار"
                       نوع الكسر والملاحظات
                     </span>
                   </th>
+
                 </tr>
 
                 <tr className="bg-gray-200">
+
                   <th className="border border-black p-1">
                     L
                   </th>
@@ -1714,15 +1711,19 @@ label="Test Specification / مواصفة الاختبار"
                   <th className="border border-black p-1">
                     H
                   </th>
+
                 </tr>
+
               </thead>
 
               <tbody>
+
                 {samples.map(
                   (
                     sample,
                     index
                   ) => {
+
                     const area =
                       calculateArea(
                         sample
@@ -1754,7 +1755,6 @@ label="Test Specification / مواصفة الاختبار"
                           sample.sample_no
                         }
                       >
-                        {/* SAMPLE NO */}
 
                         <td className="border border-black p-1 text-center font-bold">
                           {
@@ -1762,9 +1762,8 @@ label="Test Specification / مواصفة الاختبار"
                           }
                         </td>
 
-                        {/* FIELD SAMPLE */}
-
                         <td className="border border-black p-1">
+
                           <input
                             className="w-full min-w-[70px] p-1 border"
                             value={
@@ -1779,17 +1778,15 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "field_sample_no",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
+
                         </td>
 
-                        {/* STRUCTURE */}
-
                         <td className="border border-black p-1">
+
                           <input
                             className="w-full min-w-[130px] p-1 border"
                             value={
@@ -1804,17 +1801,15 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "structure_part",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
+
                         </td>
 
-                        {/* DATE */}
-
                         <td className="border border-black p-1">
+
                           <input
                             type="date"
                             className="w-full min-w-[110px] p-1 border"
@@ -1830,17 +1825,15 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "date_sampled",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
+
                         </td>
 
-                        {/* SLUMP */}
-
                         <td className="border border-black p-1">
+
                           <input
                             type="number"
                             className="w-full min-w-[55px] p-1 border"
@@ -1856,17 +1849,15 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "slump",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
+
                         </td>
 
-                        {/* AGE */}
-
                         <td className="border border-black p-1">
+
                           <input
                             type="number"
                             className="w-full min-w-[50px] p-1 border"
@@ -1882,15 +1873,12 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "age_days",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
-                        </td>
 
-                        {/* LENGTH */}
+                        </td>
 
                         <DimensionInput
                           value={
@@ -1910,8 +1898,6 @@ label="Test Specification / مواصفة الاختبار"
                           }
                         />
 
-                        {/* WIDTH */}
-
                         <DimensionInput
                           value={
                             sample.width
@@ -1929,8 +1915,6 @@ label="Test Specification / مواصفة الاختبار"
                             )
                           }
                         />
-
-                        {/* HEIGHT */}
 
                         <DimensionInput
                           value={
@@ -1950,8 +1934,6 @@ label="Test Specification / مواصفة الاختبار"
                           }
                         />
 
-                        {/* AREA */}
-
                         <td className="border border-black p-1 text-center bg-gray-50">
                           {area !== null
                             ? area.toFixed(
@@ -1959,8 +1941,6 @@ label="Test Specification / مواصفة الاختبار"
                               )
                             : ""}
                         </td>
-
-                        {/* VOLUME */}
 
                         <td className="border border-black p-1 text-center bg-gray-50">
                           {volume !== null
@@ -1970,9 +1950,8 @@ label="Test Specification / مواصفة الاختبار"
                             : ""}
                         </td>
 
-                        {/* WEIGHT */}
-
                         <td className="border border-black p-1">
+
                           <input
                             type="number"
                             className="w-full min-w-[65px] p-1 border"
@@ -1988,15 +1967,12 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "weight",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
-                        </td>
 
-                        {/* UNIT WEIGHT */}
+                        </td>
 
                         <td className="border border-black p-1 text-center bg-gray-50">
                           {unitWeight !==
@@ -2007,9 +1983,8 @@ label="Test Specification / مواصفة الاختبار"
                             : ""}
                         </td>
 
-                        {/* LOAD KN */}
-
                         <td className="border border-black p-1">
+
                           <input
                             type="number"
                             step="0.1"
@@ -2026,15 +2001,12 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "load_kn",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
-                        </td>
 
-                        {/* LOAD KG */}
+                        </td>
 
                         <td className="border border-black p-1 text-center bg-gray-50">
                           {loadKg !== null
@@ -2043,8 +2015,6 @@ label="Test Specification / مواصفة الاختبار"
                               )
                             : ""}
                         </td>
-
-                        {/* STRENGTH */}
 
                         <td className="border border-black p-1 text-center bg-gray-50 font-semibold">
                           {strength !==
@@ -2055,11 +2025,10 @@ label="Test Specification / مواصفة الاختبار"
                             : ""}
                         </td>
 
-                        {/* BREAK + REMARKS */}
-
                         <td className="border border-black p-1">
+
                           <input
-                            placeholder="Break"
+                            placeholder="Break / نوع الكسر"
                             className="w-full p-1 border mb-1"
                             value={
                               sample.break_type
@@ -2073,15 +2042,13 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "break_type",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
 
                           <input
-                            placeholder="Remarks"
+                            placeholder="Remarks / ملاحظات"
                             className="w-full p-1 border"
                             value={
                               sample.remarks
@@ -2095,32 +2062,38 @@ label="Test Specification / مواصفة الاختبار"
                               updateSample(
                                 index,
                                 "remarks",
-                                e
-                                  .target
-                                  .value
+                                e.target.value
                               )
                             }
                           />
+
                         </td>
+
                       </tr>
                     );
                   }
                 )}
+
               </tbody>
+
             </table>
+
           </div>
 
           {/* =================================================
-              FINAL TECHNICIAN RESULTS
+              FINAL RESULTS
           ================================================= */}
 
           <div className="mt-4 border border-black">
+
             <div className="grid md:grid-cols-3">
+
               {/* AVG */}
 
               <div className="border-b md:border-b-0 md:border-r border-black p-3">
+
                 <strong>
-                  AVG
+                  AVG / المتوسط
                 </strong>
 
                 <div className="text-xl font-bold mt-1">
@@ -2131,29 +2104,35 @@ label="Test Specification / مواصفة الاختبار"
                       )
                     : "-"}
                 </div>
+
               </div>
 
               {/* TESTED BY */}
 
               <div className="border-b md:border-b-0 md:border-r border-black p-3">
+
                 <strong>
-  Tested By (L.T) / الفاحص
-</strong>
+                  Tested By (L.T) / الفاحص
+                </strong>
 
                 <input
                   type="text"
-className="w-full border p-2 mt-2 bg-gray-100"                   value={                     testedByName 
+                  className="w-full border p-2 mt-2 bg-gray-100"
+                  value={
+                    testedByName
                   }
                   readOnly
                 />
+
               </div>
 
               {/* NOTES */}
 
               <div className="p-3">
-<strong>
-  Notes / الملاحظات
-</strong>
+
+                <strong>
+                  Notes / الملاحظات
+                </strong>
 
                 <textarea
                   className="w-full border p-2 mt-2"
@@ -2170,8 +2149,11 @@ className="w-full border p-2 mt-2 bg-gray-100"                   value={    
                     )
                   }
                 />
+
               </div>
+
             </div>
+
           </div>
 
           {/* =================================================
@@ -2180,10 +2162,13 @@ className="w-full border p-2 mt-2 bg-gray-100"                   value={    
 
           {reviewer && (
             <div className="mt-4 border border-black">
+
               <div className="grid md:grid-cols-2">
+
                 <div className="p-3 border-b md:border-b-0 md:border-r border-black">
+
                   <strong>
-                    Reviewed By
+                    Reviewed By / تمت المراجعة بواسطة
                   </strong>
 
                   <div className="mt-2">
@@ -2191,36 +2176,57 @@ className="w-full border p-2 mt-2 bg-gray-100"                   value={    
                       reviewer.username ||
                       "-"}
                   </div>
+
                 </div>
 
                 <div className="p-3">
+
                   <strong>
-                    Reviewed At
+                    Reviewed At / تاريخ المراجعة
                   </strong>
 
                   <div className="mt-2">
                     {reviewedAt
                       ? new Date(
                           reviewedAt
-                        ).toLocaleString()
+                        ).toLocaleString(
+                          "ar-SA",
+                          {
+                            timeZone:
+                              "Asia/Riyadh",
+                          }
+                        )
                       : "-"}
                   </div>
+
                 </div>
+
               </div>
+
             </div>
           )}
 
           {/* =================================================
-              ACCEPTANCE STATUS
+              ACCEPTANCE
           ================================================= */}
 
           {acceptanceStatus && (
-            <div className="mt-4 border border-black p-3 text-center font-bold">
-              Acceptance Status:{" "}
+            <div
+              className={`mt-4 border border-black p-3 text-center font-bold ${
+                acceptanceStatus ===
+                "Accepted"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              Acceptance Status / حالة القبول:
+              {" "}
               {acceptanceStatus}
             </div>
           )}
+
         </div>
+
       </div>
     </ProtectedRoute>
   );
@@ -2247,6 +2253,7 @@ function Field({
 }) {
   return (
     <div className="border-t border-black p-2">
+
       <div className="font-bold text-xs mb-1">
         {label}
       </div>
@@ -2262,6 +2269,7 @@ function Field({
           )
         }
       />
+
     </div>
   );
 }
@@ -2283,6 +2291,7 @@ function DimensionInput({
 }) {
   return (
     <td className="border border-black p-1">
+
       <input
         type="number"
         className="w-full min-w-[50px] p-1 border"
@@ -2294,6 +2303,7 @@ function DimensionInput({
           )
         }
       />
+
     </td>
   );
 }
