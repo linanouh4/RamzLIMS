@@ -168,15 +168,40 @@ export default function TaskResultsPage() {
 
     try {
       // 1. تحميل المهام
-      const { data: tasksData, error: tasksError } = await supabase
-  .from("tasks")
-  .select(`
-    *,
-    users:technician_id (
-      id,
-      full_name
-    ),
-    concrete_tests (
+const { data: tasksData, error: tasksError } =
+  await supabase
+    .from("tasks")
+    .select(`
+      *,
+      users:technician_id (
+        id,
+        full_name
+      )
+    `)
+    .order("id", { ascending: false });
+
+console.log("🔥 TASKS DATA:", tasksData);
+console.log("🔥 TASKS ERROR:", tasksError);
+
+if (tasksError) {
+  alert("خطأ في تحميل المهام:\n" + tasksError.message);
+  return;
+}
+const taskIds = (tasksData || []).map(
+  (task: any) => Number(task.id)
+);
+
+console.log("🔥 TASK IDS:", taskIds);
+
+let concreteTestsData: any[] = [];
+
+if (taskIds.length > 0) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("concrete_tests")
+    .select(`
       id,
       task_id,
       order_no,
@@ -190,41 +215,120 @@ export default function TaskResultsPage() {
       curing_temperature,
       specimen_type,
       test_specification,
-      tested_by, 
-sampled_by, 
-checked_by, 
-notes, 
-average_strength, 
-acceptance_status, 
-status,
-reviewed_by,
-reviewed_at,
-      concrete_test_results (
-        id,
-        test_id,
-        sample_no,
-        field_sample_no,
-        structure_part,
-        date_sampled,
-        slump,
-        age_days,
-        length,
-        width,
-        height,
-        area,
-        volume,
-        weight,
-        unit_weight,
-        load_kn,
-        load_kg,
-        strength,
-        break_type,
-        remarks
-      )
-    )
-  `)
-  .order("id", { ascending: false });
+      tested_by,
+      sampled_by,
+      checked_by,
+      notes,
+      average_strength,
+      acceptance_status,
+      status,
+      reviewed_by,
+      reviewed_at
+    `)
+    .in("task_id", taskIds)
+    .order("id", {
+      ascending: false,
+    });
 
+  console.log(
+    "🔥 CONCRETE TESTS:",
+    data
+  );
+
+  console.log(
+    "🔥 CONCRETE TESTS ERROR:",
+    error
+  );
+
+  if (error) {
+    console.error(
+      "LOAD CONCRETE TESTS ERROR:",
+      error
+    );
+  } else {
+    concreteTestsData = data || [];
+  }
+}
+      const concreteTestIds =
+  concreteTestsData.map(
+    (test: any) => Number(test.id)
+  );
+
+let concreteResultsData: any[] = [];
+
+if (concreteTestIds.length > 0) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("concrete_test_results")
+    .select(`
+      id,
+      test_id,
+      sample_no,
+      field_sample_no,
+      structure_part,
+      date_sampled,
+      slump,
+      age_days,
+      length,
+      width,
+      height,
+      area,
+      volume,
+      weight,
+      unit_weight,
+      load_kn,
+      load_kg,
+      strength,
+      break_type,
+      remarks
+    `)
+    .in(
+      "test_id",
+      concreteTestIds
+    )
+    .order("sample_no", {
+      ascending: true,
+    });
+
+  console.log(
+    "🔥 CONCRETE RESULTS:",
+    data
+  );
+
+  console.log(
+    "🔥 CONCRETE RESULTS ERROR:",
+    error
+  );
+
+  if (error) {
+    console.error(
+      "LOAD CONCRETE RESULTS ERROR:",
+      error
+    );
+  } else {
+    concreteResultsData = data || [];
+  }
+}
+      const concreteTestsWithResults =
+  concreteTestsData.map(
+    (test: any) => ({
+      ...test,
+
+      concrete_test_results:
+        concreteResultsData.filter(
+          (result: any) =>
+            Number(result.test_id) ===
+            Number(test.id)
+        ),
+    })
+  );
+
+console.log(
+  "🔥 CONCRETE TESTS WITH RESULTS:",
+  concreteTestsWithResults
+);
       console.log("TASK RESULTS:", tasksData);
       const reviewerIds = (tasksData || [])
   .flatMap((task: any) =>
@@ -232,7 +336,19 @@ reviewed_at,
       .map((test: any) => test.reviewed_by)
       .filter((id: any) => id != null)
   );
+const tasksWithConcrete =
+  (tasksData || []).map(
+    (task: any) => ({
+      ...task,
 
+      concrete_tests:
+        concreteTestsWithResults.filter(
+          (test: any) =>
+            Number(test.task_id) ===
+            Number(task.id)
+        ),
+    })
+  );
 const uniqueReviewerIds = [
   ...new Set(
     reviewerIds.map((id: any) => Number(id))
@@ -327,18 +443,28 @@ console.log("REVIEWER IDS:", reviewerIds);
       }
 
       // 3. ربط نموذج Field Density بالمهمة عن طريق task_id
-      const tasksWithDensity = (tasksData || []).map(
-        (task: any) => ({
-          ...task,
+     const finalTasks =
+  tasksWithConcrete.map(
+    (task: any) => ({
+      ...task,
 
-          field_density_tests: (densityData || []).filter(
-            (density: any) =>
-              Number(density.task_id) === Number(task.id)
-          ),
-        })
-      );
+      field_density_tests:
+        (densityData || []).filter(
+          (density: any) =>
+            Number(density.task_id) ===
+            Number(task.id)
+        ),
+    })
+  );
 
-      setTasks(tasksWithDensity as Task[]);
+console.log(
+  "🔥🔥 FINAL TASKS:",
+  finalTasks
+);
+
+setTasks(
+  finalTasks as Task[]
+);
 
       // 4. تحميل صور جميع المهام
       const {
@@ -531,14 +657,7 @@ async function deleteTask(taskId: number) {
     🗑️ حذف المهمة
   </button>
 )}
-                  {currentUser?.role === "admin" && (
-  <button
-    onClick={() => deleteTask(task.id)}
-    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-3 print:hidden"
-  >
-    🗑️ حذف المهمة
-  </button>
-)}
+
 <div className="flex justify-end mb-4 print:hidden">
   <button
     onClick={() => {
