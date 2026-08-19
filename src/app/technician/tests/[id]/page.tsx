@@ -2142,9 +2142,7 @@ label="Test Specification / مواصفة الاختبار"
 
                 <input
                   type="text"
-<div className="font-bold text-xs mb-1">
-  Tested By / الفاحص
-</div>
+className="w-full border p-2 mt-2 bg-gray-100"                   value={                     testedByName 
                   }
                   readOnly
                 />
