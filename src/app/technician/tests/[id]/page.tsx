@@ -223,16 +223,43 @@ export default function ConcreteTestPage() {
   // CALCULATIONS
   // =========================================================
 
-  function calculateArea(sample: Sample) {
-    const length = Number(sample.length);
-    const width = Number(sample.width);
+function calculateArea(sample: Sample) {
+  const length = Number(sample.length);
+  const width = Number(sample.width);
 
-    if (!length || !width) {
-      return null;
-    }
+  if (!length || !width) {
+    return null;
+  }
 
+  // CUBE
+  if (form.specimen_type === "Cube") {
     return (length * width) / 100;
   }
+
+  // CYLINDER
+  if (form.specimen_type === "Cylinder") {
+    const diameter = width;
+
+    return (
+      (Math.PI * diameter * diameter) /
+      4 /
+      100
+    );
+  }
+
+  // CONCRETE CORE
+  if (form.specimen_type === "Concrete Core") {
+    const diameter = width;
+
+    return (
+      (Math.PI * diameter * diameter) /
+      4 /
+      100
+    );
+  }
+
+  return (length * width) / 100;
+}
 
   function calculateVolume(sample: Sample) {
     const length = Number(sample.length);
@@ -1292,7 +1319,7 @@ export default function ConcreteTestPage() {
           <div className="border-l border-r border-b border-black">
             <div className="grid grid-cols-2">
               <Field
-                label="Sampling Date"
+  label="Sampling Date / تاريخ أخذ العينة"
                 value={
                   form.sampling_date
                 }
@@ -1326,7 +1353,7 @@ export default function ConcreteTestPage() {
               </div>
 
               <Field
-                label="Strength Specified / Design Strength (Kg/cm²)"
+                label="Strength Specified / Design Strength (Kg/cm²) / المقاومة التصميمية"
                 value={
                   form.design_strength
                 }
@@ -1343,7 +1370,7 @@ export default function ConcreteTestPage() {
               />
 
               <Field
-                label="Sampled By"
+label="Sampled By / أخذ العينة بواسطة"
                 value={
                   form.sampled_by
                 }
@@ -1359,7 +1386,7 @@ export default function ConcreteTestPage() {
               />
 
               <Field
-                label="Cement Content (Kg/m³ - Portland)"
+label="Cement Content (Kg/m³ - Portland) / محتوى الأسمنت"
                 value={
                   form.cement_content
                 }
@@ -1376,7 +1403,7 @@ export default function ConcreteTestPage() {
               />
 
               <Field
-                label="Concrete Temperature (°C)"
+label="Concrete Temperature (°C) / درجة حرارة الخرسانة"
                 value={
                   form.concrete_temperature
                 }
@@ -1393,7 +1420,7 @@ export default function ConcreteTestPage() {
               />
 
               <Field
-                label="Protection & Capping or No"
+label="Protection & Capping or No / الحماية والتغطية"
                 value={
                   form.protection_capping
                 }
@@ -1409,7 +1436,7 @@ export default function ConcreteTestPage() {
               />
 
               <Field
-                label="Curing Temperature (°C)"
+label="Curing Temperature (°C) / درجة حرارة المعالجة"
                 value={
                   form.curing_temperature
                 }
@@ -1447,22 +1474,22 @@ export default function ConcreteTestPage() {
                     )
                   }
                 >
-                  <option value="Cube">
-                    CUBE
-                  </option>
+          <option value="Cube">
+  CUBE / مكعب
+</option>
 
-                  <option value="Cylinder">
-                    CYLINDER
-                  </option>
+<option value="Cylinder">
+  CYLINDER / أسطوانة
+</option>
 
-                  <option value="Concrete Core">
-                    Concrete Cores
-                  </option>
+<option value="Concrete Core">
+  CONCRETE CORE / لبّة خرسانية
+</option>
                 </select>
               </div>
 
               <Field
-                label="Test Specification"
+label="Test Specification / مواصفة الاختبار"
                 value={
                   form.test_specification
                 }
@@ -2110,14 +2137,14 @@ export default function ConcreteTestPage() {
 
               <div className="border-b md:border-b-0 md:border-r border-black p-3">
                 <strong>
-                  Tested By (L.T)
-                </strong>
+  Tested By (L.T) / الفاحص
+</strong>
 
                 <input
                   type="text"
-                  className="w-full border p-2 mt-2 bg-gray-100"
-                  value={
-                    testedByName
+<div className="font-bold text-xs mb-1">
+  Tested By / الفاحص
+</div>
                   }
                   readOnly
                 />
@@ -2126,9 +2153,9 @@ export default function ConcreteTestPage() {
               {/* NOTES */}
 
               <div className="p-3">
-                <strong>
-                  Notes
-                </strong>
+<strong>
+  Notes / الملاحظات
+</strong>
 
                 <textarea
                   className="w-full border p-2 mt-2"
