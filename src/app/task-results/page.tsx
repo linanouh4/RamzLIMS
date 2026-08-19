@@ -138,8 +138,7 @@ export default function TaskResultsPage() {
   const router = useRouter();
  const [currentUser, setCurrentUser] = useState<any>(null);
 
-console.log("👤 CURRENT USER:", currentUser);
-  console.log("👤 CURRENT USER:", currentUser);
+
   const [reviewers, setReviewers] = useState<
   Record<number, string>
 >({});
@@ -153,12 +152,15 @@ console.log("👤 CURRENT USER:", currentUser);
 
   console.log("🔥 CURRENT LOGGED USER:", user);
 
+  if (!user) {
+    router.push("/");
+    return;
+  }
+
   setCurrentUser(user);
 
-  console.log("🔥 TASK RESULTS PAGE LOADED");
-
   loadResults();
-}, []);
+}, [router]);
   async function loadResults() {
     console.log("🔥 LOAD RESULTS RUNNING");
 
@@ -370,10 +372,11 @@ console.log("REVIEWER IDS:", reviewerIds);
 
 async function reviewConcreteTest(testId: number) {
   if (!currentUser?.id) {
+
     alert("لم يتم التعرف على المستخدم الحالي");
     return;
   }
-
+    console.log("👤 REVIEWING USER:", currentUser);
   const confirmed = window.confirm(
     "هل أنت متأكد من اعتماد ومراجعة نتائج اختبار الخرسانة؟"
   );
