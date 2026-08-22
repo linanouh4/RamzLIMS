@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
-
 const roles = ["admin", "lab", "reception", "technician"];
 export default function Employees() {
   const [users, setUsers] = useState<any[]>([]);
