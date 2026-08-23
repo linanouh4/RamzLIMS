@@ -14,10 +14,11 @@ console.log("🔥🔥 THIS IS TASK RESULTS PAGE 🔥🔥");
 ========================================================= */
 
 type User = {
-  id: number;
-  full_name?: string | null;
-  username?: string | null;
-  role?: string | null;
+  id: string | number;
+  username: string;
+  full_name: string;
+  role: string;
+  signature?: string | null;
 };
 
 type FieldDensityResult = {

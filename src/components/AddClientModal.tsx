@@ -13,6 +13,7 @@ type Client = {
   contact_person?: string;
   company_type?: string;
   status: string;
+  branch_id?: number | null;
 };
 
 type Props = {
@@ -20,6 +21,7 @@ type Props = {
   onClose: () => void;
   onSaved: () => void;
   client?: Client | null;
+  branchId?: number | null;
 };
 
 export default function AddClientModal({
@@ -27,24 +29,53 @@ export default function AddClientModal({
   onClose,
   onSaved,
   client,
+  branchId,
 }: Props) {
-  const [clientName, setClientName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("");
-  const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
-  const [contactPerson, setContactPerson] = useState("");
-  const [companyType, setCompanyType] = useState("");
+  const [clientName, setClientName] =
+    useState("");
+
+  const [phone, setPhone] =
+    useState("");
+
+  const [city, setCity] =
+    useState("");
+
+  const [email, setEmail] =
+    useState("");
+
+  const [address, setAddress] =
+    useState("");
+
+  const [contactPerson, setContactPerson] =
+    useState("");
+
+  const [companyType, setCompanyType] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
 
   useEffect(() => {
     if (client) {
-      setClientName(client.client_name);
-      setPhone(client.phone);
-      setCity(client.city);
-      setEmail(client.email);
-      setAddress(client.address);
-      setContactPerson(client.contact_person || "");
-      setCompanyType(client.company_type || "");
+      setClientName(
+        client.client_name || ""
+      );
+
+      setPhone(client.phone || "");
+
+      setCity(client.city || "");
+
+      setEmail(client.email || "");
+
+      setAddress(client.address || "");
+
+      setContactPerson(
+        client.contact_person || ""
+      );
+
+      setCompanyType(
+        client.company_type || ""
+      );
     } else {
       clearForm();
     }
@@ -63,58 +94,126 @@ export default function AddClientModal({
   if (!open) return null;
 
   async function saveClient() {
-    let error;
-
-    if (client) {
-      const result = await supabase
-        .from("clients")
-        .update({
-          client_name: clientName,
-          phone,
-          city,
-          email,
-          address,
-          contact_person: contactPerson,
-          company_type: companyType,
-        })
-        .eq("id", client.id);
-
-      error = result.error;
-    } else {
-      const result = await supabase.from("clients").insert([
-        {
-          client_name: clientName,
-          phone,
-          city,
-          email,
-          address,
-          contact_person: contactPerson,
-          company_type: companyType,
-          status: "Active",
-        },
-      ]);
-
-      error = result.error;
-    }
-
-    if (error) {
-      alert(error.message);
+    if (!clientName.trim()) {
+      alert("Please enter the client name.");
       return;
     }
 
-    clearForm();
+    /*
+     * عند إنشاء عميل جديد:
+     * يجب أن يكون هناك branch_id.
+     *
+     * مدير الفرع:
+     * branchId يأتي من users.branch_id.
+     *
+     * Admin:
+     * إذا لم يكن مرتبطًا بفرع، سيبقى branch_id = null.
+     */
+    if (!client && !branchId) {
+      alert(
+        "لا يمكن إضافة العميل لأن المستخدم الحالي غير مرتبط بفرع."
+      );
+      return;
+    }
 
-    onSaved();
-    onClose();
+    setSaving(true);
+
+    try {
+      let error;
+
+      if (client) {
+        /*
+         * تعديل العميل
+         *
+         * لا نغير branch_id هنا.
+         * العميل يبقى تابعًا لفرعه الأصلي.
+         */
+        const result = await supabase
+          .from("clients")
+          .update({
+            client_name: clientName,
+            phone,
+            city,
+            email,
+            address,
+            contact_person:
+              contactPerson,
+            company_type:
+              companyType,
+          })
+          .eq("id", client.id);
+
+        error = result.error;
+      } else {
+        /*
+         * إنشاء عميل جديد
+         *
+         * ربط العميل تلقائيًا بفرع
+         * المستخدم الحالي.
+         */
+        const result = await supabase
+          .from("clients")
+          .insert([
+            {
+              client_name: clientName,
+              phone,
+              city,
+              email,
+              address,
+              contact_person:
+                contactPerson,
+              company_type:
+                companyType,
+              status: "Active",
+              branch_id: branchId,
+            },
+          ]);
+
+        error = result.error;
+      }
+
+      if (error) {
+        console.error(
+          "SAVE CLIENT ERROR:",
+          error
+        );
+
+        alert(
+          "حدث خطأ أثناء حفظ العميل:\n" +
+            error.message
+        );
+
+        return;
+      }
+
+      clearForm();
+
+      onSaved();
+      onClose();
+    } catch (error: any) {
+      console.error(
+        "SAVE CLIENT EXCEPTION:",
+        error
+      );
+
+      alert(
+        "حدث خطأ أثناء حفظ العميل:\n" +
+          (error?.message || "Unknown error")
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
 
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-[600px]">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-[600px] max-w-[95vw]">
 
         <h2 className="text-2xl font-bold mb-6">
-          {client ? "Edit Client" : "Add New Client"}
+          {client
+            ? "Edit Client"
+            : "Add New Client"}
         </h2>
 
         <div className="grid grid-cols-2 gap-4">
@@ -123,49 +222,63 @@ export default function AddClientModal({
             className="border border-gray-300 rounded-lg p-3 text-black"
             placeholder="Client Name"
             value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
+            onChange={(e) =>
+              setClientName(e.target.value)
+            }
           />
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
             placeholder="Phone"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) =>
+              setPhone(e.target.value)
+            }
           />
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
             placeholder="City"
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={(e) =>
+              setCity(e.target.value)
+            }
           />
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
             placeholder="Email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
           />
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
             placeholder="Contact Person"
             value={contactPerson}
-            onChange={(e) => setContactPerson(e.target.value)}
+            onChange={(e) =>
+              setContactPerson(e.target.value)
+            }
           />
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
             placeholder="Company Type"
             value={companyType}
-            onChange={(e) => setCompanyType(e.target.value)}
+            onChange={(e) =>
+              setCompanyType(e.target.value)
+            }
           />
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black col-span-2"
             placeholder="Address"
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={(e) =>
+              setAddress(e.target.value)
+            }
           />
 
         </div>
@@ -174,16 +287,22 @@ export default function AddClientModal({
 
           <button
             onClick={onClose}
-            className="px-6 py-3 rounded-lg bg-gray-300 hover:bg-gray-400"
+            disabled={saving}
+            className="px-6 py-3 rounded-lg bg-gray-300 hover:bg-gray-400 disabled:opacity-50"
           >
             Cancel
           </button>
 
           <button
             onClick={saveClient}
-            className="px-6 py-3 rounded-lg bg-blue-700 text-white hover:bg-blue-800"
+            disabled={saving}
+            className="px-6 py-3 rounded-lg bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-50"
           >
-            {client ? "Update Client" : "Save Client"}
+            {saving
+              ? "Saving..."
+              : client
+              ? "Update Client"
+              : "Save Client"}
           </button>
 
         </div>

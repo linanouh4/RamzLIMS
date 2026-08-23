@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
+import { useEffect, useMemo, useState } from "react";
 import {
   useParams,
   useRouter,
@@ -17,7 +12,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import ReportHeader from "@/components/reports/ReportHeader";
 
 type User = {
-  id: number;
+  id: string | number;
   username?: string | null;
   full_name?: string | null;
 };
@@ -72,23 +67,18 @@ export default function ConcreteTestPage() {
 
   const [draftId, setDraftId] = useState<number | null>(null);
 
-  const [reviewer, setReviewer] =
-    useState<Reviewer | null>(null);
+  const [reviewer, setReviewer] = useState<Reviewer | null>(null);
 
-  const [reviewedAt, setReviewedAt] =
-    useState<string | null>(null);
+  const [reviewedAt, setReviewedAt] = useState<string | null>(null);
 
-  const [testedByName, setTestedByName] =
-    useState("");
+  const [testedByName, setTestedByName] = useState("");
 
   const [loading, setLoading] = useState(true);
+
   const [saving, setSaving] = useState(false);
 
   const [samples, setSamples] = useState<Sample[]>(
-    Array.from(
-      { length: 12 },
-      (_, i) => emptySample(i + 1)
-    )
+    Array.from({ length: 12 }, (_, i) => emptySample(i + 1))
   );
 
   const [form, setForm] = useState({
@@ -117,8 +107,7 @@ export default function ConcreteTestPage() {
   useEffect(() => {
     const initialize = async () => {
       try {
-        const savedUser =
-          localStorage.getItem("user");
+        const savedUser = localStorage.getItem("user");
 
         let parsedUser: User | null = null;
 
@@ -126,10 +115,7 @@ export default function ConcreteTestPage() {
           try {
             parsedUser = JSON.parse(savedUser);
           } catch (error) {
-            console.error(
-              "USER PARSE ERROR:",
-              error
-            );
+            console.error("USER PARSE ERROR:", error);
           }
         }
 
@@ -155,10 +141,7 @@ export default function ConcreteTestPage() {
           await loadDraft(parsedUser);
         }
       } catch (error) {
-        console.error(
-          "INITIALIZE ERROR:",
-          error
-        );
+        console.error("INITIALIZE ERROR:", error);
       } finally {
         setLoading(false);
       }
@@ -185,10 +168,7 @@ export default function ConcreteTestPage() {
   // UPDATE FORM
   // =========================================================
 
-  function updateField(
-    field: string,
-    value: string
-  ) {
+  function updateField(field: string, value: string) {
     setForm((prev) => ({
       ...prev,
       [field]: value,
@@ -257,9 +237,7 @@ export default function ConcreteTestPage() {
       return null;
     }
 
-    return (
-      (length * width * height) / 1000
-    );
+    return (length * width * height) / 1000;
   }
 
   function calculateUnitWeight(sample: Sample) {
@@ -302,9 +280,7 @@ export default function ConcreteTestPage() {
     const strengths = samples
       .map(calculateStrength)
       .filter(
-        (
-          value
-        ): value is number =>
+        (value): value is number =>
           value !== null &&
           Number.isFinite(value)
       );
@@ -330,8 +306,9 @@ export default function ConcreteTestPage() {
       return "";
     }
 
-    const designStrength =
-      Number(form.design_strength);
+    const designStrength = Number(
+      form.design_strength
+    );
 
     if (!designStrength) {
       return "";
@@ -562,9 +539,11 @@ export default function ConcreteTestPage() {
           id: Number(
             reviewedUser.id
           ),
+
           full_name:
             reviewedUser.full_name ||
             null,
+
           username:
             reviewedUser.username ||
             null,
@@ -1211,17 +1190,15 @@ export default function ConcreteTestPage() {
       <div
         className={
           shouldPrint
-            ? "min-h-screen bg-white p-0"
+            ? "print-page min-h-screen bg-white p-0"
             : "min-h-screen bg-gray-100 p-4 md:p-6"
         }
       >
-
         {/* =================================================
             CONTROL BUTTONS
         ================================================= */}
 
         <div className="flex flex-wrap gap-3 mb-4 print:hidden">
-
           <button
             onClick={() =>
               router.back()
@@ -1264,7 +1241,6 @@ export default function ConcreteTestPage() {
           >
             🖨️ طباعة التقرير
           </button>
-
         </div>
 
         {/* =================================================
@@ -1274,17 +1250,17 @@ export default function ConcreteTestPage() {
         <div
           className={
             shouldPrint
-              ? "bg-white p-0 shadow-none print:shadow-none"
+              ? "concrete-report bg-white p-0 shadow-none print:shadow-none"
               : "bg-white p-4 md:p-6 shadow-sm print:shadow-none"
           }
         >
-
           <ReportHeader />
 
-          {/* TITLE */}
+          {/* =================================================
+              TITLE
+          ================================================= */}
 
           <div className="border border-black mt-4">
-
             <div className="text-center font-bold text-lg p-3 border-b border-black">
               WORKSHEET FOR COMPRESSIVE STRENGTH OF CONCRETE / MORTAR SAMPLES
             </div>
@@ -1292,15 +1268,14 @@ export default function ConcreteTestPage() {
             <div className="text-center font-bold text-lg p-2">
               نموذج فحص قوة عينات الخرسانة الأسمنتية
             </div>
-
           </div>
 
-          {/* FORM DATA */}
+          {/* =================================================
+              FORM DATA
+          ================================================= */}
 
           <div className="border-l border-r border-b border-black">
-
             <div className="grid grid-cols-2">
-
               <Field
                 label="Sampling Date / تاريخ أخذ العينة"
                 value={
@@ -1321,7 +1296,6 @@ export default function ConcreteTestPage() {
               {/* TESTED BY */}
 
               <div className="border-t border-black p-2">
-
                 <div className="font-bold text-xs mb-1">
                   Tested By / الفاحص
                 </div>
@@ -1334,7 +1308,6 @@ export default function ConcreteTestPage() {
                   }
                   readOnly
                 />
-
               </div>
 
               <Field
@@ -1440,7 +1413,6 @@ export default function ConcreteTestPage() {
               {/* SPECIMEN TYPE */}
 
               <div className="border-t border-black p-2">
-
                 <div className="font-bold text-xs mb-2">
                   Specimens Desc. / Type
                   <br />
@@ -1474,7 +1446,6 @@ export default function ConcreteTestPage() {
                     CONCRETE CORE / لبّة خرسانية
                   </option>
                 </select>
-
               </div>
 
               <Field
@@ -1492,23 +1463,17 @@ export default function ConcreteTestPage() {
                   )
                 }
               />
-
             </div>
-
           </div>
 
           {/* =================================================
               RESULTS TABLE
           ================================================= */}
 
-          <div className="overflow-x-auto mt-5">
-
+          <div className="results-wrapper overflow-x-auto mt-5">
             <table className="w-full border-collapse border border-black text-[10px]">
-
               <thead>
-
                 <tr className="bg-gray-200">
-
                   <th
                     rowSpan={2}
                     className="border border-black p-2"
@@ -1695,11 +1660,9 @@ export default function ConcreteTestPage() {
                       نوع الكسر والملاحظات
                     </span>
                   </th>
-
                 </tr>
 
                 <tr className="bg-gray-200">
-
                   <th className="border border-black p-1">
                     L
                   </th>
@@ -1711,19 +1674,15 @@ export default function ConcreteTestPage() {
                   <th className="border border-black p-1">
                     H
                   </th>
-
                 </tr>
-
               </thead>
 
               <tbody>
-
                 {samples.map(
                   (
                     sample,
                     index
                   ) => {
-
                     const area =
                       calculateArea(
                         sample
@@ -1755,7 +1714,6 @@ export default function ConcreteTestPage() {
                           sample.sample_no
                         }
                       >
-
                         <td className="border border-black p-1 text-center font-bold">
                           {
                             sample.sample_no
@@ -1763,7 +1721,6 @@ export default function ConcreteTestPage() {
                         </td>
 
                         <td className="border border-black p-1">
-
                           <input
                             className="w-full min-w-[70px] p-1 border"
                             value={
@@ -1772,9 +1729,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "field_sample_no",
@@ -1782,11 +1737,9 @@ export default function ConcreteTestPage() {
                               )
                             }
                           />
-
                         </td>
 
                         <td className="border border-black p-1">
-
                           <input
                             className="w-full min-w-[130px] p-1 border"
                             value={
@@ -1795,9 +1748,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "structure_part",
@@ -1805,11 +1756,9 @@ export default function ConcreteTestPage() {
                               )
                             }
                           />
-
                         </td>
 
                         <td className="border border-black p-1">
-
                           <input
                             type="date"
                             className="w-full min-w-[110px] p-1 border"
@@ -1819,9 +1768,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "date_sampled",
@@ -1829,11 +1776,9 @@ export default function ConcreteTestPage() {
                               )
                             }
                           />
-
                         </td>
 
                         <td className="border border-black p-1">
-
                           <input
                             type="number"
                             className="w-full min-w-[55px] p-1 border"
@@ -1843,9 +1788,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "slump",
@@ -1853,11 +1796,9 @@ export default function ConcreteTestPage() {
                               )
                             }
                           />
-
                         </td>
 
                         <td className="border border-black p-1">
-
                           <input
                             type="number"
                             className="w-full min-w-[50px] p-1 border"
@@ -1867,9 +1808,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "age_days",
@@ -1877,7 +1816,6 @@ export default function ConcreteTestPage() {
                               )
                             }
                           />
-
                         </td>
 
                         <DimensionInput
@@ -1887,9 +1825,7 @@ export default function ConcreteTestPage() {
                           readOnly={
                             shouldPrint
                           }
-                          onChange={(
-                            value
-                          ) =>
+                          onChange={(value) =>
                             updateSample(
                               index,
                               "length",
@@ -1905,9 +1841,7 @@ export default function ConcreteTestPage() {
                           readOnly={
                             shouldPrint
                           }
-                          onChange={(
-                            value
-                          ) =>
+                          onChange={(value) =>
                             updateSample(
                               index,
                               "width",
@@ -1923,9 +1857,7 @@ export default function ConcreteTestPage() {
                           readOnly={
                             shouldPrint
                           }
-                          onChange={(
-                            value
-                          ) =>
+                          onChange={(value) =>
                             updateSample(
                               index,
                               "height",
@@ -1951,7 +1883,6 @@ export default function ConcreteTestPage() {
                         </td>
 
                         <td className="border border-black p-1">
-
                           <input
                             type="number"
                             className="w-full min-w-[65px] p-1 border"
@@ -1961,9 +1892,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "weight",
@@ -1971,7 +1900,6 @@ export default function ConcreteTestPage() {
                               )
                             }
                           />
-
                         </td>
 
                         <td className="border border-black p-1 text-center bg-gray-50">
@@ -1984,7 +1912,6 @@ export default function ConcreteTestPage() {
                         </td>
 
                         <td className="border border-black p-1">
-
                           <input
                             type="number"
                             step="0.1"
@@ -1995,9 +1922,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "load_kn",
@@ -2005,7 +1930,6 @@ export default function ConcreteTestPage() {
                               )
                             }
                           />
-
                         </td>
 
                         <td className="border border-black p-1 text-center bg-gray-50">
@@ -2026,7 +1950,6 @@ export default function ConcreteTestPage() {
                         </td>
 
                         <td className="border border-black p-1">
-
                           <input
                             placeholder="Break / نوع الكسر"
                             className="w-full p-1 border mb-1"
@@ -2036,9 +1959,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "break_type",
@@ -2056,9 +1977,7 @@ export default function ConcreteTestPage() {
                             readOnly={
                               shouldPrint
                             }
-                            onChange={(
-                              e
-                            ) =>
+                            onChange={(e) =>
                               updateSample(
                                 index,
                                 "remarks",
@@ -2066,32 +1985,24 @@ export default function ConcreteTestPage() {
                               )
                             }
                           />
-
                         </td>
-
                       </tr>
                     );
                   }
                 )}
-
               </tbody>
-
             </table>
-
           </div>
 
           {/* =================================================
               FINAL RESULTS
           ================================================= */}
 
-          <div className="mt-4 border border-black">
-
+          <div className="final-results mt-4 border border-black">
             <div className="grid md:grid-cols-3">
-
               {/* AVG */}
 
               <div className="border-b md:border-b-0 md:border-r border-black p-3">
-
                 <strong>
                   AVG / المتوسط
                 </strong>
@@ -2104,13 +2015,11 @@ export default function ConcreteTestPage() {
                       )
                     : "-"}
                 </div>
-
               </div>
 
               {/* TESTED BY */}
 
               <div className="border-b md:border-b-0 md:border-r border-black p-3">
-
                 <strong>
                   Tested By (L.T) / الفاحص
                 </strong>
@@ -2123,13 +2032,11 @@ export default function ConcreteTestPage() {
                   }
                   readOnly
                 />
-
               </div>
 
               {/* NOTES */}
 
               <div className="p-3">
-
                 <strong>
                   Notes / الملاحظات
                 </strong>
@@ -2149,11 +2056,8 @@ export default function ConcreteTestPage() {
                     )
                   }
                 />
-
               </div>
-
             </div>
-
           </div>
 
           {/* =================================================
@@ -2161,12 +2065,9 @@ export default function ConcreteTestPage() {
           ================================================= */}
 
           {reviewer && (
-            <div className="mt-4 border border-black">
-
+            <div className="review-section mt-4 border border-black">
               <div className="grid md:grid-cols-2">
-
                 <div className="p-3 border-b md:border-b-0 md:border-r border-black">
-
                   <strong>
                     Reviewed By / تمت المراجعة بواسطة
                   </strong>
@@ -2176,11 +2077,9 @@ export default function ConcreteTestPage() {
                       reviewer.username ||
                       "-"}
                   </div>
-
                 </div>
 
                 <div className="p-3">
-
                   <strong>
                     Reviewed At / تاريخ المراجعة
                   </strong>
@@ -2198,11 +2097,8 @@ export default function ConcreteTestPage() {
                         )
                       : "-"}
                   </div>
-
                 </div>
-
               </div>
-
             </div>
           )}
 
@@ -2212,7 +2108,7 @@ export default function ConcreteTestPage() {
 
           {acceptanceStatus && (
             <div
-              className={`mt-4 border border-black p-3 text-center font-bold ${
+              className={`acceptance-section mt-4 border border-black p-3 text-center font-bold ${
                 acceptanceStatus ===
                 "Accepted"
                   ? "bg-green-100 text-green-800"
@@ -2220,13 +2116,12 @@ export default function ConcreteTestPage() {
               }`}
             >
               Acceptance Status / حالة القبول:
-              {" "}
-              {acceptanceStatus}
+              <span className="ml-2">
+                {acceptanceStatus}
+              </span>
             </div>
           )}
-
         </div>
-
       </div>
     </ProtectedRoute>
   );
@@ -2245,15 +2140,12 @@ function Field({
 }: {
   label: string;
   value: string;
-  onChange: (
-    value: string
-  ) => void;
+  onChange: (value: string) => void;
   type?: string;
   readOnly?: boolean;
 }) {
   return (
     <div className="border-t border-black p-2">
-
       <div className="font-bold text-xs mb-1">
         {label}
       </div>
@@ -2269,7 +2161,6 @@ function Field({
           )
         }
       />
-
     </div>
   );
 }
@@ -2284,14 +2175,11 @@ function DimensionInput({
   readOnly = false,
 }: {
   value: string;
-  onChange: (
-    value: string
-  ) => void;
+  onChange: (value: string) => void;
   readOnly?: boolean;
 }) {
   return (
     <td className="border border-black p-1">
-
       <input
         type="number"
         className="w-full min-w-[50px] p-1 border"
@@ -2303,7 +2191,6 @@ function DimensionInput({
           )
         }
       />
-
     </td>
   );
 }

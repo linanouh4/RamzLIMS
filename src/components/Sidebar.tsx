@@ -11,14 +11,16 @@ type Props = {
     full_name?: string;
   } | null;
 };
+
 export default function Sidebar({ user }: Props) {
   const pathname = usePathname();
-const router = useRouter();
+  const router = useRouter();
 
-const logout = () => {
-  clearSavedUser();
-  router.push("/");
-};
+  const logout = () => {
+    clearSavedUser();
+    router.push("/");
+  };
+
   const linkClass = (href: string) =>
     `block rounded-lg p-3 transition ${
       pathname === href
@@ -105,6 +107,61 @@ const logout = () => {
           </>
         )}
 
+        {/* ================= BRANCH MANAGER ================= */}
+
+        {user?.role === "branch_manager" && (
+          <>
+            <Link
+              href="/dashboard"
+              className={linkClass("/dashboard")}
+            >
+              🏠 Dashboard
+            </Link>
+
+            <Link
+              href="/clients"
+              className={linkClass("/clients")}
+            >
+              👥 Clients
+            </Link>
+
+            <Link
+              href="/projects"
+              className={linkClass("/projects")}
+            >
+              🏗 Projects
+            </Link>
+
+            <Link
+              href="/contracts"
+              className={linkClass("/contracts")}
+            >
+              📝 Contracts
+            </Link>
+
+            <Link
+              href="/tasks"
+              className={linkClass("/tasks")}
+            >
+              📋 Tasks
+            </Link>
+
+            <Link
+              href="/task-results"
+              className={linkClass("/task-results")}
+            >
+              📊 Task Results
+            </Link>
+
+            <Link
+              href="/reports"
+              className={linkClass("/reports")}
+            >
+              📑 Reports
+            </Link>
+          </>
+        )}
+
         {/* ================= TECHNICIAN ================= */}
 
         {user?.role === "technician" && (
@@ -138,12 +195,16 @@ const logout = () => {
             </Link>
           </>
         )}
-<button
-  onClick={logout}
-  className="w-full text-right rounded-lg p-3 mt-6 bg-red-600 hover:bg-red-700 transition"
->
-  🚪 Logout
-</button>
+
+        {/* ================= LOGOUT ================= */}
+
+        <button
+          onClick={logout}
+          className="w-full text-right rounded-lg p-3 mt-6 bg-red-600 hover:bg-red-700 transition"
+        >
+          🚪 Logout
+        </button>
+
       </nav>
     </aside>
   );
