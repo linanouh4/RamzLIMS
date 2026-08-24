@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { getSavedUser, saveUser } from "@/lib/auth";
 
 export default function Home() {
@@ -10,55 +10,80 @@ export default function Home() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const savedUser = getSavedUser();
+
     if (savedUser) {
-      router.push("/dashboard");
+      if (savedUser.role === "technician") {
+        router.replace("/technician");
+      } else {
+        router.replace("/dashboard");
+      }
     }
   }, [router]);
 
- const handleLogin = async () => {
-  // البحث عن المستخدم في جدول users
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("username", username.trim())
-    .eq("password", password.trim())
-    .limit(1);
+  const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      alert("الرجاء إدخال اسم المستخدم وكلمة المرور");
+      return;
+    }
 
-  if (error) {
-    console.error("USER LOGIN ERROR:", error);
-    alert(error.message);
-    return;
-  }
+    setLoading(true);
 
-  if (!data || data.length === 0) {
-    alert("اسم المستخدم أو كلمة المرور غير صحيحة");
-    return;
-  }
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select(
+          "id, username, full_name, role, branch_id, signature"
+        )
+        .eq("username", username.trim())
+        .eq("password", password.trim())
+        .maybeSingle();
 
-  const row = data[0];
+      if (error) {
+        console.error("LOGIN ERROR:", error);
+        alert("تعذر الوصول إلى بيانات المستخدم.");
+        return;
+      }
 
-  // حفظ المستخدم بالطريقة القديمة
-  const user = {
-    id: row.id,
-    username: row.username,
-    full_name: row.full_name || row.username,
-    role: row.role || "reception",
+      if (!data) {
+        alert("اسم المستخدم أو كلمة المرور غير صحيحة");
+        return;
+      }
+
+      const user = {
+        id: data.id,
+        username: data.username,
+        full_name: data.full_name || data.username,
+        role: String(data.role || "reception")
+          .trim()
+          .toLowerCase(),
+        branch_id:
+          data.branch_id !== null &&
+          data.branch_id !== undefined
+            ? Number(data.branch_id)
+            : null,
+        signature: data.signature || null,
+      };
+
+      saveUser(user);
+
+      console.log("LOGGED IN USER:", user);
+
+      if (user.role === "technician") {
+        router.replace("/technician");
+      } else {
+        router.replace("/dashboard");
+      }
+    } catch (error: any) {
+      console.error("LOGIN ERROR:", error);
+      alert(error?.message || "حدث خطأ أثناء تسجيل الدخول");
+    } finally {
+      setLoading(false);
+    }
   };
-
-  console.log("LOGGED IN USER:", user);
-
-  saveUser(user);
-
-  // التوجيه حسب الصلاحية
-  if (user.role === "technician") {
-    router.push("/technician");
-  } else {
-    router.push("/dashboard");
-  }
-};
 
   return (
     <main className="min-h-screen bg-slate-100 flex items-center justify-center">
@@ -82,6 +107,11 @@ export default function Home() {
             className="w-full border rounded-lg p-3 mb-4"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleLogin();
+              }
+            }}
           />
 
           <label className="block mb-2 font-semibold">
@@ -94,13 +124,19 @@ export default function Home() {
             className="w-full border rounded-lg p-3 mb-6"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleLogin();
+              }
+            }}
           />
 
           <button
             onClick={handleLogin}
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white rounded-lg p-3"
+            disabled={loading}
+            className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white rounded-lg p-3"
           >
-            Login
+            {loading ? "جاري تسجيل الدخول..." : "Login"}
           </button>
         </div>
       </div>

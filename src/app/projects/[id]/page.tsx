@@ -24,6 +24,7 @@ export default function ProjectDetailsPage() {
   const [approvingLabManager, setApprovingLabManager] = useState<
     number | null
   >(null);
+  const [deletingTasks, setDeletingTasks] = useState(false);
 
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -36,56 +37,35 @@ export default function ProjectDetailsPage() {
   const [priority, setPriority] = useState("عادي");
   const [testType, setTestType] = useState("");
 
-  const [deletingTasks, setDeletingTasks] = useState(false);
-
   // =========================
   // CURRENT USER
   // =========================
 
-  // =========================
-// CURRENT USER & PERMISSIONS
-// =========================
+  const currentUser = getSavedUser() as
+    | {
+        id: number;
+        username: string;
+        full_name: string;
+        role: string;
+        signature?: string | null;
+      }
+    | null;
 
-const currentUser = getSavedUser() as
-  | {
-      id: number;
-      username: string;
-      full_name: string;
-      role: string;
-      signature?: string | null;
-    }
-  | null;
+  const userRole = currentUser?.role;
 
-const userRole = currentUser?.role;
+  const userPermissions =
+    userRole && userRole in permissions
+      ? permissions[userRole as keyof typeof permissions]
+      : null;
 
-const userPermissions =
-  userRole && userRole in permissions
-    ? permissions[userRole as keyof typeof permissions]
-    : null;
+  const isAdmin = userRole === "admin";
 
-const isAdmin = userRole === "admin";
+  const canCreateContract =
+    userPermissions?.createContract === true;
 
-const canCreateProject =
-  userPermissions?.createProject === true;
+  const canAssignTask =
+    userPermissions?.assignTask === true;
 
-const canCreateContract =
-  userPermissions?.createContract === true;
-
-const canAssignTask =
-  userPermissions?.assignTask === true;
-
-const canManageEmployees =
-  userPermissions?.manageEmployees === true;
-
-const canManageClients =
-  userPermissions?.manageClients === true;
-
-  /*
-   * مدير المختبر:
-   * - lab_manager هو الدور الأساسي.
-   * - admin مسموح له أيضًا بالاعتماد حتى يمكن اختبار النظام
-   *   بحساب المدير العام الحالي.
-   */
   const isLabManager =
     currentUser?.role === "lab_manager" ||
     currentUser?.role === "admin";
@@ -113,7 +93,7 @@ const canManageClients =
   const [paymentMethod, setPaymentMethod] = useState("");
 
   // =========================
-  // LOAD PROJECT
+  // LOAD
   // =========================
 
   useEffect(() => {
@@ -123,29 +103,48 @@ const canManageClients =
   }, [id]);
 
   // =========================
+  // CONTRACT STATUS
+  // =========================
+
+  const approvedCustomerContract = externalRequests.find(
+    (request) =>
+      request.customer_approval_status === "Approved"
+  );
+
+  const hasApprovedCustomerContract =
+    !!approvedCustomerContract;
+
+  // =========================
   // SAVE TASK
   // =========================
 
   async function saveTask() {
-  if (!canAssignTask) {
-    alert("ليس لديك صلاحية إسناد المهام.");
-    return;
-  }
+    if (!canAssignTask) {
+      alert("ليس لديك صلاحية إسناد المهام.");
+      return;
+    }
 
-  if (!technicianId) {
-    alert("الرجاء اختيار الفني");
-    return;
-  }
+    if (!hasApprovedCustomerContract) {
+      alert(
+        "لا يمكن إسناد المهمة قبل إنشاء عقد العميل واعتماده من العميل."
+      );
+      return;
+    }
 
-  if (!taskName.trim()) {
-    alert("الرجاء إدخال اسم المهمة");
-    return;
-  }
+    if (!technicianId) {
+      alert("الرجاء اختيار الفني");
+      return;
+    }
 
-  if (!testType) {
-    alert("الرجاء اختيار نوع الفحص");
-    return;
-  }
+    if (!taskName.trim()) {
+      alert("الرجاء إدخال اسم المهمة");
+      return;
+    }
+
+    if (!testType) {
+      alert("الرجاء اختيار نوع الفحص");
+      return;
+    }
 
     const { error } = await supabase.from("tasks").insert([
       {
@@ -153,9 +152,9 @@ const canManageClients =
         technician_id: Number(technicianId),
         task_name: taskName,
         task_description: taskDescription,
-        priority: priority,
+        priority,
         test_type: testType,
-        is_test: true,
+        is_test: false,
       },
     ]);
 
@@ -168,7 +167,6 @@ const canManageClients =
     alert("تم إسناد المهمة بنجاح");
 
     setShowTaskModal(false);
-
     setTechnicianId("");
     setTaskName("");
     setTaskDescription("");
@@ -179,34 +177,82 @@ const canManageClients =
   }
 
   // =========================
-  // SAVE EXTERNAL REQUEST
+  // GENERATE UNIQUE REQUEST NO
+  // =========================
+
+  function generateRequestNumber() {
+    const year = new Date().getFullYear();
+
+    const timestamp = Date.now()
+      .toString()
+      .slice(-8);
+
+    const random = Math.floor(
+      100 + Math.random() * 900
+    );
+
+    return `ETR-${year}-${timestamp}${random}`;
+  }
+
+  // =========================
+  // GENERATE APPROVAL TOKEN
+  // =========================
+
+  function generateApprovalToken() {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
+      return crypto.randomUUID();
+    }
+
+    return `${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 15)}`;
+  }
+
+  // =========================
+  // SAVE CLIENT CONTRACT
   // =========================
 
   async function saveExternalRequest() {
-  if (!canCreateContract) {
-    alert("ليس لديك صلاحية إنشاء طلب فحص.");
-    return;
-  }
+    if (!canCreateContract) {
+      alert("ليس لديك صلاحية إنشاء عقد العميل.");
+      return;
+    }
 
-  if (!requestedTest.trim()) {
-    alert("الرجاء إدخال الاختبار المطلوب");
-    return;
-  }
+    if (!project?.client_id) {
+      alert("هذا المشروع غير مرتبط بعميل.");
+      return;
+    }
 
-  if (!sampleKind.trim()) {
-    alert("الرجاء إدخال نوع العينة");
-    return;
-  }
+    if (!requestedTest.trim()) {
+      alert("الرجاء إدخال الاختبار المطلوب");
+      return;
+    }
+
+    if (!sampleKind.trim()) {
+      alert("الرجاء إدخال نوع العينة");
+      return;
+    }
+
     setSavingRequest(true);
 
     try {
+      const requestNo = generateRequestNumber();
+      const approvalToken = generateApprovalToken();
+
       const { data, error } = await supabase
         .from("external_test_requests")
         .insert([
           {
             project_id: Number(id),
 
-            client_id: project?.client_id || null,
+            client_id: project.client_id,
+
+            request_no: requestNo,
+
+            approval_token: approvalToken,
 
             order_no: orderNo || null,
 
@@ -238,8 +284,18 @@ const canManageClients =
 
             technical_review_status: "Pending",
 
+            technical_review_notes: null,
+
             customer_name:
               client?.client_name || null,
+
+            customer_approval_status: "Pending",
+
+            customer_approved_by: null,
+
+            customer_approved_at: null,
+
+            customer_signature: null,
 
             lab_manager_approval_status: "Pending",
 
@@ -257,12 +313,12 @@ const canManageClients =
 
       if (error) {
         console.error(
-          "SAVE EXTERNAL REQUEST ERROR:",
+          "SAVE CLIENT CONTRACT ERROR:",
           JSON.stringify(error, null, 2)
         );
 
         alert(
-          "حدث خطأ أثناء حفظ طلب الفحص:\n\n" +
+          "حدث خطأ أثناء حفظ عقد العميل:\n\n" +
             `Code: ${error.code || "-"}\n` +
             `Message: ${error.message || "-"}\n` +
             `Details: ${error.details || "-"}\n` +
@@ -273,17 +329,18 @@ const canManageClients =
       }
 
       alert(
-        `تم إنشاء طلب الفحص بنجاح\nرقم الطلب: ${data.request_no}`
+        `تم إنشاء عقد العميل بنجاح\n\nرقم العقد: ${
+          data?.request_no || requestNo
+        }\n\nتم إصدار رابط موافقة العميل.`
       );
 
       resetExternalRequestForm();
-
       setShowRequestModal(false);
 
       await loadExternalRequests();
     } catch (error: any) {
       console.error(
-        "UNEXPECTED EXTERNAL REQUEST ERROR:",
+        "UNEXPECTED CLIENT CONTRACT ERROR:",
         error
       );
 
@@ -297,7 +354,7 @@ const canManageClients =
   }
 
   // =========================
-  // RESET REQUEST FORM
+  // RESET FORM
   // =========================
 
   function resetExternalRequestForm() {
@@ -311,7 +368,9 @@ const canManageClients =
       client?.contact_person || ""
     );
 
-    setRequestTelephone(client?.phone || "");
+    setRequestTelephone(
+      client?.phone || ""
+    );
 
     setSampleKind("");
     setSampleQuantity("");
@@ -327,27 +386,28 @@ const canManageClients =
   async function approveLabManager(request: any) {
     if (!isLabManager) {
       alert(
-        "ليس لديك صلاحية اعتماد طلب الفحص كمدير مختبر."
+        "ليس لديك صلاحية اعتماد العقد كمدير مختبر."
       );
       return;
     }
 
     if (!currentUser?.id) {
-      alert(
-        "تعذر تحديد المستخدم الحالي."
-      );
+      alert("تعذر تحديد المستخدم الحالي.");
       return;
     }
 
-    if (request.lab_manager_approval_status === "Approved") {
+    if (
+      request.lab_manager_approval_status ===
+      "Approved"
+    ) {
       alert(
-        "طلب الفحص معتمد مسبقًا من مدير المختبر."
+        "العقد معتمد مسبقًا من مدير المختبر."
       );
       return;
     }
 
     const confirmed = window.confirm(
-      `هل أنت متأكد من اعتماد طلب الفحص ${request.request_no} كمدير مختبر؟\n\nسيتم تسجيل اسمك وتوقيعك وتاريخ الاعتماد.`
+      `هل أنت متأكد من اعتماد العقد ${request.request_no} كمدير مختبر؟`
     );
 
     if (!confirmed) {
@@ -357,10 +417,6 @@ const canManageClients =
     setApprovingLabManager(request.id);
 
     try {
-      /*
-       * التوقيع يتم أخذه مباشرة من المستخدم الحالي المحفوظ
-       * في users.signature.
-       */
       const managerSignature =
         currentUser.signature || null;
 
@@ -385,6 +441,8 @@ const canManageClients =
 
           lab_manager_approved_by_name:
             managerName,
+
+          status: "Approved",
         })
         .eq("id", request.id);
 
@@ -395,31 +453,18 @@ const canManageClients =
         );
 
         alert(
-          "حدث خطأ أثناء اعتماد الطلب:\n\n" +
-            `Code: ${error.code || "-"}\n` +
-            `Message: ${error.message || "-"}\n` +
-            `Details: ${error.details || "-"}\n` +
-            `Hint: ${error.hint || "-"}`
+          "حدث خطأ أثناء اعتماد العقد:\n\n" +
+            error.message
         );
 
         return;
       }
 
       alert(
-        "تم اعتماد طلب الفحص بنجاح من مدير المختبر."
+        "تم اعتماد العقد بنجاح من مدير المختبر."
       );
 
       await loadExternalRequests();
-    } catch (error: any) {
-      console.error(
-        "UNEXPECTED LAB MANAGER APPROVAL ERROR:",
-        error
-      );
-
-      alert(
-        "حدث خطأ غير متوقع أثناء الاعتماد:\n" +
-          (error?.message || "خطأ غير معروف")
-      );
     } finally {
       setApprovingLabManager(null);
     }
@@ -448,9 +493,7 @@ const canManageClients =
       );
 
       alert(projectError.message);
-
       setLoading(false);
-
       return;
     }
 
@@ -494,8 +537,6 @@ const canManageClients =
         "SAMPLES ERROR:",
         samplesError
       );
-
-      alert(samplesError.message);
     }
 
     setProject(projectData);
@@ -513,28 +554,21 @@ const canManageClients =
       .select("id, full_name")
       .eq("role", "technician")
       .order("full_name");
-if (techError) {
-  console.error("TECHNICIANS ERROR MESSAGE:", techError.message);
-  console.error("TECHNICIANS ERROR CODE:", techError.code);
-  console.error("TECHNICIANS ERROR DETAILS:", techError.details);
-  console.error("TECHNICIANS ERROR HINT:", techError.hint);
 
-  alert(
-    "خطأ تحميل الفنيين:\n\n" +
-      `Code: ${techError.code || "-"}\n` +
-      `Message: ${techError.message || "-"}\n` +
-      `Details: ${techError.details || "-"}\n` +
-      `Hint: ${techError.hint || "-"}`
-  );
-} else {
-  setTechnicians(techData || []);
-}
+    if (techError) {
+      console.error(
+        "TECHNICIANS ERROR:",
+        techError
+      );
+    } else {
+      setTechnicians(techData || []);
+    }
 
     setLoading(false);
   }
 
   // =========================
-  // LOAD EXTERNAL REQUESTS
+  // LOAD CONTRACTS
   // =========================
 
   async function loadExternalRequests() {
@@ -545,6 +579,8 @@ if (techError) {
       .from("external_test_requests")
       .select(`
         id,
+        project_id,
+        client_id,
         request_no,
         order_no,
         request_date,
@@ -565,7 +601,6 @@ if (techError) {
         customer_approved_at,
         customer_signature,
         created_at,
-
         lab_manager_approval_status,
         lab_manager_approved_by,
         lab_manager_approved_at,
@@ -579,7 +614,7 @@ if (techError) {
 
     if (error) {
       console.error(
-        "EXTERNAL REQUESTS ERROR:",
+        "CONTRACTS ERROR:",
         error
       );
 
@@ -590,10 +625,73 @@ if (techError) {
   }
 
   // =========================
-  // PRINT EXTERNAL REQUEST
+  // COPY APPROVAL LINK
   // =========================
 
-  function printExternalRequest(request: any) {
+  async function copyApprovalLink(
+    request: any
+  ) {
+    if (!request.approval_token) {
+      alert(
+        "لا يوجد رابط موافقة لهذا العقد."
+      );
+      return;
+    }
+
+    const approvalUrl =
+      `${window.location.origin}/customer-approval/${request.approval_token}`;
+
+    try {
+      await navigator.clipboard.writeText(
+        approvalUrl
+      );
+
+      alert(
+        "تم نسخ رابط موافقة العميل."
+      );
+    } catch (error) {
+      console.error(
+        "COPY APPROVAL LINK ERROR:",
+        error
+      );
+
+      window.prompt(
+        "انسخ رابط موافقة العميل:",
+        approvalUrl
+      );
+    }
+  }
+
+  // =========================
+  // OPEN APPROVAL LINK
+  // =========================
+
+  function openApprovalLink(
+    request: any
+  ) {
+    if (!request.approval_token) {
+      alert(
+        "لا يوجد رابط موافقة لهذا العقد."
+      );
+      return;
+    }
+
+    const approvalUrl =
+      `${window.location.origin}/customer-approval/${request.approval_token}`;
+
+    window.open(
+      approvalUrl,
+      "_blank"
+    );
+  }
+
+  // =========================
+  // PRINT CONTRACT
+  // =========================
+
+  function printExternalRequest(
+    request: any
+  ) {
     const printWindow = window.open(
       "",
       "_blank",
@@ -629,70 +727,8 @@ if (techError) {
           ).toLocaleString("ar-SA")
         : "-";
 
-    const customerSignatureHtml =
-      request.customer_signature
-        ? `
-          <div class="signature-box">
-            <div class="label">
-              توقيع العميل / ممثل العميل
-            </div>
-
-            <img
-              src="${request.customer_signature}"
-              class="signature"
-            />
-          </div>
-        `
-        : `
-          <div class="signature-box">
-            <div class="label">
-              توقيع العميل / ممثل العميل
-            </div>
-
-            <div class="empty-signature">
-              لم يتم اعتماد الطلب من العميل بعد
-            </div>
-          </div>
-        `;
-
-    const labManagerSignatureHtml =
-      request.lab_manager_signature
-        ? `
-          <div class="signature-box">
-            <div class="label">
-              توقيع مدير المختبر
-            </div>
-
-            <img
-              src="${request.lab_manager_signature}"
-              class="signature"
-            />
-          </div>
-        `
-        : `
-          <div class="signature-box">
-            <div class="label">
-              توقيع مدير المختبر
-            </div>
-
-            <div class="empty-signature">
-              لم يتم اعتماد الطلب من مدير المختبر بعد
-            </div>
-          </div>
-        `;
-
-    const overallStatus =
-      customerApproved && labManagerApproved
-        ? "تم اعتماد الطلب من العميل ومدير المختبر"
-        : !customerApproved && !labManagerApproved
-        ? "بانتظار اعتماد العميل ومدير المختبر"
-        : customerApproved
-        ? "تم اعتماد العميل - بانتظار اعتماد مدير المختبر"
-        : "تم اعتماد مدير المختبر - بانتظار اعتماد العميل";
-
     printWindow.document.write(`
       <!DOCTYPE html>
-
       <html lang="ar" dir="rtl">
 
       <head>
@@ -700,7 +736,9 @@ if (techError) {
         <meta charset="UTF-8" />
 
         <title>
-          طلب فحص خارجي - ${request.request_no || ""}
+          عقد العميل - ${
+            request.request_no || ""
+          }
         </title>
 
         <style>
@@ -715,7 +753,6 @@ if (techError) {
             padding: 20px;
             color: #000;
             background: white;
-            direction: rtl;
           }
 
           .page {
@@ -740,41 +777,40 @@ if (techError) {
           .company {
             font-size: 24px;
             font-weight: bold;
-            margin-bottom: 8px;
           }
 
           .title {
             font-size: 21px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-top: 10px;
           }
 
           .subtitle {
             font-size: 14px;
             color: #444;
+            margin-top: 5px;
           }
 
-          .request-number {
+          .contract-number {
             border: 2px solid #000;
             padding: 15px 25px;
             text-align: center;
-            min-width: 170px;
+            min-width: 180px;
           }
 
-          .request-number-label {
+          .contract-number-label {
             font-size: 13px;
-            margin-bottom: 8px;
           }
 
-          .request-number-value {
+          .contract-number-value {
             font-size: 20px;
             font-weight: bold;
+            margin-top: 8px;
           }
 
           .section {
             border: 1px solid #000;
             margin-bottom: 15px;
-            page-break-inside: avoid;
           }
 
           .section-title {
@@ -828,11 +864,6 @@ if (techError) {
             font-size: 15px;
           }
 
-          .approval {
-            border: 2px solid #000;
-            padding: 15px;
-          }
-
           .signature-box {
             border: 1px solid #999;
             margin-top: 15px;
@@ -845,10 +876,10 @@ if (techError) {
             max-width: 400px;
             height: 110px;
             object-fit: contain;
-            margin: 10px auto 0;
+            margin: 10px auto;
           }
 
-          .empty-signature {
+          .empty {
             height: 100px;
             display: flex;
             align-items: center;
@@ -862,7 +893,6 @@ if (techError) {
             padding-top: 10px;
             text-align: center;
             font-size: 12px;
-            line-height: 1.8;
           }
 
           .print-button {
@@ -905,8 +935,6 @@ if (techError) {
 
         <div class="page">
 
-          <!-- HEADER -->
-
           <div class="header">
 
             <div class="header-row">
@@ -918,7 +946,7 @@ if (techError) {
                 </div>
 
                 <div class="title">
-                  طلب فحص خارجي
+                  عقد العميل وطلب الفحص
                 </div>
 
                 <div class="subtitle">
@@ -927,14 +955,17 @@ if (techError) {
 
               </div>
 
-              <div class="request-number">
+              <div class="contract-number">
 
-                <div class="request-number-label">
-                  رقم الطلب
+                <div class="contract-number-label">
+                  رقم العقد
                 </div>
 
-                <div class="request-number-value">
-                  ${request.request_no || "-"}
+                <div class="contract-number-value">
+                  ${
+                    request.request_no ||
+                    "-"
+                  }
                 </div>
 
               </div>
@@ -943,15 +974,15 @@ if (techError) {
 
           </div>
 
-
-          <!-- STATUS -->
-
           <div class="status">
-            ${overallStatus}
+
+            ${
+              customerApproved
+                ? "تم اعتماد العقد من العميل"
+                : "بانتظار اعتماد العميل"
+            }
+
           </div>
-
-
-          <!-- CUSTOMER / PROJECT -->
 
           <div class="section">
 
@@ -967,9 +998,11 @@ if (techError) {
                   <div class="label">
                     اسم العميل
                   </div>
-
                   <div class="value">
-                    ${request.customer_name || "-"}
+                    ${
+                      request.customer_name ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -977,9 +1010,11 @@ if (techError) {
                   <div class="label">
                     اسم المشروع
                   </div>
-
                   <div class="value">
-                    ${project?.project_name || "-"}
+                    ${
+                      project?.project_name ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -987,9 +1022,11 @@ if (techError) {
                   <div class="label">
                     مسؤول الاتصال
                   </div>
-
                   <div class="value">
-                    ${request.contact_person || "-"}
+                    ${
+                      request.contact_person ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -997,9 +1034,11 @@ if (techError) {
                   <div class="label">
                     الهاتف
                   </div>
-
                   <div class="value">
-                    ${request.telephone || "-"}
+                    ${
+                      request.telephone ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -1008,9 +1047,6 @@ if (techError) {
             </div>
 
           </div>
-
-
-          <!-- REQUEST -->
 
           <div class="section">
 
@@ -1026,9 +1062,11 @@ if (techError) {
                   <div class="label">
                     رقم طلب العميل
                   </div>
-
                   <div class="value">
-                    ${request.order_no || "-"}
+                    ${
+                      request.order_no ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -1036,9 +1074,11 @@ if (techError) {
                   <div class="label">
                     تاريخ الطلب
                   </div>
-
                   <div class="value">
-                    ${request.request_date || "-"}
+                    ${
+                      request.request_date ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -1046,9 +1086,11 @@ if (techError) {
                   <div class="label">
                     نوع العينة
                   </div>
-
                   <div class="value">
-                    ${request.sample_kind || "-"}
+                    ${
+                      request.sample_kind ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -1056,9 +1098,11 @@ if (techError) {
                   <div class="label">
                     عدد العينات
                   </div>
-
                   <div class="value">
-                    ${request.quantity ?? "-"}
+                    ${
+                      request.quantity ??
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -1067,9 +1111,6 @@ if (techError) {
             </div>
 
           </div>
-
-
-          <!-- TEST -->
 
           <div class="section">
 
@@ -1085,19 +1126,23 @@ if (techError) {
                   <div class="label">
                     الاختبار المطلوب
                   </div>
-
                   <div class="value">
-                    ${request.requested_test || "-"}
+                    ${
+                      request.requested_test ||
+                      "-"
+                    }
                   </div>
                 </div>
 
                 <div class="field">
                   <div class="label">
-                    مواصفة / طريقة الاختبار
+                    طريقة الاختبار
                   </div>
-
                   <div class="value">
-                    ${request.test_method || "-"}
+                    ${
+                      request.test_method ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -1105,19 +1150,23 @@ if (techError) {
                   <div class="label">
                     طريقة الدفع
                   </div>
-
                   <div class="value">
-                    ${request.payment_method || "-"}
+                    ${
+                      request.payment_method ||
+                      "-"
+                    }
                   </div>
                 </div>
 
                 <div class="field">
                   <div class="label">
-                    المراجعة الفنية
+                    حالة العقد
                   </div>
-
                   <div class="value">
-                    ${request.technical_review_status || "Pending"}
+                    ${
+                      request.status ||
+                      "-"
+                    }
                   </div>
                 </div>
 
@@ -1126,9 +1175,6 @@ if (techError) {
             </div>
 
           </div>
-
-
-          <!-- DECLARATION -->
 
           <div class="section">
 
@@ -1141,19 +1187,17 @@ if (techError) {
               <div class="declaration">
 
                 أقر أنا الموقع أدناه بأنني اطلعت
-                على بيانات طلب الفحص الموضحة أعلاه،
-                وأنها تمثل متطلبات الفحص المطلوبة،
-                وأوافق على تنفيذ الاختبارات المذكورة
-                وفقًا للبيانات الموضحة في الطلب.
+                على بيانات عقد العميل وطلب الفحص
+                الموضحة أعلاه، وأنها تمثل متطلبات
+                الفحص المطلوبة، وأوافق على تنفيذ
+                الاختبارات المذكورة وفقًا للبيانات
+                الموضحة في الطلب.
 
               </div>
 
             </div>
 
           </div>
-
-
-          <!-- CUSTOMER APPROVAL -->
 
           <div class="section">
 
@@ -1163,62 +1207,71 @@ if (techError) {
 
             <div class="section-body">
 
-              <div class="approval">
+              <div class="grid">
 
-                <div class="grid">
-
-                  <div class="field">
-
-                    <div class="label">
-                      حالة اعتماد العميل
-                    </div>
-
-                    <div class="value">
-                      ${
-                        customerApproved
-                          ? "تم الاعتماد"
-                          : "بانتظار الاعتماد"
-                      }
-                    </div>
-
+                <div class="field">
+                  <div class="label">
+                    الحالة
                   </div>
-
-                  <div class="field">
-
-                    <div class="label">
-                      اسم العميل / ممثل العميل
-                    </div>
-
-                    <div class="value">
-                      ${request.customer_approved_by || "-"}
-                    </div>
-
+                  <div class="value">
+                    ${
+                      customerApproved
+                        ? "تم الاعتماد"
+                        : "بانتظار الاعتماد"
+                    }
                   </div>
-
-                  <div class="field">
-
-                    <div class="label">
-                      تاريخ الاعتماد
-                    </div>
-
-                    <div class="value">
-                      ${customerApprovalDate}
-                    </div>
-
-                  </div>
-
                 </div>
 
-                ${customerSignatureHtml}
+                <div class="field">
+                  <div class="label">
+                    اسم المعتمد
+                  </div>
+                  <div class="value">
+                    ${
+                      request.customer_approved_by ||
+                      "-"
+                    }
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="label">
+                    تاريخ الاعتماد
+                  </div>
+                  <div class="value">
+                    ${customerApprovalDate}
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="signature-box">
+
+                <div class="label">
+                  توقيع العميل / ممثل العميل
+                </div>
+
+                ${
+                  request.customer_signature
+                    ? `
+                      <img
+                        src="${request.customer_signature}"
+                        class="signature"
+                        alt="توقيع العميل"
+                      />
+                    `
+                    : `
+                      <div class="empty">
+                        لم يتم توقيع العقد بعد
+                      </div>
+                    `
+                }
 
               </div>
 
             </div>
 
           </div>
-
-
-          <!-- LAB MANAGER APPROVAL -->
 
           <div class="section">
 
@@ -1228,65 +1281,71 @@ if (techError) {
 
             <div class="section-body">
 
-              <div class="approval">
+              <div class="grid">
 
-                <div class="grid">
-
-                  <div class="field">
-
-                    <div class="label">
-                      حالة اعتماد مدير المختبر
-                    </div>
-
-                    <div class="value">
-                      ${
-                        labManagerApproved
-                          ? "تم الاعتماد"
-                          : "بانتظار اعتماد مدير المختبر"
-                      }
-                    </div>
-
+                <div class="field">
+                  <div class="label">
+                    الحالة
                   </div>
-
-                  <div class="field">
-
-                    <div class="label">
-                      اسم مدير المختبر
-                    </div>
-
-                    <div class="value">
-                      ${
-                        request.lab_manager_approved_by_name ||
-                        "-"
-                      }
-                    </div>
-
+                  <div class="value">
+                    ${
+                      labManagerApproved
+                        ? "تم الاعتماد"
+                        : "بانتظار اعتماد مدير المختبر"
+                    }
                   </div>
-
-                  <div class="field">
-
-                    <div class="label">
-                      تاريخ الاعتماد
-                    </div>
-
-                    <div class="value">
-                      ${labManagerApprovalDate}
-                    </div>
-
-                  </div>
-
                 </div>
 
-                ${labManagerSignatureHtml}
+                <div class="field">
+                  <div class="label">
+                    اسم مدير المختبر
+                  </div>
+                  <div class="value">
+                    ${
+                      request.lab_manager_approved_by_name ||
+                      "-"
+                    }
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="label">
+                    تاريخ الاعتماد
+                  </div>
+                  <div class="value">
+                    ${labManagerApprovalDate}
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="signature-box">
+
+                <div class="label">
+                  توقيع مدير المختبر
+                </div>
+
+                ${
+                  request.lab_manager_signature
+                    ? `
+                      <img
+                        src="${request.lab_manager_signature}"
+                        class="signature"
+                        alt="توقيع مدير المختبر"
+                      />
+                    `
+                    : `
+                      <div class="empty">
+                        لم يتم اعتماد العقد من مدير المختبر بعد
+                      </div>
+                    `
+                }
 
               </div>
 
             </div>
 
           </div>
-
-
-          <!-- FOOTER -->
 
           <div class="footer">
 
@@ -1300,17 +1359,19 @@ if (techError) {
 
             <br />
 
-            رقم الطلب:
-            ${request.request_no || "-"}
+            رقم العقد:
+            ${
+              request.request_no ||
+              "-"
+            }
 
           </div>
-
 
           <button
             class="print-button"
             onclick="window.print()"
           >
-            🖨️ طباعة
+            🖨️ طباعة العقد
           </button>
 
         </div>
@@ -1321,7 +1382,6 @@ if (techError) {
     `);
 
     printWindow.document.close();
-
     printWindow.focus();
   }
 
@@ -1362,8 +1422,6 @@ if (techError) {
         error
       );
 
-      alert(error.message);
-
       return;
     }
 
@@ -1379,7 +1437,6 @@ if (techError) {
       alert(
         "ليس لديك صلاحية حذف المهام التجريبية."
       );
-
       return;
     }
 
@@ -1391,7 +1448,6 @@ if (techError) {
       alert(
         "لا توجد مهام تجريبية لحذفها."
       );
-
       return;
     }
 
@@ -1415,16 +1471,10 @@ if (techError) {
         .eq("is_test", true);
 
       if (error) {
-        console.error(
-          "DELETE TEST TASKS ERROR:",
-          error
-        );
-
         alert(
           "حدث خطأ أثناء حذف المهام:\n" +
             error.message
         );
-
         return;
       }
 
@@ -1433,16 +1483,6 @@ if (techError) {
       );
 
       await loadTasks();
-    } catch (error: any) {
-      console.error(
-        "UNEXPECTED DELETE ERROR:",
-        error
-      );
-
-      alert(
-        "حدث خطأ غير متوقع:\n" +
-          (error?.message || "خطأ غير معروف")
-      );
     } finally {
       setDeletingTasks(false);
     }
@@ -1461,10 +1501,6 @@ if (techError) {
       </ProtectedRoute>
     );
   }
-
-  // =========================
-  // PROJECT NOT FOUND
-  // =========================
 
   if (!project) {
     return (
@@ -1502,8 +1538,7 @@ if (techError) {
 
         </div>
 
-
-        {/* PROJECT INFORMATION */}
+        {/* PROJECT */}
 
         <div className="bg-white rounded-xl shadow p-6 mb-6">
 
@@ -1542,7 +1577,6 @@ if (techError) {
 
           </div>
 
-
           <div className="grid md:grid-cols-3 gap-4 mt-6">
 
             <div className="border rounded-lg p-4">
@@ -1557,7 +1591,6 @@ if (techError) {
 
             </div>
 
-
             <div className="border rounded-lg p-4">
 
               <p className="text-sm text-gray-500">
@@ -1569,7 +1602,6 @@ if (techError) {
               </p>
 
             </div>
-
 
             <div className="border rounded-lg p-4">
 
@@ -1587,57 +1619,71 @@ if (techError) {
 
         </div>
 
-
-        {/* EXTERNAL TEST REQUESTS */}
+        {/* =========================
+            CLIENT CONTRACT
+        ========================= */}
 
         <div className="bg-white rounded-xl shadow p-6 mb-6">
 
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-5">
 
             <div>
 
-              <h3 className="text-xl font-bold">
-                طلبات فحص العميل
+              <h3 className="text-xl font-bold text-blue-900">
+                📝 عقد العميل
               </h3>
 
               <p className="text-sm text-gray-500 mt-1">
-                External Test Requests
+                عقد العميل وطلب الفحص والموافقة والتوقيع الإلكتروني
               </p>
 
             </div>
 
-{canCreateContract && (
-  <button
-    onClick={() => {
-      resetExternalRequestForm();
-      setShowRequestModal(true);
-    }}
-    className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg"
-  >
-    + طلب فحص جديد
-  </button>
-)}
+            {canCreateContract && (
+              <button
+                onClick={() => {
+                  resetExternalRequestForm();
+                  setShowRequestModal(true);
+                }}
+                className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
+              >
+                + إنشاء عقد عميل
+              </button>
+            )}
 
           </div>
 
+          {!client && (
+            <div className="border border-red-300 bg-red-50 text-red-700 rounded-lg p-4 mb-4">
+              لا يمكن إنشاء عقد لأن المشروع غير مرتبط بعميل.
+            </div>
+          )}
 
           {externalRequests.length === 0 ? (
 
-            <div className="border border-dashed rounded-lg p-6 text-center text-gray-500">
-              لا توجد طلبات فحص لهذا المشروع.
+            <div className="border border-dashed rounded-lg p-8 text-center">
+
+              <p className="text-gray-500 mb-2">
+                لم يتم إنشاء عقد للعميل لهذا المشروع.
+              </p>
+
+              <p className="text-sm text-gray-400">
+                يجب إنشاء العقد وإرسال رابط الموافقة للعميل قبل إسناد المهام.
+              </p>
+
             </div>
 
           ) : (
 
-            <div className="space-y-3">
+            <div className="space-y-4">
 
               {externalRequests.map((request) => {
 
-                const isApproved =
+                const customerApproved =
                   request.customer_approval_status ===
                   "Approved";
 
-                const isLabApproved =
+                const labApproved =
                   request.lab_manager_approval_status ===
                   "Approved";
 
@@ -1648,480 +1694,370 @@ if (techError) {
                       ).toLocaleString("ar-SA")
                     : null;
 
-                const labManagerApprovalDate =
+                const labApprovalDate =
                   request.lab_manager_approved_at
                     ? new Date(
                         request.lab_manager_approved_at
                       ).toLocaleString("ar-SA")
                     : null;
 
-                const approvalUrl =
-                  typeof window !== "undefined"
-                    ? `${window.location.origin}/customer-approval/${request.approval_token}`
-                    : "";
-
-                async function copyApprovalLink() {
-                  try {
-                    await navigator.clipboard.writeText(
-                      approvalUrl
-                    );
-
-                    alert(
-                      "تم نسخ رابط موافقة العميل"
-                    );
-                  } catch (error) {
-                    console.error(
-                      "COPY APPROVAL LINK ERROR:",
-                      error
-                    );
-
-                    alert(
-                      "تعذر نسخ الرابط، يمكنك نسخه يدويًا."
-                    );
-                  }
-                }
-
                 return (
 
                   <div
                     key={request.id}
-                    className={`border rounded-lg p-4 ${
-                      isLabApproved && isApproved
+                    className={`border-2 rounded-xl p-5 ${
+                      customerApproved
                         ? "border-green-300 bg-green-50"
                         : "border-yellow-300 bg-yellow-50"
                     }`}
                   >
 
-                    <div className="flex justify-between items-start gap-4">
+                    <div className="flex justify-between items-start gap-4 flex-wrap">
 
-                      <div className="flex-1">
-
-                        {/* REQUEST HEADER */}
+                      <div>
 
                         <div className="flex items-center gap-2 flex-wrap">
 
-                          <p className="font-bold text-lg">
+                          <span className="font-bold text-xl">
                             {request.request_no}
-                          </p>
-
-                          <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
-                            {request.status}
                           </span>
 
+                          {customerApproved ? (
 
-                          {isApproved ? (
-
-                            <span className="text-xs bg-green-600 text-white px-3 py-1 rounded-full">
-                              🟢 معتمد من العميل
+                            <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full">
+                              🟢 العميل وافق ووقّع
                             </span>
 
                           ) : (
 
-                            <span className="text-xs bg-yellow-500 text-white px-3 py-1 rounded-full">
-                              🟡 بانتظار موافقة العميل
+                            <span className="bg-yellow-500 text-white text-xs px-3 py-1 rounded-full">
+                              🟡 بانتظار العميل
                             </span>
 
                           )}
 
+                          {labApproved ? (
 
-                          {isLabApproved ? (
-
-                            <span className="text-xs bg-purple-700 text-white px-3 py-1 rounded-full">
+                            <span className="bg-purple-700 text-white text-xs px-3 py-1 rounded-full">
                               🧪 معتمد من مدير المختبر
                             </span>
 
                           ) : (
 
-                            <span className="text-xs bg-purple-100 text-purple-800 px-3 py-1 rounded-full">
-                              🧪 بانتظار اعتماد مدير المختبر
+                            <span className="bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full">
+                              🧪 بانتظار مدير المختبر
                             </span>
 
                           )}
 
                         </div>
 
-
-                        {/* REQUEST INFORMATION */}
-
-                        <div className="mt-3 text-sm text-gray-600 space-y-1">
+                        <div className="mt-4 grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
 
                           <p>
-                            رقم طلب العميل:{" "}
-                            <span className="font-semibold">
-                              {request.order_no || "-"}
-                            </span>
+                            العميل:{" "}
+                            <strong>
+                              {request.customer_name || "-"}
+                            </strong>
                           </p>
 
                           <p>
-                            تاريخ الطلب:{" "}
-                            {request.request_date || "-"}
+                            المشروع:{" "}
+                            <strong>
+                              {project.project_name}
+                            </strong>
+                          </p>
+
+                          <p>
+                            الاختبار:{" "}
+                            <strong>
+                              {request.requested_test || "-"}
+                            </strong>
                           </p>
 
                           <p>
                             نوع العينة:{" "}
-                            {request.sample_kind || "-"}
+                            <strong>
+                              {request.sample_kind || "-"}
+                            </strong>
                           </p>
 
                           <p>
                             العدد:{" "}
-                            {request.quantity ?? "-"}
-                          </p>
-
-                          <p>
-                            الاختبار المطلوب:{" "}
-                            {request.requested_test || "-"}
+                            <strong>
+                              {request.quantity ?? "-"}
+                            </strong>
                           </p>
 
                           <p>
                             طريقة الاختبار:{" "}
-                            {request.test_method || "-"}
+                            <strong>
+                              {request.test_method || "-"}
+                            </strong>
                           </p>
-
-                          <p>
-                            المراجعة الفنية:{" "}
-                            {request.technical_review_status ||
-                              "Pending"}
-                          </p>
-
-                        </div>
-
-
-                        {/* CUSTOMER APPROVAL */}
-
-                        <div className="mt-4 border-t pt-4">
-
-                          <p className="font-bold mb-2">
-                            موافقة العميل
-                          </p>
-
-
-                          {isApproved ? (
-
-                            <div className="space-y-1 text-sm">
-
-                              <p className="text-green-700 font-semibold">
-                                🟢 تم اعتماد طلب الفحص من العميل
-                              </p>
-
-                              <p>
-                                اسم المعتمد:{" "}
-                                <span className="font-semibold">
-                                  {request.customer_approved_by ||
-                                    "-"}
-                                </span>
-                              </p>
-
-                              <p>
-                                تاريخ الاعتماد:{" "}
-                                <span className="font-semibold">
-                                  {approvalDate || "-"}
-                                </span>
-                              </p>
-
-                            </div>
-
-                          ) : (
-
-                            <p className="text-yellow-700 font-medium">
-                              🟡 لم تتم موافقة العميل حتى الآن
-                            </p>
-
-                          )}
-
-                        </div>
-
-
-                        {/* LAB MANAGER APPROVAL */}
-
-                        <div className="mt-4 border-t pt-4">
-
-                          <p className="font-bold mb-2">
-                            اعتماد مدير المختبر
-                          </p>
-
-
-                          {isLabApproved ? (
-
-                            <div className="space-y-2 text-sm">
-
-                              <p className="text-purple-700 font-semibold">
-                                🧪 تم اعتماد طلب الفحص من مدير المختبر
-                              </p>
-
-                              <p>
-                                اسم المعتمد:{" "}
-                                <span className="font-semibold">
-                                  {request.lab_manager_approved_by_name ||
-                                    "-"}
-                                </span>
-                              </p>
-
-                              <p>
-                                تاريخ الاعتماد:{" "}
-                                <span className="font-semibold">
-                                  {labManagerApprovalDate ||
-                                    "-"}
-                                </span>
-                              </p>
-
-                              {request.lab_manager_signature && (
-                                <div className="mt-3">
-
-                                  <p className="text-xs text-gray-500 mb-2">
-                                    توقيع مدير المختبر:
-                                  </p>
-
-                                  <img
-                                    src={
-                                      request.lab_manager_signature
-                                    }
-                                    alt="توقيع مدير المختبر"
-                                    className="max-w-[250px] max-h-[100px] object-contain border rounded-lg bg-white p-2"
-                                  />
-
-                                </div>
-                              )}
-
-                            </div>
-
-                          ) : (
-
-                            <div>
-
-                              <p className="text-yellow-700 font-medium mb-3">
-                                🟡 بانتظار اعتماد مدير المختبر
-                              </p>
-
-
-                              {isLabManager && (
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    approveLabManager(request)
-                                  }
-                                  disabled={
-                                    approvingLabManager ===
-                                    request.id
-                                  }
-                                  className="bg-purple-700 hover:bg-purple-800 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm"
-                                >
-
-                                  {approvingLabManager ===
-                                  request.id
-                                    ? "جاري الاعتماد..."
-                                    : "🧪 اعتماد مدير المختبر"}
-
-                                </button>
-
-                              )}
-
-                            </div>
-
-                          )}
-
-                        </div>
-
-
-                        {/* ACTIONS */}
-
-                        <div className="flex flex-wrap gap-2 mt-4">
-
-
-                          {!isApproved &&
-                            request.approval_token && (
-
-                              <button
-                                type="button"
-                                onClick={copyApprovalLink}
-                                className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm"
-                              >
-                                🔗 نسخ رابط موافقة العميل
-                              </button>
-
-                            )}
-
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              printExternalRequest(request)
-                            }
-                            className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm"
-                          >
-                            🖨️ طباعة طلب الفحص
-                          </button>
-
-
-                          {isApproved &&
-                            request.customer_signature && (
-
-                              <button
-                                type="button"
-                                onClick={() => {
-
-                                  const newWindow =
-                                    window.open(
-                                      "",
-                                      "_blank"
-                                    );
-
-                                  if (!newWindow) {
-                                    alert(
-                                      "يرجى السماح بفتح النوافذ الجديدة."
-                                    );
-                                    return;
-                                  }
-
-                                  newWindow.document.write(`
-                                    <!DOCTYPE html>
-
-                                    <html
-                                      dir="rtl"
-                                      lang="ar"
-                                    >
-
-                                    <head>
-
-                                      <meta charset="UTF-8" />
-
-                                      <title>
-                                        توقيع العميل
-                                      </title>
-
-                                    </head>
-
-                                    <body style="
-                                      margin:0;
-                                      padding:40px;
-                                      font-family:Arial;
-                                      text-align:center;
-                                      background:#f9fafb;
-                                    ">
-
-                                      <h2>
-                                        توقيع العميل
-                                      </h2>
-
-                                      <img
-                                        src="${request.customer_signature}"
-                                        style="
-                                          max-width:500px;
-                                          max-height:300px;
-                                          border:1px solid #ddd;
-                                          border-radius:10px;
-                                          padding:20px;
-                                          background:white;
-                                        "
-                                        alt="توقيع العميل"
-                                      />
-
-                                    </body>
-
-                                    </html>
-                                  `);
-
-                                  newWindow.document.close();
-
-                                }}
-                                className="border border-green-600 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg text-sm"
-                              >
-                                ✍️ عرض توقيع العميل
-                              </button>
-
-                            )}
-
-
-                          {isLabApproved &&
-                            request.lab_manager_signature && (
-
-                              <button
-                                type="button"
-                                onClick={() => {
-
-                                  const newWindow =
-                                    window.open(
-                                      "",
-                                      "_blank"
-                                    );
-
-                                  if (!newWindow) {
-                                    alert(
-                                      "يرجى السماح بفتح النوافذ الجديدة."
-                                    );
-                                    return;
-                                  }
-
-                                  newWindow.document.write(`
-                                    <!DOCTYPE html>
-
-                                    <html
-                                      dir="rtl"
-                                      lang="ar"
-                                    >
-
-                                    <head>
-
-                                      <meta charset="UTF-8" />
-
-                                      <title>
-                                        توقيع مدير المختبر
-                                      </title>
-
-                                    </head>
-
-                                    <body style="
-                                      margin:0;
-                                      padding:40px;
-                                      font-family:Arial;
-                                      text-align:center;
-                                      background:#f9fafb;
-                                    ">
-
-                                      <h2>
-                                        توقيع مدير المختبر
-                                      </h2>
-
-                                      <p style="
-                                        color:#555;
-                                      ">
-                                        ${
-                                          request.lab_manager_approved_by_name ||
-                                          "-"
-                                        }
-                                      </p>
-
-                                      <img
-                                        src="${request.lab_manager_signature}"
-                                        style="
-                                          max-width:500px;
-                                          max-height:300px;
-                                          border:1px solid #ddd;
-                                          border-radius:10px;
-                                          padding:20px;
-                                          background:white;
-                                        "
-                                        alt="توقيع مدير المختبر"
-                                      />
-
-                                    </body>
-
-                                    </html>
-                                  `);
-
-                                  newWindow.document.close();
-
-                                }}
-                                className="border border-purple-600 text-purple-700 hover:bg-purple-100 px-4 py-2 rounded-lg text-sm"
-                              >
-                                🧪 عرض توقيع مدير المختبر
-                              </button>
-
-                            )}
 
                         </div>
 
                       </div>
+
+                    </div>
+
+                    {/* CUSTOMER APPROVAL */}
+
+                    <div className="mt-5 border-t pt-4">
+
+                      <h4 className="font-bold mb-2">
+                        موافقة العميل
+                      </h4>
+
+                      {customerApproved ? (
+
+                        <div className="text-sm space-y-1">
+
+                          <p className="text-green-700 font-semibold">
+                            🟢 تم اعتماد العقد وتوقيعه من العميل
+                          </p>
+
+                          <p>
+                            اسم المعتمد:{" "}
+                            <strong>
+                              {request.customer_approved_by ||
+                                "-"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            تاريخ الاعتماد:{" "}
+                            <strong>
+                              {approvalDate || "-"}
+                            </strong>
+                          </p>
+
+                          {request.customer_signature && (
+                            <div className="mt-3">
+
+                              <p className="text-xs text-gray-500 mb-2">
+                                توقيع العميل:
+                              </p>
+
+                              <img
+                                src={
+                                  request.customer_signature
+                                }
+                                alt="توقيع العميل"
+                                className="max-w-[250px] max-h-[100px] object-contain border rounded-lg bg-white p-2"
+                              />
+
+                            </div>
+                          )}
+
+                        </div>
+
+                      ) : (
+
+                        <p className="text-yellow-700 font-medium">
+                          🟡 لم يوافق العميل على العقد حتى الآن.
+                        </p>
+
+                      )}
+
+                    </div>
+
+                    {/* LAB MANAGER */}
+
+                    <div className="mt-5 border-t pt-4">
+
+                      <h4 className="font-bold mb-2">
+                        اعتماد مدير المختبر
+                      </h4>
+
+                      {labApproved ? (
+
+                        <div className="text-sm space-y-1">
+
+                          <p className="text-purple-700 font-semibold">
+                            🧪 تم اعتماد العقد من مدير المختبر
+                          </p>
+
+                          <p>
+                            الاسم:{" "}
+                            <strong>
+                              {request.lab_manager_approved_by_name ||
+                                "-"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            التاريخ:{" "}
+                            <strong>
+                              {labApprovalDate || "-"}
+                            </strong>
+                          </p>
+
+                        </div>
+
+                      ) : (
+
+                        <div>
+
+                          <p className="text-purple-700 mb-3">
+                            🟡 بانتظار اعتماد مدير المختبر
+                          </p>
+
+                          {isLabManager && (
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                approveLabManager(
+                                  request
+                                )
+                              }
+                              disabled={
+                                approvingLabManager ===
+                                request.id
+                              }
+                              className="bg-purple-700 hover:bg-purple-800 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg"
+                            >
+                              {approvingLabManager ===
+                              request.id
+                                ? "جاري الاعتماد..."
+                                : "🧪 اعتماد العقد"}
+                            </button>
+
+                          )}
+
+                        </div>
+
+                      )}
+
+                    </div>
+
+                    {/* ACTIONS */}
+
+                    <div className="flex flex-wrap gap-2 mt-5">
+
+                      {!customerApproved &&
+                        request.approval_token && (
+
+                          <>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                copyApprovalLink(
+                                  request
+                                )
+                              }
+                              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm"
+                            >
+                              🔗 نسخ رابط موافقة العميل
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openApprovalLink(
+                                  request
+                                )
+                              }
+                              className="border border-blue-700 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm"
+                            >
+                              🌐 فتح رابط الموافقة
+                            </button>
+                          </>
+
+                        )}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          printExternalRequest(
+                            request
+                          )
+                        }
+                        className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm"
+                      >
+                        🖨️ طباعة العقد
+                      </button>
+
+                      {customerApproved &&
+                        request.customer_signature && (
+
+                          <button
+                            type="button"
+                            onClick={() => {
+
+                              const newWindow =
+                                window.open(
+                                  "",
+                                  "_blank"
+                                );
+
+                              if (!newWindow) {
+                                alert(
+                                  "يرجى السماح بفتح النوافذ الجديدة."
+                                );
+                                return;
+                              }
+
+                              newWindow.document.write(`
+                                <html
+                                  dir="rtl"
+                                  lang="ar"
+                                >
+
+                                <head>
+                                  <meta charset="UTF-8" />
+                                  <title>
+                                    توقيع العميل
+                                  </title>
+                                </head>
+
+                                <body style="
+                                  margin:0;
+                                  padding:40px;
+                                  font-family:Arial;
+                                  text-align:center;
+                                  background:#f9fafb;
+                                ">
+
+                                  <h2>
+                                    توقيع العميل
+                                  </h2>
+
+                                  <p>
+                                    ${
+                                      request.customer_approved_by ||
+                                      ""
+                                    }
+                                  </p>
+
+                                  <img
+                                    src="${request.customer_signature}"
+                                    style="
+                                      max-width:600px;
+                                      max-height:400px;
+                                      border:1px solid #ddd;
+                                      border-radius:10px;
+                                      padding:20px;
+                                      background:white;
+                                    "
+                                  />
+
+                                </body>
+
+                                </html>
+                              `);
+
+                              newWindow.document.close();
+
+                            }}
+                            className="border border-green-600 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg text-sm"
+                          >
+                            ✍️ عرض توقيع العميل
+                          </button>
+
+                        )}
 
                     </div>
 
@@ -2136,22 +2072,36 @@ if (techError) {
 
         </div>
 
-
-        {/* TASK BUTTONS */}
+        {/* =========================
+            TASK BUTTONS
+        ========================= */}
 
         <div className="flex justify-end gap-3 mb-4">
 
-         {canAssignTask && (
-  <button
-    onClick={() =>
-      setShowTaskModal(true)
-    }
-    className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg"
-  >
-    📋 إسناد مهمة
-  </button>
-)}
+          {canAssignTask && (
 
+            <button
+              onClick={() => {
+
+                if (!hasApprovedCustomerContract) {
+                  alert(
+                    "يجب أولًا إنشاء عقد العميل وإرسال الرابط والحصول على موافقته وتوقيعه."
+                  );
+                  return;
+                }
+
+                setShowTaskModal(true);
+              }}
+              className={`text-white px-5 py-2 rounded-lg ${
+                hasApprovedCustomerContract
+                  ? "bg-blue-700 hover:bg-blue-800"
+                  : "bg-gray-400"
+              }`}
+            >
+              📋 إسناد مهمة
+            </button>
+
+          )}
 
           {isAdmin && (
 
@@ -2169,8 +2119,9 @@ if (techError) {
 
         </div>
 
-
-        {/* TASKS */}
+        {/* =========================
+            TASKS
+        ========================= */}
 
         <div className="bg-white rounded-xl shadow p-6 mb-6">
 
@@ -2186,6 +2137,13 @@ if (techError) {
 
           </div>
 
+          {!hasApprovedCustomerContract && (
+
+            <div className="mb-4 border border-yellow-300 bg-yellow-50 text-yellow-800 rounded-lg p-4">
+              🔒 إسناد المهام مقفول حتى تتم موافقة العميل وتوقيعه على العقد.
+            </div>
+
+          )}
 
           {tasks.length === 0 ? (
 
@@ -2226,13 +2184,14 @@ if (techError) {
                           </p>
 
                           {task.is_test && (
+
                             <span className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full">
                               تجريبية
                             </span>
+
                           )}
 
                         </div>
-
 
                         {isAdmin &&
                           task.is_test === true && (
@@ -2265,23 +2224,12 @@ if (techError) {
                                     );
 
                                 if (error) {
-
-                                  console.error(
-                                    "DELETE TASK ERROR:",
-                                    error
-                                  );
-
                                   alert(
                                     "خطأ في حذف المهمة:\n" +
                                       error.message
                                   );
-
                                   return;
                                 }
-
-                                alert(
-                                  "تم حذف المهمة بنجاح"
-                                );
 
                                 setTasks(
                                   (prev) =>
@@ -2300,12 +2248,10 @@ if (techError) {
 
                           )}
 
-
                         <p className="text-sm text-gray-600 mt-1">
                           {task.task_description ||
                             "لا يوجد وصف"}
                         </p>
-
 
                         <div className="mt-2 text-sm space-y-1">
 
@@ -2347,7 +2293,6 @@ if (techError) {
                   </div>
 
                 );
-
               })}
 
             </div>
@@ -2356,15 +2301,15 @@ if (techError) {
 
         </div>
 
-
-        {/* SAMPLES */}
+        {/* =========================
+            SAMPLES
+        ========================= */}
 
         <div className="bg-white rounded-xl shadow p-6">
 
           <h3 className="text-xl font-bold mb-4">
             Associated Samples
           </h3>
-
 
           {samples.length === 0 ? (
 
@@ -2397,7 +2342,6 @@ if (techError) {
 
                   </div>
 
-
                   <div className="text-right">
 
                     <p className="text-sm font-medium">
@@ -2424,7 +2368,6 @@ if (techError) {
 
       </div>
 
-
       {/* =========================
           TASK MODAL
       ========================= */}
@@ -2439,7 +2382,6 @@ if (techError) {
               📋 إسناد مهمة لفني
             </h2>
 
-
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">
@@ -2449,9 +2391,7 @@ if (techError) {
               <select
                 value={technicianId}
                 onChange={(e) =>
-                  setTechnicianId(
-                    e.target.value
-                  )
+                  setTechnicianId(e.target.value)
                 }
                 className="w-full border rounded-lg p-3"
               >
@@ -2475,7 +2415,6 @@ if (techError) {
 
             </div>
 
-
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">
@@ -2485,9 +2424,7 @@ if (techError) {
               <select
                 value={testType}
                 onChange={(e) =>
-                  setTestType(
-                    e.target.value
-                  )
+                  setTestType(e.target.value)
                 }
                 className="w-full border rounded-lg p-3"
               >
@@ -2508,7 +2445,6 @@ if (techError) {
 
             </div>
 
-
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">
@@ -2519,16 +2455,13 @@ if (techError) {
                 type="text"
                 value={taskName}
                 onChange={(e) =>
-                  setTaskName(
-                    e.target.value
-                  )
+                  setTaskName(e.target.value)
                 }
                 className="w-full border rounded-lg p-3"
                 placeholder="مثال: أخذ عينات تربة"
               />
 
             </div>
-
 
             <div className="mb-4">
 
@@ -2550,7 +2483,6 @@ if (techError) {
 
             </div>
 
-
             <div className="mb-6">
 
               <label className="block mb-2 font-medium">
@@ -2560,9 +2492,7 @@ if (techError) {
               <select
                 value={priority}
                 onChange={(e) =>
-                  setPriority(
-                    e.target.value
-                  )
+                  setPriority(e.target.value)
                 }
                 className="w-full border rounded-lg p-3"
               >
@@ -2583,7 +2513,6 @@ if (techError) {
 
             </div>
 
-
             <div className="flex justify-end gap-3">
 
               <button
@@ -2594,7 +2523,6 @@ if (techError) {
               >
                 إلغاء
               </button>
-
 
               <button
                 onClick={saveTask}
@@ -2611,9 +2539,8 @@ if (techError) {
 
       )}
 
-
       {/* =========================
-          EXTERNAL REQUEST MODAL
+          CLIENT CONTRACT MODAL
       ========================= */}
 
       {showRequestModal && (
@@ -2627,7 +2554,7 @@ if (techError) {
               <div>
 
                 <h2 className="text-2xl font-bold text-blue-900">
-                  طلب فحص خارجي
+                  📝 إنشاء عقد العميل
                 </h2>
 
                 <p className="text-sm text-gray-500 mt-1">
@@ -2635,7 +2562,6 @@ if (techError) {
                 </p>
 
               </div>
-
 
               <button
                 onClick={() =>
@@ -2648,15 +2574,13 @@ if (techError) {
 
             </div>
 
-
-            {/* CUSTOMER / PROJECT */}
+            {/* CUSTOMER */}
 
             <div className="border rounded-xl p-4 mb-5">
 
               <h3 className="font-bold mb-4">
                 بيانات العميل والمشروع
               </h3>
-
 
               <div className="grid md:grid-cols-2 gap-4">
 
@@ -2677,7 +2601,6 @@ if (techError) {
 
                 </div>
 
-
                 <div>
 
                   <label className="block text-sm text-gray-600 mb-1">
@@ -2695,7 +2618,6 @@ if (techError) {
 
                 </div>
 
-
                 <div>
 
                   <label className="block text-sm text-gray-600 mb-1">
@@ -2712,11 +2634,9 @@ if (techError) {
                       )
                     }
                     className="w-full border rounded-lg p-3"
-                    placeholder="مسؤول الاتصال"
                   />
 
                 </div>
-
 
                 <div>
 
@@ -2734,7 +2654,6 @@ if (techError) {
                       )
                     }
                     className="w-full border rounded-lg p-3"
-                    placeholder="رقم الهاتف"
                   />
 
                 </div>
@@ -2743,22 +2662,20 @@ if (techError) {
 
             </div>
 
-
             {/* REQUEST */}
 
             <div className="border rounded-xl p-4 mb-5">
 
               <h3 className="font-bold mb-4">
-                بيانات الطلب
+                بيانات العقد
               </h3>
-
 
               <div className="grid md:grid-cols-2 gap-4">
 
                 <div>
 
                   <label className="block text-sm text-gray-600 mb-1">
-                    رقم الطلب
+                    رقم طلب العميل
                   </label>
 
                   <input
@@ -2774,11 +2691,10 @@ if (techError) {
 
                 </div>
 
-
                 <div>
 
                   <label className="block text-sm text-gray-600 mb-1">
-                    تاريخ الطلب
+                    تاريخ العقد
                   </label>
 
                   <input
@@ -2798,7 +2714,6 @@ if (techError) {
 
             </div>
 
-
             {/* SAMPLE */}
 
             <div className="border rounded-xl p-4 mb-5">
@@ -2806,7 +2721,6 @@ if (techError) {
               <h3 className="font-bold mb-4">
                 بيانات العينة
               </h3>
-
 
               <div className="grid md:grid-cols-2 gap-4">
 
@@ -2829,7 +2743,6 @@ if (techError) {
 
                 </div>
 
-
                 <div>
 
                   <label className="block text-sm text-gray-600 mb-1">
@@ -2846,7 +2759,6 @@ if (techError) {
                       )
                     }
                     className="w-full border rounded-lg p-3"
-                    placeholder="العدد"
                   />
 
                 </div>
@@ -2855,7 +2767,6 @@ if (techError) {
 
             </div>
 
-
             {/* TEST */}
 
             <div className="border rounded-xl p-4 mb-5">
@@ -2863,7 +2774,6 @@ if (techError) {
               <h3 className="font-bold mb-4">
                 بيانات الاختبار
               </h3>
-
 
               <div className="space-y-4">
 
@@ -2885,7 +2795,6 @@ if (techError) {
                   />
 
                 </div>
-
 
                 <div>
 
@@ -2910,7 +2819,6 @@ if (techError) {
 
             </div>
 
-
             {/* PAYMENT */}
 
             <div className="border rounded-xl p-4 mb-6">
@@ -2918,7 +2826,6 @@ if (techError) {
               <h3 className="font-bold mb-4">
                 المسائل المالية
               </h3>
-
 
               <select
                 value={paymentMethod}
@@ -2954,6 +2861,15 @@ if (techError) {
 
             </div>
 
+            {/* INFO */}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
+
+              بعد حفظ العقد سيتم إنشاء رابط خاص للعميل،
+              ويمكن نسخه وإرساله للعميل ليطلع على العقد
+              ويوافق عليه ويوقّعه إلكترونيًا.
+
+            </div>
 
             {/* BUTTONS */}
 
@@ -2964,11 +2880,10 @@ if (techError) {
                   setShowRequestModal(false)
                 }
                 disabled={savingRequest}
-                className="border border-gray-300 px-5 py-2 rounded-lg hover:bg-gray-50"
+                className="border border-gray-300 px-5 py-2 rounded-lg"
               >
                 إلغاء
               </button>
-
 
               <button
                 onClick={saveExternalRequest}
@@ -2976,8 +2891,8 @@ if (techError) {
                 className="bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg"
               >
                 {savingRequest
-                  ? "جاري الحفظ..."
-                  : "حفظ طلب الفحص"}
+                  ? "جاري إنشاء العقد..."
+                  : "📝 إنشاء العقد وإصدار الرابط"}
               </button>
 
             </div>

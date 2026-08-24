@@ -226,16 +226,71 @@ export default function TaskResultsPage() {
 
     setCurrentUser(user);
 
-    loadResults();
+    /*
+      مهم جداً:
+      نمرر المستخدم مباشرة إلى loadResults
+      حتى لا نعتمد على setState التي تعمل بشكل غير متزامن.
+    */
+    loadResults(user);
   }, [router]);
+
+  /* =======================================================
+     CHECK USER PERMISSION
+  ======================================================= */
+
+  function isTechnician(user: User) {
+    const role =
+      String(user.role || "")
+        .trim()
+        .toLowerCase();
+
+    return role === "technician";
+  }
+
+  function canViewAllTasks(user: User) {
+    const role =
+      String(user.role || "")
+        .trim()
+        .toLowerCase();
+
+    return [
+      "admin",
+      "lab manager",
+      "lab_manager",
+      "labmanager",
+
+      "technical manager",
+      "technical_manager",
+      "technicalmanager",
+
+      "branch manager",
+      "branch_manager",
+      "branchmanager",
+    ].includes(role);
+  }
 
   /* =======================================================
      LOAD EVERYTHING
   ======================================================= */
 
-  async function loadResults() {
+  async function loadResults(user: User) {
     console.log(
       "🔥🔥🔥 LOAD RESULTS STARTED 🔥🔥🔥"
+    );
+
+    console.log(
+      "🔥 USER FOR RESULTS:",
+      user
+    );
+
+    console.log(
+      "🔥 USER ID:",
+      user.id
+    );
+
+    console.log(
+      "🔥 USER ROLE:",
+      user.role
     );
 
     setLoading(true);
@@ -243,12 +298,17 @@ export default function TaskResultsPage() {
     try {
       /* =====================================================
          1. LOAD TASKS
+         
+         IMPORTANT:
+         
+         Technician:
+         technician_id = current user id
+         
+         Managers / Admin:
+         all tasks
       ===================================================== */
 
-      const {
-        data: tasksData,
-        error: tasksError,
-      } = await supabase
+      let tasksQuery = supabase
         .from("tasks")
         .select(`
           *,
@@ -261,6 +321,67 @@ export default function TaskResultsPage() {
         .order("id", {
           ascending: false,
         });
+
+      /*
+        حماية الفني:
+
+        لا نسمح للفني بتحميل جميع المهام من قاعدة البيانات.
+
+        يتم إرسال شرط technician_id مباشرة إلى Supabase.
+      */
+
+      if (isTechnician(user)) {
+        console.log(
+          "🔐 TECHNICIAN MODE ENABLED"
+        );
+
+        console.log(
+          "🔐 LOADING ONLY TASKS FOR TECHNICIAN:",
+          user.id
+        );
+
+        tasksQuery = tasksQuery.eq(
+          "technician_id",
+          Number(user.id)
+        );
+      } else {
+        console.log(
+          "🔓 MANAGER / ADMIN MODE"
+        );
+
+        console.log(
+          "🔓 ROLE:",
+          user.role
+        );
+
+        if (!canViewAllTasks(user)) {
+          console.warn(
+            "⚠️ USER ROLE IS NOT EXPLICITLY ALLOWED TO VIEW ALL TASKS:",
+            user.role
+          );
+
+          /*
+            احتياط إضافي:
+
+            أي Role غير معروف لا يحصل على كل المهام.
+
+            إذا كان المستخدم ليس Technician
+            وليس من الأدوار الإدارية المعروفة،
+            لن نعرض له أي مهام.
+          */
+
+          setTasks([]);
+          setImages([]);
+          setLoading(false);
+
+          return;
+        }
+      }
+
+      const {
+        data: tasksData,
+        error: tasksError,
+      } = await tasksQuery;
 
       console.log(
         "🔥 TASKS DATA:",
@@ -289,24 +410,47 @@ export default function TaskResultsPage() {
         rawTasks.length
       );
 
-      if (rawTasks.length === 0) {
+      /*
+        حماية إضافية في الواجهة:
+
+        حتى لو رجعت بيانات غير متوقعة،
+        الفني لا يمكن أن يرى مهمة ليست له.
+      */
+
+      const securedTasks =
+        isTechnician(user)
+          ? rawTasks.filter(
+              (task) =>
+                Number(
+                  task.technician_id
+                ) === Number(user.id)
+            )
+          : rawTasks;
+
+      console.log(
+        "🔐 SECURED TASKS:",
+        securedTasks
+      );
+
+      console.log(
+        "🔐 SECURED TASK COUNT:",
+        securedTasks.length
+      );
+
+      if (securedTasks.length === 0) {
         setTasks([]);
+        setImages([]);
         return;
       }
 
       /* =====================================================
          2. LOAD CONCRETE TESTS DIRECTLY
-         
-         مهم:
-         لا نعتمد على:
-         tasks -> concrete_tests
-         
-         بل نبحث مباشرة باستخدام task_id.
       ===================================================== */
 
-      const taskIds = rawTasks.map(
-        (task) => Number(task.id)
-      );
+      const taskIds =
+        securedTasks.map(
+          (task) => Number(task.id)
+        );
 
       console.log(
         "🔥 TASK IDS:",
@@ -566,7 +710,7 @@ export default function TaskResultsPage() {
       ===================================================== */
 
       const finalTasks: Task[] =
-        rawTasks.map(
+        securedTasks.map(
           (task) => {
             const taskId =
               Number(task.id);
@@ -696,6 +840,9 @@ export default function TaskResultsPage() {
 
       /* =====================================================
          10. LOAD IMAGES
+         
+         IMPORTANT:
+         We only load images belonging to the secured tasks.
       ===================================================== */
 
       const {
@@ -703,7 +850,11 @@ export default function TaskResultsPage() {
         error: imagesError,
       } = await supabase
         .from("task_images")
-        .select("*");
+        .select("*")
+        .in(
+          "task_id",
+          taskIds
+        );
 
       console.log(
         "🔥 IMAGES DATA:",
@@ -813,7 +964,11 @@ export default function TaskResultsPage() {
       "تم تسجيل المراجعة بنجاح ✅"
     );
 
-    await loadResults();
+    if (currentUser) {
+      await loadResults(
+        currentUser
+      );
+    }
   }
 
   /* =======================================================
@@ -873,6 +1028,15 @@ export default function TaskResultsPage() {
         )
     );
 
+    setImages(
+      (prev) =>
+        prev.filter(
+          (image) =>
+            image.task_id !==
+            taskId
+        )
+    );
+
     alert(
       "تم حذف المهمة بنجاح 🗑️"
     );
@@ -885,6 +1049,28 @@ export default function TaskResultsPage() {
   async function loadImages(
     taskId: number
   ) {
+    /*
+      حماية إضافية:
+      لا نحمل صور مهمة ليست موجودة ضمن المهام
+      التي تم تحميلها للمستخدم الحالي.
+    */
+
+    const allowedTask =
+      tasks.some(
+        (task) =>
+          Number(task.id) ===
+          Number(taskId)
+      );
+
+    if (!allowedTask) {
+      console.warn(
+        "🔐 BLOCKED IMAGE REQUEST FOR UNAUTHORIZED TASK:",
+        taskId
+      );
+
+      return;
+    }
+
     const {
       data,
       error,
@@ -987,9 +1173,24 @@ export default function TaskResultsPage() {
 
         <div className="flex items-center justify-between mb-6">
 
-          <h1 className="text-3xl font-bold">
-            📋 نتائج المهام المنجزة
-          </h1>
+          <div>
+
+            <h1 className="text-3xl font-bold">
+              📋 نتائج المهام المنجزة
+            </h1>
+
+            {currentUser && (
+              <p className="text-sm text-gray-500 mt-1">
+                المستخدم:
+                {" "}
+                <span className="font-semibold">
+                  {currentUser.full_name ||
+                    currentUser.username}
+                </span>
+              </p>
+            )}
+
+          </div>
 
           <button
             onClick={() =>
@@ -1012,7 +1213,14 @@ export default function TaskResultsPage() {
           </div>
         ) : tasks.length === 0 ? (
           <div className="bg-white rounded-xl p-6 shadow text-gray-500">
-            لا توجد نتائج حالياً
+
+            {currentUser &&
+            isTechnician(
+              currentUser
+            )
+              ? "لا توجد مهام مسندة إليك حالياً."
+              : "لا توجد نتائج حالياً"}
+
           </div>
         ) : (
 
@@ -1712,9 +1920,7 @@ export default function TaskResultsPage() {
                               <div className="flex items-center justify-between mb-3">
 
                                 <h4 className="font-bold text-base">
-
                                   📊 نتائج العينات
-
                                 </h4>
 
                                 <span className="text-sm font-semibold">

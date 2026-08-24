@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { clearSavedUser } from "@/lib/auth";
 
 type Props = {
   user?: {
+    id?: number | string;
     role?: string;
     full_name?: string;
   } | null;
@@ -15,6 +15,8 @@ type Props = {
 export default function Sidebar({ user }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const role = user?.role?.toLowerCase();
 
   const logout = () => {
     clearSavedUser();
@@ -30,10 +32,12 @@ export default function Sidebar({ user }: Props) {
 
   return (
     <aside className="w-64 bg-blue-800 text-white p-6 min-h-screen">
+      {/* LOGO */}
       <h1 className="text-3xl font-bold mb-10">
         RamzLIMS
       </h1>
 
+      {/* CURRENT USER */}
       {user && (
         <div className="mb-6 p-4 rounded-xl bg-blue-700">
           <div className="text-sm text-slate-100">
@@ -41,21 +45,31 @@ export default function Sidebar({ user }: Props) {
           </div>
 
           <div className="font-semibold text-lg">
-            {user.full_name}
+            {user.full_name || "User"}
           </div>
 
           <div className="text-sm text-slate-200 capitalize">
-            {user.role}
+            {role || "-"}
           </div>
         </div>
       )}
 
       <nav className="space-y-4">
 
-        {/* ================= ADMIN ================= */}
+        {/* =====================================================
+            ADMIN
+            الوصول الكامل لجميع الفروع
+        ===================================================== */}
 
-        {user?.role === "admin" && (
+        {role === "admin" && (
           <>
+            <Link
+              href="/dashboard"
+              className={linkClass("/dashboard")}
+            >
+              🏠 Dashboard
+            </Link>
+
             <Link
               href="/employees"
               className={linkClass("/employees")}
@@ -67,7 +81,176 @@ export default function Sidebar({ user }: Props) {
               href="/clients"
               className={linkClass("/clients")}
             >
-              👥 Clients
+              👥 All Clients
+            </Link>
+
+            <Link
+              href="/projects"
+              className={linkClass("/projects")}
+            >
+              🏗 All Projects
+            </Link>
+
+            <Link
+              href="/tasks"
+              className={linkClass("/tasks")}
+            >
+              📋 All Tasks
+            </Link>
+
+            <Link
+              href="/task-results"
+              className={linkClass("/task-results")}
+            >
+              📊 Task Results
+            </Link>
+
+            <Link
+              href="/samples"
+              className={linkClass("/samples")}
+            >
+              🧪 Samples
+            </Link>
+
+            <Link
+              href="/tests"
+              className={linkClass("/tests")}
+            >
+              🔬 Tests
+            </Link>
+
+            <Link
+              href="/reports"
+              className={linkClass("/reports")}
+            >
+              📑 Reports
+            </Link>
+
+            <Link
+              href="/contracts"
+              className={linkClass("/contracts")}
+            >
+              📝 Contracts
+            </Link>
+          </>
+        )}
+
+
+        {/* =====================================================
+            ACCOUNTANT
+            الوصول لجميع الفروع ولكن بدون إدارة المستخدمين
+        ===================================================== */}
+
+        {role === "accountant" && (
+          <>
+            <Link
+              href="/dashboard"
+              className={linkClass("/dashboard")}
+            >
+              🏠 Dashboard
+            </Link>
+
+            <Link
+              href="/clients"
+              className={linkClass("/clients")}
+            >
+              👥 All Clients
+            </Link>
+
+            <Link
+              href="/projects"
+              className={linkClass("/projects")}
+            >
+              🏗 All Projects
+            </Link>
+
+            <Link
+              href="/contracts"
+              className={linkClass("/contracts")}
+            >
+              📝 Contracts
+            </Link>
+
+            <Link
+              href="/reports"
+              className={linkClass("/reports")}
+            >
+              📑 Reports
+            </Link>
+          </>
+        )}
+
+
+        {/* =====================================================
+            BRANCH MANAGER
+            يظهر له فقط ما يخص فرعه
+        ===================================================== */}
+
+        {role === "branch_manager" && (
+          <>
+            <Link
+              href="/dashboard"
+              className={linkClass("/dashboard")}
+            >
+              🏠 Dashboard
+            </Link>
+
+            <Link
+              href="/clients"
+              className={linkClass("/clients")}
+            >
+              👥 عملاء الفرع
+            </Link>
+
+            <Link
+              href="/projects"
+              className={linkClass("/projects")}
+            >
+              🏗 مشاريع الفرع
+            </Link>
+
+            <Link
+              href="/contracts"
+              className={linkClass("/contracts")}
+            >
+              📝 عقود العملاء
+            </Link>
+
+            <Link
+              href="/tasks"
+              className={linkClass("/tasks")}
+            >
+              📋 إسناد المهام
+            </Link>
+
+            <Link
+              href="/task-results"
+              className={linkClass("/task-results")}
+            >
+              📊 نتائج المهام
+            </Link>
+
+            <Link
+              href="/reports"
+              className={linkClass("/reports")}
+            >
+              📑 تقارير الفرع
+            </Link>
+          </>
+        )}
+
+
+        {/* =====================================================
+            LAB MANAGER
+        ===================================================== */}
+
+        {role === "lab_manager" && (
+          <>
+            <Link
+              href="/dashboard"
+              className={linkClass("/dashboard")}
+            >
+              🏠 Dashboard
             </Link>
 
             <Link
@@ -78,10 +261,17 @@ export default function Sidebar({ user }: Props) {
             </Link>
 
             <Link
+              href="/tasks"
+              className={linkClass("/tasks")}
+            >
+              📋 Tasks
+            </Link>
+
+            <Link
               href="/task-results"
               className={linkClass("/task-results")}
             >
-              📋 Task Results
+              📊 Task Results
             </Link>
 
             <Link
@@ -107,9 +297,12 @@ export default function Sidebar({ user }: Props) {
           </>
         )}
 
-        {/* ================= BRANCH MANAGER ================= */}
 
-        {user?.role === "branch_manager" && (
+        {/* =====================================================
+            RECEPTION
+        ===================================================== */}
+
+        {role === "reception" && (
           <>
             <Link
               href="/dashboard"
@@ -138,33 +331,15 @@ export default function Sidebar({ user }: Props) {
             >
               📝 Contracts
             </Link>
-
-            <Link
-              href="/tasks"
-              className={linkClass("/tasks")}
-            >
-              📋 Tasks
-            </Link>
-
-            <Link
-              href="/task-results"
-              className={linkClass("/task-results")}
-            >
-              📊 Task Results
-            </Link>
-
-            <Link
-              href="/reports"
-              className={linkClass("/reports")}
-            >
-              📑 Reports
-            </Link>
           </>
         )}
 
-        {/* ================= TECHNICIAN ================= */}
 
-        {user?.role === "technician" && (
+        {/* =====================================================
+            TECHNICIAN
+        ===================================================== */}
+
+        {role === "technician" && (
           <>
             <Link
               href="/technician"
@@ -196,11 +371,14 @@ export default function Sidebar({ user }: Props) {
           </>
         )}
 
-        {/* ================= LOGOUT ================= */}
+
+        {/* =====================================================
+            LOGOUT
+        ===================================================== */}
 
         <button
           onClick={logout}
-          className="w-full text-right rounded-lg p-3 mt-6 bg-red-600 hover:bg-red-700 transition"
+          className="w-full text-right rounded-lg p-3 mt-8 bg-red-600 hover:bg-red-700 transition"
         >
           🚪 Logout
         </button>

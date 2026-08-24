@@ -17,7 +17,6 @@ export default function ProjectsPage() {
 
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [currentUser, setCurrentUser] =
     useState<CurrentUser | null>(null);
 
@@ -27,26 +26,14 @@ export default function ProjectsPage() {
   const [status, setStatus] = useState("Active");
   const [description, setDescription] = useState("");
 
-  // =========================
-  // LOAD PROJECTS ON PAGE LOAD
-  // =========================
-
   useEffect(() => {
     loadProjects();
   }, []);
-
-  // =========================
-  // LOAD PROJECTS
-  // =========================
 
   async function loadProjects() {
     setLoading(true);
 
     try {
-      // =========================
-      // GET SAVED USER
-      // =========================
-
       const savedUser = getSavedUser();
 
       if (!savedUser) {
@@ -61,29 +48,19 @@ export default function ProjectsPage() {
         return;
       }
 
-      // =========================
-      // LOAD CURRENT USER
-      // =========================
-
-      const {
-        data: userData,
-        error: userError,
-      } = await supabase
-        .from("users")
-        .select("id, role, branch_id")
-        .eq("id", userId)
-        .single();
+      const { data: userData, error: userError } =
+        await supabase
+          .from("users")
+          .select("id, role, branch_id")
+          .eq("id", userId)
+          .single();
 
       if (userError || !userData) {
-        console.error(
-          "LOAD CURRENT USER ERROR:",
-          userError
-        );
+        console.error("LOAD CURRENT USER ERROR:", userError);
 
         alert(
           "تعذر تحميل بيانات المستخدم:\n" +
-            (userError?.message ||
-              "المستخدم غير موجود")
+            (userError?.message || "المستخدم غير موجود")
         );
 
         return;
@@ -91,102 +68,59 @@ export default function ProjectsPage() {
 
       const current: CurrentUser = {
         id: Number(userData.id),
-        role: userData.role,
+        role: String(userData.role || "")
+          .trim()
+          .toLowerCase(),
         branch_id:
-          userData.branch_id != null
+          userData.branch_id !== null &&
+          userData.branch_id !== undefined
             ? Number(userData.branch_id)
             : null,
       };
 
       setCurrentUser(current);
 
-      // =========================
-      // DEBUG
-      // =========================
-
       console.log("CURRENT USER:", current);
-
-      // =========================
-      // LOAD PROJECTS
-      // =========================
 
       let query = supabase
         .from("projects")
         .select("*")
-        .order("id", {
-          ascending: false,
-        });
+        .order("id", { ascending: false });
 
-      /*
-       * ADMIN:
-       * يشاهد جميع المشاريع.
-       *
-       * BRANCH MANAGER:
-       * يشاهد مشاريع فرعه فقط.
-       *
-       * باقي المستخدمين:
-       * يشاهدون المشاريع التابعة لفرعهم.
-       */
-
-      if (current.role === "admin") {
-        // Admin sees all projects
-      } else {
+      // ADMIN يشوف جميع المشاريع
+      // أي مستخدم آخر يشوف مشاريع فرعه فقط
+      if (current.role !== "admin") {
         if (current.branch_id === null) {
-          alert(
-            "المستخدم الحالي غير مرتبط بأي فرع."
-          );
-
+          alert("المستخدم الحالي غير مرتبط بأي فرع.");
           setProjects([]);
           return;
         }
 
-        query = query.eq(
-          "branch_id",
-          current.branch_id
-        );
+        query = query.eq("branch_id", current.branch_id);
       }
 
-      const {
-        data,
-        error,
-      } = await query;
+      const { data, error } = await query;
 
       if (error) {
-        console.error(
-          "LOAD PROJECTS ERROR:",
-          error
-        );
-
+        console.error("LOAD PROJECTS ERROR:", error);
         alert(error.message);
         return;
       }
-
-      // =========================
-      // DEBUG
-      // =========================
 
       console.log("PROJECTS:", data);
 
       setProjects(data || []);
     } catch (error: any) {
-      console.error(
-        "PROJECTS PAGE ERROR:",
-        error
-      );
+      console.error("PROJECTS PAGE ERROR:", error);
 
       alert(
         "حدث خطأ أثناء تحميل المشاريع:\n" +
-          (error?.message ||
-            "خطأ غير معروف")
+          (error?.message || "خطأ غير معروف")
       );
     } finally {
       setLoading(false);
     }
   }
-
-  // =========================
-  // ADD PROJECT
-  // =========================
 
   async function addProject() {
     if (!projectName.trim()) {
@@ -195,84 +129,43 @@ export default function ProjectsPage() {
     }
 
     if (!currentUser) {
-      alert(
-        "لم يتم التعرف على المستخدم الحالي."
-      );
+      alert("لم يتم التعرف على المستخدم الحالي.");
       return;
     }
-
-    /*
-     * Admin يمكنه إنشاء مشروع بدون فرع
-     * إذا كان branch_id غير موجود.
-     *
-     * باقي المستخدمين يجب أن يكونوا
-     * مرتبطين بفرع.
-     */
 
     if (
       currentUser.role !== "admin" &&
       currentUser.branch_id === null
     ) {
-      alert(
-        "المستخدم الحالي غير مرتبط بأي فرع."
-      );
+      alert("المستخدم الحالي غير مرتبط بأي فرع.");
       return;
     }
 
-    // =========================
-    // CREATE PROJECT OBJECT
-    // =========================
-
     const newProject: any = {
-      project_name: projectName,
-      project_number: projectNumber,
-      location,
+      project_name: projectName.trim(),
+      project_number: projectNumber.trim(),
+      location: location.trim(),
       project_status: status,
-      description,
+      description: description.trim(),
     };
 
-    /*
-     * كل مستخدم مرتبط بفرع:
-     * المشروع يأخذ branch_id الخاص به.
-     */
-
+    // ADMIN يمكنه إنشاء مشروع بدون فرع
+    // مدير الفرع ينشئ المشروع تلقائيًا على فرعه
     if (currentUser.branch_id !== null) {
-      newProject.branch_id =
-        currentUser.branch_id;
+      newProject.branch_id = currentUser.branch_id;
     }
 
-    // =========================
-    // DEBUG
-    // =========================
+    console.log("NEW PROJECT:", newProject);
 
-    console.log(
-      "NEW PROJECT:",
-      newProject
-    );
-
-    // =========================
-    // INSERT PROJECT
-    // =========================
-
-    const {
-      error,
-    } = await supabase
+    const { error } = await supabase
       .from("projects")
       .insert([newProject]);
 
     if (error) {
-      console.error(
-        "ADD PROJECT ERROR:",
-        error
-      );
-
+      console.error("ADD PROJECT ERROR:", error);
       alert(error.message);
       return;
     }
-
-    // =========================
-    // RESET FORM
-    // =========================
 
     setProjectName("");
     setProjectNumber("");
@@ -280,30 +173,17 @@ export default function ProjectsPage() {
     setStatus("Active");
     setDescription("");
 
-    // =========================
-    // RELOAD PROJECTS
-    // =========================
-
     await loadProjects();
   }
 
-  // =========================
-  // DELETE PROJECT
-  // =========================
-
-  async function deleteProject(
-    id: number
-  ) {
+  async function deleteProject(id: number) {
     if (!currentUser) {
-      alert(
-        "لم يتم التعرف على المستخدم الحالي."
-      );
+      alert("لم يتم التعرف على المستخدم الحالي.");
       return;
     }
 
     const project = projects.find(
-      (item) =>
-        Number(item.id) === Number(id)
+      (item) => Number(item.id) === Number(id)
     );
 
     if (!project) {
@@ -311,30 +191,17 @@ export default function ProjectsPage() {
       return;
     }
 
-    /*
-     * Admin:
-     * يستطيع حذف أي مشروع.
-     *
-     * Branch Manager:
-     * يستطيع حذف مشروع فرعه فقط.
-     */
-
+    // منع حذف مشروع تابع لفرع آخر
     if (
       currentUser.role !== "admin" &&
       Number(project.branch_id) !==
         Number(currentUser.branch_id)
     ) {
-      alert(
-        "لا يمكنك حذف مشروع تابع لفرع آخر."
-      );
+      alert("لا يمكنك حذف مشروع تابع لفرع آخر.");
       return;
     }
 
-    if (
-      !confirm(
-        "Delete this project?"
-      )
-    ) {
+    if (!confirm("Delete this project?")) {
       return;
     }
 
@@ -343,14 +210,8 @@ export default function ProjectsPage() {
       .delete()
       .eq("id", id);
 
-    /*
-     * Admin:
-     * بدون فلترة فرع.
-     *
-     * باقي المستخدمين:
-     * الحذف من فرعهم فقط.
-     */
-
+    // ADMIN يحذف من أي فرع
+    // غير ADMIN يحذف فقط من فرعه
     if (currentUser.role !== "admin") {
       query = query.eq(
         "branch_id",
@@ -358,16 +219,10 @@ export default function ProjectsPage() {
       );
     }
 
-    const {
-      error,
-    } = await query;
+    const { error } = await query;
 
     if (error) {
-      console.error(
-        "DELETE PROJECT ERROR:",
-        error
-      );
-
+      console.error("DELETE PROJECT ERROR:", error);
       alert(error.message);
       return;
     }
@@ -375,30 +230,17 @@ export default function ProjectsPage() {
     await loadProjects();
   }
 
-  // =========================
-  // PAGE
-  // =========================
-
   return (
     <ProtectedRoute>
       <div className="p-8">
-
-        {/* =========================
-            HEADER
-        ========================= */}
-
+        {/* HEADER */}
         <div className="flex items-center gap-3 mb-8">
-
           <button
             onClick={() => {
-              if (
-                window.history.length > 1
-              ) {
+              if (window.history.length > 1) {
                 router.back();
               } else {
-                router.push(
-                  "/dashboard"
-                );
+                router.push("/dashboard");
               }
             }}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -407,38 +249,29 @@ export default function ProjectsPage() {
           </button>
 
           <div>
-
             <h1 className="text-3xl font-bold">
               Projects
             </h1>
 
             <p className="text-gray-500 mt-1">
-              {currentUser?.role ===
-              "branch_manager"
+              {currentUser?.role === "branch_manager"
                 ? "Manage projects for your branch."
-                : "Manage all company projects."}
+                : currentUser?.role === "admin"
+                ? "Manage all company projects."
+                : "Manage projects for your branch."}
             </p>
-
           </div>
-
         </div>
 
-        {/* =========================
-            ADD PROJECT
-        ========================= */}
-
+        {/* ADD PROJECT */}
         <div className="bg-white rounded-xl shadow p-6 mb-8">
-
           <div className="grid grid-cols-2 gap-4">
-
             <input
               className="border rounded-lg p-3"
               placeholder="Project Name"
               value={projectName}
               onChange={(e) =>
-                setProjectName(
-                  e.target.value
-                )
+                setProjectName(e.target.value)
               }
             />
 
@@ -447,9 +280,7 @@ export default function ProjectsPage() {
               placeholder="Project Number"
               value={projectNumber}
               onChange={(e) =>
-                setProjectNumber(
-                  e.target.value
-                )
+                setProjectNumber(e.target.value)
               }
             />
 
@@ -458,9 +289,7 @@ export default function ProjectsPage() {
               placeholder="Location"
               value={location}
               onChange={(e) =>
-                setLocation(
-                  e.target.value
-                )
+                setLocation(e.target.value)
               }
             />
 
@@ -468,24 +297,17 @@ export default function ProjectsPage() {
               className="border rounded-lg p-3"
               value={status}
               onChange={(e) =>
-                setStatus(
-                  e.target.value
-                )
+                setStatus(e.target.value)
               }
             >
-              <option>
-                Active
-              </option>
-
-              <option>
+              <option value="Active">Active</option>
+              <option value="Completed">
                 Completed
               </option>
-
-              <option>
+              <option value="On Hold">
                 On Hold
               </option>
             </select>
-
           </div>
 
           <textarea
@@ -494,9 +316,7 @@ export default function ProjectsPage() {
             placeholder="Description"
             value={description}
             onChange={(e) =>
-              setDescription(
-                e.target.value
-              )
+              setDescription(e.target.value)
             }
           />
 
@@ -506,35 +326,22 @@ export default function ProjectsPage() {
           >
             + Add Project
           </button>
-
         </div>
 
-        {/* =========================
-            PROJECTS TABLE
-        ========================= */}
-
+        {/* PROJECTS TABLE */}
         <div className="bg-white rounded-xl shadow overflow-hidden">
-
           {loading ? (
-
             <div className="p-6 text-center">
               Loading...
             </div>
-
           ) : projects.length === 0 ? (
-
             <div className="p-6 text-center">
               No projects found
             </div>
-
           ) : (
-
             <table className="w-full">
-
               <thead className="bg-gray-100">
-
                 <tr>
-
                   <th className="p-3 text-left">
                     Project
                   </th>
@@ -554,98 +361,74 @@ export default function ProjectsPage() {
                   <th className="p-3 text-left">
                     Actions
                   </th>
-
                 </tr>
-
               </thead>
 
               <tbody>
+                {projects.map((project) => (
+                  <tr
+                    key={project.id}
+                    className="border-t hover:bg-gray-50"
+                  >
+                    <td className="p-3 font-semibold">
+                      {project.project_name}
+                    </td>
 
-                {projects.map(
-                  (project) => (
+                    <td className="p-3">
+                      {project.project_number}
+                    </td>
 
-                    <tr
-                      key={project.id}
-                      className="border-t"
-                    >
+                    <td className="p-3">
+                      {project.location}
+                    </td>
 
-                      <td className="p-3 font-semibold">
-                        {project.project_name}
-                      </td>
+                    <td className="p-3">
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm text-white ${
+                          project.project_status ===
+                          "Active"
+                            ? "bg-green-600"
+                            : project.project_status ===
+                              "Completed"
+                            ? "bg-blue-600"
+                            : "bg-yellow-600"
+                        }`}
+                      >
+                        {project.project_status}
+                      </span>
+                    </td>
 
-                      <td className="p-3">
-                        {project.project_number}
-                      </td>
-
-                      <td className="p-3">
-                        {project.location}
-                      </td>
-
-                      <td className="p-3">
-
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm text-white ${
-                            project.project_status ===
-                            "Active"
-                              ? "bg-green-600"
-                              : project.project_status ===
-                                "Completed"
-                              ? "bg-blue-600"
-                              : "bg-yellow-600"
-                          }`}
-                        >
-                          {
-                            project.project_status
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() =>
+                            router.push(
+                              `/projects/${project.id}`
+                            )
                           }
-                        </span>
+                          className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded"
+                        >
+                          Open
+                        </button>
 
-                      </td>
-
-                      <td className="p-3">
-
-                        <div className="flex gap-2">
-
-                          <button
-                            onClick={() =>
-                              router.push(
-                                `/projects/${project.id}`
-                              )
-                            }
-                            className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded"
-                          >
-                            Open
-                          </button>
-
-                          <button
-                            onClick={() =>
-                              deleteProject(
-                                Number(
-                                  project.id
-                                )
-                              )
-                            }
-                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                          >
-                            Delete
-                          </button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-
-                  )
-                )}
-
+                        <button
+                          onClick={() =>
+                            deleteProject(
+                              Number(project.id)
+                            )
+                          }
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
-
             </table>
-
           )}
-
         </div>
-
       </div>
     </ProtectedRoute>
   );
