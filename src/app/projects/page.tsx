@@ -16,6 +16,7 @@ export default function ProjectsPage() {
   const router = useRouter();
 
   const [projects, setProjects] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] =
     useState<CurrentUser | null>(null);
@@ -25,10 +26,42 @@ export default function ProjectsPage() {
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("Active");
   const [description, setDescription] = useState("");
+  const [clientId, setClientId] = useState("");
 
   useEffect(() => {
     loadProjects();
+    loadClients();
   }, []);
+
+  // =========================
+  // LOAD CLIENTS
+  // =========================
+
+  async function loadClients() {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("id, client_name")
+      .order("client_name", {
+        ascending: true,
+      });
+
+    if (error) {
+      console.error("LOAD CLIENTS ERROR:", error);
+
+      alert(
+        "تعذر تحميل العملاء:\n" +
+          error.message
+      );
+
+      return;
+    }
+
+    setClients(data || []);
+  }
+
+  // =========================
+  // LOAD PROJECTS
+  // =========================
 
   async function loadProjects() {
     setLoading(true);
@@ -48,19 +81,25 @@ export default function ProjectsPage() {
         return;
       }
 
-      const { data: userData, error: userError } =
-        await supabase
-          .from("users")
-          .select("id, role, branch_id")
-          .eq("id", userId)
-          .single();
+      const {
+        data: userData,
+        error: userError,
+      } = await supabase
+        .from("users")
+        .select("id, role, branch_id")
+        .eq("id", userId)
+        .single();
 
       if (userError || !userData) {
-        console.error("LOAD CURRENT USER ERROR:", userError);
+        console.error(
+          "LOAD CURRENT USER ERROR:",
+          userError
+        );
 
         alert(
           "تعذر تحميل بيانات المستخدم:\n" +
-            (userError?.message || "المستخدم غير موجود")
+            (userError?.message ||
+              "المستخدم غير موجود")
         );
 
         return;
@@ -68,9 +107,11 @@ export default function ProjectsPage() {
 
       const current: CurrentUser = {
         id: Number(userData.id),
+
         role: String(userData.role || "")
           .trim()
           .toLowerCase(),
+
         branch_id:
           userData.branch_id !== null &&
           userData.branch_id !== undefined
@@ -80,56 +121,102 @@ export default function ProjectsPage() {
 
       setCurrentUser(current);
 
-      console.log("CURRENT USER:", current);
+      console.log(
+        "CURRENT USER:",
+        current
+      );
 
       let query = supabase
         .from("projects")
         .select("*")
-        .order("id", { ascending: false });
+        .order("id", {
+          ascending: false,
+        });
 
       // ADMIN يشوف جميع المشاريع
       // أي مستخدم آخر يشوف مشاريع فرعه فقط
+
       if (current.role !== "admin") {
         if (current.branch_id === null) {
-          alert("المستخدم الحالي غير مرتبط بأي فرع.");
+          alert(
+            "المستخدم الحالي غير مرتبط بأي فرع."
+          );
+
           setProjects([]);
+
           return;
         }
 
-        query = query.eq("branch_id", current.branch_id);
+        query = query.eq(
+          "branch_id",
+          current.branch_id
+        );
       }
 
-      const { data, error } = await query;
+      const {
+        data,
+        error,
+      } = await query;
 
       if (error) {
-        console.error("LOAD PROJECTS ERROR:", error);
+        console.error(
+          "LOAD PROJECTS ERROR:",
+          error
+        );
+
         alert(error.message);
+
         return;
       }
 
-      console.log("PROJECTS:", data);
+      console.log(
+        "PROJECTS:",
+        data
+      );
 
       setProjects(data || []);
     } catch (error: any) {
-      console.error("PROJECTS PAGE ERROR:", error);
+      console.error(
+        "PROJECTS PAGE ERROR:",
+        error
+      );
 
       alert(
         "حدث خطأ أثناء تحميل المشاريع:\n" +
-          (error?.message || "خطأ غير معروف")
+          (error?.message ||
+            "خطأ غير معروف")
       );
     } finally {
       setLoading(false);
     }
   }
 
+  // =========================
+  // ADD PROJECT
+  // =========================
+
   async function addProject() {
     if (!projectName.trim()) {
-      alert("Please enter project name");
+      alert(
+        "الرجاء إدخال اسم المشروع"
+      );
+
+      return;
+    }
+
+    if (!clientId) {
+      alert(
+        "الرجاء اختيار العميل."
+      );
+
       return;
     }
 
     if (!currentUser) {
-      alert("لم يتم التعرف على المستخدم الحالي.");
+      alert(
+        "لم يتم التعرف على المستخدم الحالي."
+      );
+
       return;
     }
 
@@ -137,71 +224,136 @@ export default function ProjectsPage() {
       currentUser.role !== "admin" &&
       currentUser.branch_id === null
     ) {
-      alert("المستخدم الحالي غير مرتبط بأي فرع.");
+      alert(
+        "المستخدم الحالي غير مرتبط بأي فرع."
+      );
+
       return;
     }
 
     const newProject: any = {
-      project_name: projectName.trim(),
-      project_number: projectNumber.trim(),
-      location: location.trim(),
-      project_status: status,
-      description: description.trim(),
+      project_name:
+        projectName.trim(),
+
+      project_number:
+        projectNumber.trim(),
+
+      location:
+        location.trim(),
+
+      project_status:
+        status,
+
+      description:
+        description.trim(),
+
+      // الربط الحقيقي مع العميل
+      client_id:
+        Number(clientId),
     };
 
     // ADMIN يمكنه إنشاء مشروع بدون فرع
-    // مدير الفرع ينشئ المشروع تلقائيًا على فرعه
-    if (currentUser.branch_id !== null) {
-      newProject.branch_id = currentUser.branch_id;
+    // المستخدم غير ADMIN ينشئ المشروع على فرعه
+
+    if (
+      currentUser.branch_id !== null
+    ) {
+      newProject.branch_id =
+        currentUser.branch_id;
     }
 
-    console.log("NEW PROJECT:", newProject);
+    console.log(
+      "NEW PROJECT:",
+      newProject
+    );
 
-    const { error } = await supabase
+    const {
+      error,
+    } = await supabase
       .from("projects")
       .insert([newProject]);
 
     if (error) {
-      console.error("ADD PROJECT ERROR:", error);
-      alert(error.message);
+      console.error(
+        "ADD PROJECT ERROR:",
+        error
+      );
+
+      alert(
+        "حدث خطأ أثناء إنشاء المشروع:\n" +
+          error.message
+      );
+
       return;
     }
+
+    alert(
+      "تم إنشاء المشروع وربطه بالعميل بنجاح."
+    );
+
+    // Reset form
 
     setProjectName("");
     setProjectNumber("");
     setLocation("");
     setStatus("Active");
     setDescription("");
+    setClientId("");
 
     await loadProjects();
   }
 
-  async function deleteProject(id: number) {
+  // =========================
+  // DELETE PROJECT
+  // =========================
+
+  async function deleteProject(
+    id: number
+  ) {
     if (!currentUser) {
-      alert("لم يتم التعرف على المستخدم الحالي.");
+      alert(
+        "لم يتم التعرف على المستخدم الحالي."
+      );
+
       return;
     }
 
-    const project = projects.find(
-      (item) => Number(item.id) === Number(id)
-    );
+    const project =
+      projects.find(
+        (item) =>
+          Number(item.id) ===
+          Number(id)
+      );
 
     if (!project) {
-      alert("المشروع غير موجود.");
+      alert(
+        "المشروع غير موجود."
+      );
+
       return;
     }
 
     // منع حذف مشروع تابع لفرع آخر
+
     if (
       currentUser.role !== "admin" &&
       Number(project.branch_id) !==
-        Number(currentUser.branch_id)
+        Number(
+          currentUser.branch_id
+        )
     ) {
-      alert("لا يمكنك حذف مشروع تابع لفرع آخر.");
+      alert(
+        "لا يمكنك حذف مشروع تابع لفرع آخر."
+      );
+
       return;
     }
 
-    if (!confirm("Delete this project?")) {
+    if (
+      !confirm(
+        "هل أنت متأكد من حذف هذا المشروع؟"
+      )
+    ) {
       return;
     }
 
@@ -212,37 +364,65 @@ export default function ProjectsPage() {
 
     // ADMIN يحذف من أي فرع
     // غير ADMIN يحذف فقط من فرعه
-    if (currentUser.role !== "admin") {
+
+    if (
+      currentUser.role !== "admin"
+    ) {
       query = query.eq(
         "branch_id",
         currentUser.branch_id
       );
     }
 
-    const { error } = await query;
+    const {
+      error,
+    } = await query;
 
     if (error) {
-      console.error("DELETE PROJECT ERROR:", error);
-      alert(error.message);
+      console.error(
+        "DELETE PROJECT ERROR:",
+        error
+      );
+
+      alert(
+        "حدث خطأ أثناء حذف المشروع:\n" +
+          error.message
+      );
+
       return;
     }
 
     await loadProjects();
   }
 
+  // =========================
+  // OPEN PROJECT
+  // =========================
+
+  function openProject(
+    projectId: number
+  ) {
+    router.push(
+      `/projects/${projectId}`
+    );
+  }
+
+  // =========================
+  // MAIN
+  // =========================
+
   return (
     <ProtectedRoute>
-      <div className="p-8">
+      <div className="p-8 min-h-screen bg-gray-100">
+
         {/* HEADER */}
+
         <div className="flex items-center gap-3 mb-8">
+
           <button
-            onClick={() => {
-              if (window.history.length > 1) {
-                router.back();
-              } else {
-                router.push("/dashboard");
-              }
-            }}
+            onClick={() =>
+              router.push("/dashboard")
+            }
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             ← Back
@@ -254,61 +434,121 @@ export default function ProjectsPage() {
             </h1>
 
             <p className="text-gray-500 mt-1">
-              {currentUser?.role === "branch_manager"
+              {currentUser?.role ===
+              "branch_manager"
                 ? "Manage projects for your branch."
-                : currentUser?.role === "admin"
+                : currentUser?.role ===
+                  "admin"
                 ? "Manage all company projects."
                 : "Manage projects for your branch."}
             </p>
           </div>
+
         </div>
 
         {/* ADD PROJECT */}
+
         <div className="bg-white rounded-xl shadow p-6 mb-8">
+
+          <h2 className="text-xl font-bold text-blue-900 mb-5">
+            إنشاء مشروع جديد
+          </h2>
+
           <div className="grid grid-cols-2 gap-4">
+
+            {/* CLIENT */}
+
+            <select
+              className="border rounded-lg p-3"
+              value={clientId}
+              onChange={(e) =>
+                setClientId(
+                  e.target.value
+                )
+              }
+            >
+              <option value="">
+                اختر العميل *
+              </option>
+
+              {clients.map(
+                (client) => (
+                  <option
+                    key={client.id}
+                    value={client.id}
+                  >
+                    {client.client_name}
+                  </option>
+                )
+              )}
+            </select>
+
+            {/* PROJECT NAME */}
+
             <input
               className="border rounded-lg p-3"
-              placeholder="Project Name"
+              placeholder="Project Name *"
               value={projectName}
               onChange={(e) =>
-                setProjectName(e.target.value)
+                setProjectName(
+                  e.target.value
+                )
               }
             />
+
+            {/* PROJECT NUMBER */}
 
             <input
               className="border rounded-lg p-3"
               placeholder="Project Number"
               value={projectNumber}
               onChange={(e) =>
-                setProjectNumber(e.target.value)
+                setProjectNumber(
+                  e.target.value
+                )
               }
             />
+
+            {/* LOCATION */}
 
             <input
               className="border rounded-lg p-3"
               placeholder="Location"
               value={location}
               onChange={(e) =>
-                setLocation(e.target.value)
+                setLocation(
+                  e.target.value
+                )
               }
             />
+
+            {/* STATUS */}
 
             <select
               className="border rounded-lg p-3"
               value={status}
               onChange={(e) =>
-                setStatus(e.target.value)
+                setStatus(
+                  e.target.value
+                )
               }
             >
-              <option value="Active">Active</option>
+              <option value="Active">
+                Active
+              </option>
+
               <option value="Completed">
                 Completed
               </option>
+
               <option value="On Hold">
                 On Hold
               </option>
             </select>
+
           </div>
+
+          {/* DESCRIPTION */}
 
           <textarea
             className="border rounded-lg p-3 w-full mt-4"
@@ -316,9 +556,13 @@ export default function ProjectsPage() {
             placeholder="Description"
             value={description}
             onChange={(e) =>
-              setDescription(e.target.value)
+              setDescription(
+                e.target.value
+              )
             }
           />
+
+          {/* BUTTON */}
 
           <button
             onClick={addProject}
@@ -326,24 +570,39 @@ export default function ProjectsPage() {
           >
             + Add Project
           </button>
+
         </div>
 
         {/* PROJECTS TABLE */}
+
         <div className="bg-white rounded-xl shadow overflow-hidden">
+
           {loading ? (
+
             <div className="p-6 text-center">
               Loading...
             </div>
+
           ) : projects.length === 0 ? (
-            <div className="p-6 text-center">
+
+            <div className="p-6 text-center text-gray-500">
               No projects found
             </div>
+
           ) : (
+
             <table className="w-full">
+
               <thead className="bg-gray-100">
+
                 <tr>
+
                   <th className="p-3 text-left">
                     Project
+                  </th>
+
+                  <th className="p-3 text-left">
+                    Client
                   </th>
 
                   <th className="p-3 text-left">
@@ -361,74 +620,142 @@ export default function ProjectsPage() {
                   <th className="p-3 text-left">
                     Actions
                   </th>
+
                 </tr>
+
               </thead>
 
               <tbody>
-                {projects.map((project) => (
-                  <tr
-                    key={project.id}
-                    className="border-t hover:bg-gray-50"
-                  >
-                    <td className="p-3 font-semibold">
-                      {project.project_name}
-                    </td>
 
-                    <td className="p-3">
-                      {project.project_number}
-                    </td>
+                {projects.map(
+                  (project) => {
 
-                    <td className="p-3">
-                      {project.location}
-                    </td>
+                    const client =
+                      clients.find(
+                        (item) =>
+                          Number(
+                            item.id
+                          ) ===
+                          Number(
+                            project.client_id
+                          )
+                      );
 
-                    <td className="p-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm text-white ${
-                          project.project_status ===
-                          "Active"
-                            ? "bg-green-600"
-                            : project.project_status ===
-                              "Completed"
-                            ? "bg-blue-600"
-                            : "bg-yellow-600"
-                        }`}
+                    return (
+
+                      <tr
+                        key={project.id}
+                        className="border-t hover:bg-gray-50"
                       >
-                        {project.project_status}
-                      </span>
-                    </td>
 
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() =>
-                            router.push(
-                              `/projects/${project.id}`
-                            )
-                          }
-                          className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded"
-                        >
-                          Open
-                        </button>
+                        {/* PROJECT */}
 
-                        <button
-                          onClick={() =>
-                            deleteProject(
-                              Number(project.id)
-                            )
+                        <td className="p-3 font-semibold">
+                          {
+                            project.project_name
                           }
-                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+
+                        {/* CLIENT */}
+
+                        <td className="p-3">
+
+                          {client
+                            ?.client_name ||
+                            "غير محدد"}
+
+                        </td>
+
+                        {/* NUMBER */}
+
+                        <td className="p-3">
+                          {
+                            project.project_number ||
+                            "-"
+                          }
+                        </td>
+
+                        {/* LOCATION */}
+
+                        <td className="p-3">
+                          {
+                            project.location ||
+                            "-"
+                          }
+                        </td>
+
+                        {/* STATUS */}
+
+                        <td className="p-3">
+
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm text-white ${
+                              project.project_status ===
+                              "Active"
+                                ? "bg-green-600"
+                                : project.project_status ===
+                                  "Completed"
+                                ? "bg-blue-600"
+                                : "bg-yellow-600"
+                            }`}
+                          >
+                            {
+                              project.project_status
+                            }
+                          </span>
+
+                        </td>
+
+                        {/* ACTIONS */}
+
+                        <td className="p-3">
+
+                          <div className="flex gap-2">
+
+                            <button
+                              onClick={() =>
+                                openProject(
+                                  Number(
+                                    project.id
+                                  )
+                                )
+                              }
+                              className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded"
+                            >
+                              Open
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                deleteProject(
+                                  Number(
+                                    project.id
+                                  )
+                                )
+                              }
+                              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                            >
+                              Delete
+                            </button>
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    );
+                  }
+                )}
+
               </tbody>
+
             </table>
+
           )}
+
         </div>
+
       </div>
     </ProtectedRoute>
   );

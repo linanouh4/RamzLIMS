@@ -15,6 +15,7 @@ export default function ProjectDetailsPage() {
 
   const [project, setProject] = useState<any>(null);
   const [client, setClient] = useState<any>(null);
+  const [manualClientId, setManualClientId] = useState("");
   const [samples, setSamples] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [externalRequests, setExternalRequests] = useState<any[]>([]);
@@ -79,7 +80,19 @@ export default function ProjectDetailsPage() {
   const [requestDate, setRequestDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+<div className="mb-4">
+  <label className="block mb-1 font-medium">
+    رقم العميل (Client ID)
+  </label>
 
+  <input
+    type="number"
+    value={manualClientId}
+    onChange={(e) => setManualClientId(e.target.value)}
+    placeholder="مثال: 9"
+    className="w-full border rounded-lg px-3 py-2"
+  />
+</div>
   const [requestContactPerson, setRequestContactPerson] =
     useState("");
 
@@ -215,143 +228,238 @@ export default function ProjectDetailsPage() {
   // SAVE CLIENT CONTRACT
   // =========================
 
-  async function saveExternalRequest() {
-    if (!canCreateContract) {
-      alert("ليس لديك صلاحية إنشاء عقد العميل.");
-      return;
-    }
-
-    if (!project?.client_id) {
-      alert("هذا المشروع غير مرتبط بعميل.");
-      return;
-    }
-
-    if (!requestedTest.trim()) {
-      alert("الرجاء إدخال الاختبار المطلوب");
-      return;
-    }
-
-    if (!sampleKind.trim()) {
-      alert("الرجاء إدخال نوع العينة");
-      return;
-    }
-
-    setSavingRequest(true);
-
-    try {
-      const requestNo = generateRequestNumber();
-      const approvalToken = generateApprovalToken();
-
-      const { data, error } = await supabase
-        .from("external_test_requests")
-        .insert([
-          {
-            project_id: Number(id),
-
-            client_id: project.client_id,
-
-            request_no: requestNo,
-
-            approval_token: approvalToken,
-
-            order_no: orderNo || null,
-
-            request_date: requestDate,
-
-            contact_person:
-              requestContactPerson ||
-              client?.contact_person ||
-              null,
-
-            telephone:
-              requestTelephone ||
-              client?.phone ||
-              null,
-
-            sample_kind: sampleKind,
-
-            quantity: sampleQuantity
-              ? Number(sampleQuantity)
-              : null,
-
-            requested_test: requestedTest,
-
-            test_method: testMethod || null,
-
-            payment_method: paymentMethod || null,
-
-            status: "Draft",
-
-            technical_review_status: "Pending",
-
-            technical_review_notes: null,
-
-            customer_name:
-              client?.client_name || null,
-
-            customer_approval_status: "Pending",
-
-            customer_approved_by: null,
-
-            customer_approved_at: null,
-
-            customer_signature: null,
-
-            lab_manager_approval_status: "Pending",
-
-            lab_manager_approved_by: null,
-
-            lab_manager_approved_at: null,
-
-            lab_manager_signature: null,
-
-            lab_manager_approved_by_name: null,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error(
-          "SAVE CLIENT CONTRACT ERROR:",
-          JSON.stringify(error, null, 2)
-        );
-
-        alert(
-          "حدث خطأ أثناء حفظ عقد العميل:\n\n" +
-            `Code: ${error.code || "-"}\n` +
-            `Message: ${error.message || "-"}\n` +
-            `Details: ${error.details || "-"}\n` +
-            `Hint: ${error.hint || "-"}`
-        );
-
-        return;
-      }
-
-      alert(
-        `تم إنشاء عقد العميل بنجاح\n\nرقم العقد: ${
-          data?.request_no || requestNo
-        }\n\nتم إصدار رابط موافقة العميل.`
-      );
-
-      resetExternalRequestForm();
-      setShowRequestModal(false);
-
-      await loadExternalRequests();
-    } catch (error: any) {
-      console.error(
-        "UNEXPECTED CLIENT CONTRACT ERROR:",
-        error
-      );
-
-      alert(
-        "حدث خطأ غير متوقع:\n" +
-          (error?.message || "خطأ غير معروف")
-      );
-    } finally {
-      setSavingRequest(false);
-    }
+ async function saveExternalRequest() {
+  if (!canCreateContract) {
+    alert("ليس لديك صلاحية إنشاء عقد العميل.");
+    return;
   }
+const manualId = Number(manualClientId);
+
+if (!manualClientId || !manualId) {
+  alert("الرجاء إدخال Client ID");
+  return;
+}
+  if (!requestedTest.trim()) {
+    alert("الرجاء إدخال الاختبار المطلوب");
+    return;
+  }
+
+  if (!sampleKind.trim()) {
+    alert("الرجاء إدخال نوع العينة");
+    return;
+  }
+
+  setSavingRequest(true);
+  const { data: freshProject, error: freshProjectError } =
+  await supabase
+    .from("projects")
+    .select("id, project_name, client_id")
+    .eq("id", Number(id))
+    .single();
+
+if (freshProjectError || !freshProject) {
+  console.error("FRESH PROJECT ERROR:", freshProjectError);
+
+  alert(
+    "تعذر تحميل المشروع من قاعدة البيانات.\n\n" +
+      (freshProjectError?.message || "المشروع غير موجود")
+  );
+
+  return;
+}
+
+console.log("FRESH PROJECT:", freshProject);
+
+if (!freshProject.client_id) {
+  alert(
+    "قاعدة البيانات تقول إن المشروع غير مرتبط بعميل.\n\n" +
+      `Project ID: ${freshProject.id}\n` +
+      `Client ID: ${freshProject.client_id}`
+  );
+
+  return;
+}
+
+const { data: freshClient, error: freshClientError } =
+  await supabase
+    .from("clients")
+    .select("*")
+    .eq("id", manualId)
+    .single();
+
+if (freshClientError || !freshClient) {
+  console.error("FRESH CLIENT ERROR:", freshClientError);
+
+  alert(
+    "المشروع مرتبط بالعميل رقم " +
+      freshProject.client_id +
+      " لكن تعذر تحميل بيانات العميل.\n\n" +
+      (freshClientError?.message || "العميل غير موجود")
+  );
+
+  return;
+}
+
+console.log("FRESH CLIENT:", freshClient);
+
+  try {
+    // ==========================================
+    // جلب العميل مباشرة من قاعدة البيانات
+    // ==========================================
+
+    const { data: clientData, error: clientError } =
+      await supabase
+        .from("clients")
+        .select("*")
+        .eq("id", Number(project.client_id))
+        .maybeSingle();
+
+    if (clientError) {
+      console.error("CLIENT FETCH BEFORE CONTRACT ERROR:", clientError);
+
+      alert(
+        "حدث خطأ أثناء تحميل بيانات العميل:\n\n" +
+          clientError.message
+      );
+
+      return;
+    }
+
+    if (!clientData) {
+      alert(
+        "لم يتم العثور على العميل المرتبط بالمشروع.\n\n" +
+          `Project ID: ${project.id}\n` +
+          `Client ID: ${project.client_id}`
+      );
+
+      return;
+    }
+
+    console.log("CLIENT FOUND BEFORE CONTRACT:", clientData);
+
+    // ==========================================
+    // إنشاء رقم العقد والتوكن
+    // ==========================================
+
+    const requestNo = generateRequestNumber();
+    const approvalToken = generateApprovalToken();
+
+    // ==========================================
+    // حفظ العقد
+    // ==========================================
+
+    const { data, error } = await supabase
+      .from("external_test_requests")
+      .insert([
+        {
+          project_id: Number(freshProject.id),
+
+          // مهم جدًا:
+          // هذا هو clients.id الحقيقي
+         client_id: Number(freshClient.id),
+
+          request_no: requestNo,
+
+          approval_token: approvalToken,
+
+          order_no: orderNo || null,
+
+          request_date: requestDate,
+
+         contact_person:
+  requestContactPerson ||
+  freshClient.contact_person ||
+  null,
+
+          telephone:
+  requestTelephone ||
+  freshClient.phone ||
+  null,
+          sample_kind: sampleKind,
+
+          quantity: sampleQuantity
+            ? Number(sampleQuantity)
+            : null,
+
+          requested_test: requestedTest,
+
+          test_method: testMethod || null,
+
+          payment_method: paymentMethod || null,
+
+          status: "Draft",
+
+          technical_review_status: "Pending",
+
+          technical_review_notes: null,
+
+          customer_name:
+  freshClient.client_name || "العميل المرتبط بالمشروع",
+
+          customer_approval_status: "Pending",
+
+          customer_approved_by: null,
+
+          customer_approved_at: null,
+
+          customer_signature: null,
+
+          lab_manager_approval_status: "Pending",
+
+          lab_manager_approved_by: null,
+
+          lab_manager_approved_at: null,
+
+          lab_manager_signature: null,
+
+          lab_manager_approved_by_name: null,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error(
+        "SAVE CLIENT CONTRACT ERROR:",
+        JSON.stringify(error, null, 2)
+      );
+
+      alert(
+        "حدث خطأ أثناء حفظ عقد العميل:\n\n" +
+          `Code: ${error.code || "-"}\n` +
+          `Message: ${error.message || "-"}\n` +
+          `Details: ${error.details || "-"}\n` +
+          `Hint: ${error.hint || "-"}`
+      );
+
+      return;
+    }
+
+    alert(
+      `تم إنشاء عقد العميل بنجاح\n\n` +
+        `رقم العقد: ${data?.request_no || requestNo}\n\n` +
+        `تم إصدار رابط موافقة العميل.`
+    );
+
+    resetExternalRequestForm();
+
+    setShowRequestModal(false);
+
+    await loadExternalRequests();
+  } catch (error: any) {
+    console.error(
+      "UNEXPECTED CLIENT CONTRACT ERROR:",
+      error
+    );
+
+    alert(
+      "حدث خطأ غير متوقع:\n\n" +
+        (error?.message || "خطأ غير معروف")
+    );
+  } finally {
+    setSavingRequest(false);
+  }
+}
 
   // =========================
   // RESET FORM
@@ -474,8 +582,13 @@ export default function ProjectDetailsPage() {
   // LOAD PROJECT
   // =========================
 
-  async function loadProject() {
-    setLoading(true);
+async function loadProject() {
+  setLoading(true);
+
+  try {
+    // =========================
+    // LOAD PROJECT
+    // =========================
 
     const {
       data: projectData,
@@ -483,41 +596,111 @@ export default function ProjectDetailsPage() {
     } = await supabase
       .from("projects")
       .select("*")
-      .eq("id", id)
-      .single();
+      .eq("id", Number(id))
+      .maybeSingle();
 
     if (projectError) {
-      console.error(
-        "PROJECT ERROR:",
-        projectError
+      console.error("PROJECT LOAD ERROR:", projectError);
+
+      alert(
+        "حدث خطأ أثناء تحميل المشروع:\n\n" +
+          `Code: ${projectError.code || "-"}\n` +
+          `Message: ${projectError.message || "-"}\n` +
+          `Details: ${projectError.details || "-"}\n` +
+          `Hint: ${projectError.hint || "-"}`
       );
 
-      alert(projectError.message);
-      setLoading(false);
+      setProject(null);
       return;
     }
 
-    let clientData = null;
+    if (!projectData) {
+      console.warn("لم يتم العثور على المشروع:", id);
 
-    if (projectData.client_id) {
+      alert("لم يتم العثور على بيانات المشروع.");
+
+      setProject(null);
+      return;
+    }
+
+    console.log("PROJECT FOUND:", projectData);
+
+    // =========================
+    // LOAD CLIENT BY client_id
+    // =========================
+
+    let clientData: any = null;
+
+    if (
+      projectData.client_id !== null &&
+      projectData.client_id !== undefined
+    ) {
+      console.log(
+        "LOADING CLIENT ID:",
+        projectData.client_id
+      );
+
       const {
         data,
         error,
       } = await supabase
         .from("clients")
         .select("*")
-        .eq("id", projectData.client_id)
-        .single();
+        .eq("id", Number(projectData.client_id))
+        .maybeSingle();
 
       if (error) {
-        console.error(
-          "CLIENT ERROR:",
-          error
+        console.error("CLIENT LOAD ERROR:", error);
+
+        alert(
+          "المشروع مرتبط بالعميل رقم " +
+            projectData.client_id +
+            " لكن حدث خطأ أثناء تحميل بيانات العميل:\n\n" +
+            error.message
         );
-      } else {
+      } else if (data) {
         clientData = data;
+
+        console.log("CLIENT FOUND:", {
+          clientId: data.id,
+          clientName: data.client_name,
+          phone: data.phone,
+          contactPerson: data.contact_person,
+        });
+      } else {
+        console.warn(
+          "لم يتم العثور على العميل المرتبط بالمشروع.",
+          {
+            projectId: projectData.id,
+            clientId: projectData.client_id,
+          }
+        );
+
+        alert(
+          "المشروع مرتبط بالعميل رقم " +
+            projectData.client_id +
+            " لكن لم يتم العثور على بياناته في جدول العملاء."
+        );
       }
+    } else {
+      console.warn(
+        "المشروع لا يحتوي على client_id.",
+        {
+          projectId: projectData.id,
+          projectName: projectData.project_name,
+        }
+      );
+
+      alert(
+        "هذا المشروع غير مرتبط بعميل.\n\n" +
+          "Project ID: " +
+          projectData.id
+      );
     }
+
+    // =========================
+    // LOAD SAMPLES
+    // =========================
 
     const {
       data: samplesData,
@@ -527,24 +710,54 @@ export default function ProjectDetailsPage() {
       .select(
         "id, sample_number, sample_type, status, received_date"
       )
-      .eq("project_id", id)
+      .eq("project_id", Number(id))
       .order("id", {
         ascending: false,
       });
 
     if (samplesError) {
       console.error(
-        "SAMPLES ERROR:",
+        "SAMPLES LOAD ERROR:",
         samplesError
       );
     }
+
+    // =========================
+    // DEBUG
+    // =========================
+
+    console.log("PROJECT CLIENT CHECK:", {
+      projectId: projectData.id,
+      projectName: projectData.project_name,
+      projectClientId: projectData.client_id,
+      clientId: clientData?.id ?? null,
+      clientName: clientData?.client_name ?? null,
+      clientData: clientData,
+    });
+
+    // =========================
+    // SET DATA
+    // =========================
 
     setProject(projectData);
     setClient(clientData);
     setSamples(samplesData || []);
 
+    // =========================
+    // LOAD TASKS
+    // =========================
+
     await loadTasks();
+
+    // =========================
+    // LOAD EXTERNAL REQUESTS
+    // =========================
+
     await loadExternalRequests();
+
+    // =========================
+    // LOAD TECHNICIANS
+    // =========================
 
     const {
       data: techData,
@@ -557,16 +770,27 @@ export default function ProjectDetailsPage() {
 
     if (techError) {
       console.error(
-        "TECHNICIANS ERROR:",
+        "TECHNICIANS LOAD ERROR:",
         techError
       );
     } else {
       setTechnicians(techData || []);
     }
 
+  } catch (error: any) {
+    console.error(
+      "UNEXPECTED LOAD PROJECT ERROR:",
+      error
+    );
+
+    alert(
+      "حدث خطأ غير متوقع أثناء تحميل المشروع:\n\n" +
+        (error?.message || "خطأ غير معروف")
+    );
+  } finally {
     setLoading(false);
   }
-
+}
   // =========================
   // LOAD CONTRACTS
   // =========================
@@ -1526,11 +1750,12 @@ export default function ProjectDetailsPage() {
         <div className="flex items-center gap-3 mb-6">
 
           <button
-            onClick={() => router.back()}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            ← Back
-          </button>
+  type="button"
+  onClick={() => router.push("/dashboard")}
+  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+>
+  ← العودة للوحة التحكم
+</button>
 
           <h1 className="text-3xl font-bold text-blue-900">
             Project Details
@@ -1555,19 +1780,17 @@ export default function ProjectDetailsPage() {
                   "No description provided"}
               </p>
 
-              {client && (
-                <div className="mt-4 text-sm">
+              {project.client_name && (
+  <div className="mt-4 text-sm">
+    <span className="text-gray-500">
+      العميل:
+    </span>{" "}
 
-                  <span className="text-gray-500">
-                    العميل:
-                  </span>{" "}
-
-                  <span className="font-semibold">
-                    {client.client_name}
-                  </span>
-
-                </div>
-              )}
+    <span className="font-semibold">
+      {client?.client_name || project.client_name}
+    </span>
+  </div>
+)}
 
             </div>
 
@@ -1654,11 +1877,12 @@ export default function ProjectDetailsPage() {
           </div>
 
           {!client && (
-            <div className="border border-red-300 bg-red-50 text-red-700 rounded-lg p-4 mb-4">
-              لا يمكن إنشاء عقد لأن المشروع غير مرتبط بعميل.
-            </div>
-          )}
-
+  <div className="border border-yellow-300 bg-yellow-50 text-yellow-800 rounded-lg p-4 mb-4">
+    {project.client_name
+      ? `المشروع مرتبط بالعميل: ${project.client_name}، لكن لم يتم العثور على بيانات العميل في جدول العملاء.`
+      : "لا يمكن إنشاء عقد لأن المشروع غير مرتبط بعميل."}
+  </div>
+)}
           {externalRequests.length === 0 ? (
 
             <div className="border border-dashed rounded-lg p-8 text-center">
@@ -2462,7 +2686,19 @@ export default function ProjectDetailsPage() {
               />
 
             </div>
+<div>
+  <label className="block mb-1 font-medium">
+    Client ID
+  </label>
 
+  <input
+    type="number"
+    value={manualClientId}
+    onChange={(e) => setManualClientId(e.target.value)}
+    placeholder="مثال: 9"
+    className="w-full border rounded-lg px-3 py-2"
+  />
+</div>
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">

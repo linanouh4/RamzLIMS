@@ -33,7 +33,8 @@ export default function AddClientModal({
 }: Props) {
   const [clientName, setClientName] =
     useState("");
-
+const [clientId, setClientId] =
+  useState("");
   const [phone, setPhone] =
     useState("");
 
@@ -57,6 +58,9 @@ export default function AddClientModal({
 
   useEffect(() => {
     if (client) {
+      setClientId(
+  client.id ? String(client.id) : ""
+);
       setClientName(
         client.client_name || ""
       );
@@ -78,10 +82,13 @@ export default function AddClientModal({
       );
     } else {
       clearForm();
+      
     }
+    
   }, [client, open]);
 
   function clearForm() {
+    setClientId("");
     setClientName("");
     setPhone("");
     setCity("");
@@ -98,7 +105,21 @@ export default function AddClientModal({
       alert("Please enter the client name.");
       return;
     }
+if (!client && !clientId.trim()) {
+  alert("Please enter the Client ID.");
+  return;
+}
 
+const manualClientId = Number(clientId);
+
+if (
+  !client &&
+  (!Number.isInteger(manualClientId) ||
+    manualClientId <= 0)
+) {
+  alert("Client ID must be a positive number.");
+  return;
+}
     /*
      * عند إنشاء عميل جديد:
      * يجب أن يكون هناك branch_id.
@@ -152,23 +173,23 @@ export default function AddClientModal({
          * المستخدم الحالي.
          */
         const result = await supabase
-          .from("clients")
-          .insert([
-            {
-              client_name: clientName,
-              phone,
-              city,
-              email,
-              address,
-              contact_person:
-                contactPerson,
-              company_type:
-                companyType,
-              status: "Active",
-              branch_id: branchId,
-            },
-          ]);
-
+  .from("clients")
+  .insert([
+    {
+      id: manualClientId,
+      client_name: clientName,
+      phone,
+      city,
+      email,
+      address,
+      contact_person:
+        contactPerson,
+      company_type:
+        companyType,
+      status: "Active",
+      branch_id: branchId,
+    },
+  ]);
         error = result.error;
       }
 
@@ -220,13 +241,25 @@ export default function AddClientModal({
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
+            
             placeholder="Client Name"
             value={clientName}
             onChange={(e) =>
               setClientName(e.target.value)
             }
           />
-
+{!client && (
+  <input
+    type="number"
+    min="1"
+    className="border border-gray-300 rounded-lg p-3 text-black"
+    placeholder="Client ID"
+    value={clientId}
+    onChange={(e) =>
+      setClientId(e.target.value)
+    }
+  />
+)}
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
             placeholder="Phone"

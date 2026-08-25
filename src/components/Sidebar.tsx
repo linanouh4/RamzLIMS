@@ -32,22 +32,14 @@ export default function Sidebar({ user }: Props) {
 
   return (
     <aside className="w-64 bg-blue-800 text-white p-6 min-h-screen">
-      {/* LOGO */}
-      <h1 className="text-3xl font-bold mb-10">
-        RamzLIMS
-      </h1>
+      <h1 className="text-3xl font-bold mb-10">RamzLIMS</h1>
 
-      {/* CURRENT USER */}
       {user && (
         <div className="mb-6 p-4 rounded-xl bg-blue-700">
-          <div className="text-sm text-slate-100">
-            Logged in as
-          </div>
-
+          <div className="text-sm text-slate-100">Logged in as</div>
           <div className="font-semibold text-lg">
             {user.full_name || "User"}
           </div>
-
           <div className="text-sm text-slate-200 capitalize">
             {role || "-"}
           </div>
@@ -55,296 +47,149 @@ export default function Sidebar({ user }: Props) {
       )}
 
       <nav className="space-y-4">
-
-        {/* =====================================================
-            ADMIN
-            الوصول الكامل لجميع الفروع
-        ===================================================== */}
-
         {role === "admin" && (
           <>
-            <Link
-              href="/dashboard"
-              className={linkClass("/dashboard")}
-            >
+            <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
 
-            <Link
-              href="/employees"
-              className={linkClass("/employees")}
-            >
+            <Link href="/employees" className={linkClass("/employees")}>
               👤 Users / Employees
             </Link>
 
-            <Link
-              href="/clients"
-              className={linkClass("/clients")}
-            >
+            <Link href="/clients" className={linkClass("/clients")}>
               👥 All Clients
             </Link>
 
-            <Link
-              href="/projects"
-              className={linkClass("/projects")}
-            >
+            <Link href="/projects" className={linkClass("/projects")}>
               🏗 All Projects
             </Link>
 
-            <Link
-              href="/tasks"
-              className={linkClass("/tasks")}
-            >
-              📋 All Tasks
-            </Link>
-
-            <Link
-              href="/task-results"
-              className={linkClass("/task-results")}
-            >
+            <Link href="/task-results" className={linkClass("/task-results")}>
               📊 Task Results
             </Link>
 
-            <Link
-              href="/samples"
-              className={linkClass("/samples")}
-            >
+            <Link href="/samples" className={linkClass("/samples")}>
               🧪 Samples
             </Link>
 
-            <Link
-              href="/tests"
-              className={linkClass("/tests")}
-            >
+            <Link href="/tests" className={linkClass("/tests")}>
               🔬 Tests
             </Link>
 
-            <Link
-              href="/reports"
-              className={linkClass("/reports")}
-            >
+            <Link href="/reports" className={linkClass("/reports")}>
               📑 Reports
             </Link>
 
-            <Link
-              href="/contracts"
-              className={linkClass("/contracts")}
-            >
+            <Link href="/contracts" className={linkClass("/contracts")}>
               📝 Contracts
             </Link>
           </>
         )}
-
-
-        {/* =====================================================
-            ACCOUNTANT
-            الوصول لجميع الفروع ولكن بدون إدارة المستخدمين
-        ===================================================== */}
 
         {role === "accountant" && (
           <>
-            <Link
-              href="/dashboard"
-              className={linkClass("/dashboard")}
-            >
+            <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
 
-            <Link
-              href="/clients"
-              className={linkClass("/clients")}
-            >
+            <Link href="/clients" className={linkClass("/clients")}>
               👥 All Clients
             </Link>
 
-            <Link
-              href="/projects"
-              className={linkClass("/projects")}
-            >
+            <Link href="/projects" className={linkClass("/projects")}>
               🏗 All Projects
             </Link>
 
-            <Link
-              href="/contracts"
-              className={linkClass("/contracts")}
-            >
+            <Link href="/contracts" className={linkClass("/contracts")}>
               📝 Contracts
             </Link>
 
-            <Link
-              href="/reports"
-              className={linkClass("/reports")}
-            >
+            <Link href="/reports" className={linkClass("/reports")}>
               📑 Reports
             </Link>
           </>
         )}
 
-
-        {/* =====================================================
-            BRANCH MANAGER
-            يظهر له فقط ما يخص فرعه
-        ===================================================== */}
-
         {role === "branch_manager" && (
           <>
-            <Link
-              href="/dashboard"
-              className={linkClass("/dashboard")}
-            >
+            <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
 
-            <Link
-              href="/clients"
-              className={linkClass("/clients")}
-            >
+            <Link href="/clients" className={linkClass("/clients")}>
               👥 عملاء الفرع
             </Link>
 
-            <Link
-              href="/projects"
-              className={linkClass("/projects")}
-            >
+            <Link href="/projects" className={linkClass("/projects")}>
               🏗 مشاريع الفرع
             </Link>
 
-            <Link
-              href="/contracts"
-              className={linkClass("/contracts")}
-            >
+            <Link href="/contracts" className={linkClass("/contracts")}>
               📝 عقود العملاء
             </Link>
 
-            <Link
-              href="/tasks"
-              className={linkClass("/tasks")}
-            >
-              📋 إسناد المهام
-            </Link>
-
-            <Link
-              href="/task-results"
-              className={linkClass("/task-results")}
-            >
+            <Link href="/task-results" className={linkClass("/task-results")}>
               📊 نتائج المهام
             </Link>
 
-            <Link
-              href="/reports"
-              className={linkClass("/reports")}
-            >
+            <Link href="/reports" className={linkClass("/reports")}>
               📑 تقارير الفرع
             </Link>
           </>
         )}
 
-
-        {/* =====================================================
-            LAB MANAGER
-        ===================================================== */}
-
         {role === "lab_manager" && (
           <>
-            <Link
-              href="/dashboard"
-              className={linkClass("/dashboard")}
-            >
+            <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
 
-            <Link
-              href="/projects"
-              className={linkClass("/projects")}
-            >
+            <Link href="/projects" className={linkClass("/projects")}>
               🏗 Projects
             </Link>
 
-            <Link
-              href="/tasks"
-              className={linkClass("/tasks")}
-            >
-              📋 Tasks
-            </Link>
-
-            <Link
-              href="/task-results"
-              className={linkClass("/task-results")}
-            >
+            <Link href="/task-results" className={linkClass("/task-results")}>
               📊 Task Results
             </Link>
 
-            <Link
-              href="/samples"
-              className={linkClass("/samples")}
-            >
+            <Link href="/samples" className={linkClass("/samples")}>
               🧪 Samples
             </Link>
 
-            <Link
-              href="/tests"
-              className={linkClass("/tests")}
-            >
+            <Link href="/tests" className={linkClass("/tests")}>
               🔬 Tests
             </Link>
 
-            <Link
-              href="/reports"
-              className={linkClass("/reports")}
-            >
+            <Link href="/reports" className={linkClass("/reports")}>
               📑 Reports
             </Link>
           </>
         )}
 
-
-        {/* =====================================================
-            RECEPTION
-        ===================================================== */}
-
         {role === "reception" && (
           <>
-            <Link
-              href="/dashboard"
-              className={linkClass("/dashboard")}
-            >
+            <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
 
-            <Link
-              href="/clients"
-              className={linkClass("/clients")}
-            >
+            <Link href="/clients" className={linkClass("/clients")}>
               👥 Clients
             </Link>
 
-            <Link
-              href="/projects"
-              className={linkClass("/projects")}
-            >
+            <Link href="/projects" className={linkClass("/projects")}>
               🏗 Projects
             </Link>
 
-            <Link
-              href="/contracts"
-              className={linkClass("/contracts")}
-            >
+            <Link href="/contracts" className={linkClass("/contracts")}>
               📝 Contracts
             </Link>
           </>
         )}
 
-
-        {/* =====================================================
-            TECHNICIAN
-        ===================================================== */}
-
         {role === "technician" && (
           <>
-            <Link
-              href="/technician"
-              className={linkClass("/technician")}
-            >
+            <Link href="/technician" className={linkClass("/technician")}>
               🏠 Dashboard
             </Link>
 
@@ -362,19 +207,11 @@ export default function Sidebar({ user }: Props) {
               🔬 My Tests
             </Link>
 
-            <Link
-              href="/task-results"
-              className={linkClass("/task-results")}
-            >
+            <Link href="/task-results" className={linkClass("/task-results")}>
               📋 My Results
             </Link>
           </>
         )}
-
-
-        {/* =====================================================
-            LOGOUT
-        ===================================================== */}
 
         <button
           onClick={logout}
@@ -382,7 +219,6 @@ export default function Sidebar({ user }: Props) {
         >
           🚪 Logout
         </button>
-
       </nav>
     </aside>
   );
