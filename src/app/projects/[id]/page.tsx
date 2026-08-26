@@ -15,7 +15,6 @@ export default function ProjectDetailsPage() {
 
   const [project, setProject] = useState<any>(null);
   const [client, setClient] = useState<any>(null);
-  const [manualClientId, setManualClientId] = useState("");
   const [samples, setSamples] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [externalRequests, setExternalRequests] = useState<any[]>([]);
@@ -80,19 +79,6 @@ export default function ProjectDetailsPage() {
   const [requestDate, setRequestDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-<div className="mb-4">
-  <label className="block mb-1 font-medium">
-    رقم العميل (Client ID)
-  </label>
-
-  <input
-    type="number"
-    value={manualClientId}
-    onChange={(e) => setManualClientId(e.target.value)}
-    placeholder="مثال: 9"
-    className="w-full border rounded-lg px-3 py-2"
-  />
-</div>
   const [requestContactPerson, setRequestContactPerson] =
     useState("");
 
@@ -233,12 +219,7 @@ export default function ProjectDetailsPage() {
     alert("ليس لديك صلاحية إنشاء عقد العميل.");
     return;
   }
-const manualId = Number(manualClientId);
 
-if (!manualClientId || !manualId) {
-  alert("الرجاء إدخال Client ID");
-  return;
-}
   if (!requestedTest.trim()) {
     alert("الرجاء إدخال الاختبار المطلوب");
     return;
@@ -250,92 +231,91 @@ if (!manualClientId || !manualId) {
   }
 
   setSavingRequest(true);
-  const { data: freshProject, error: freshProjectError } =
-  await supabase
-    .from("projects")
-    .select("id, project_name, client_id")
-    .eq("id", Number(id))
-    .single();
-
-if (freshProjectError || !freshProject) {
-  console.error("FRESH PROJECT ERROR:", freshProjectError);
-
-  alert(
-    "تعذر تحميل المشروع من قاعدة البيانات.\n\n" +
-      (freshProjectError?.message || "المشروع غير موجود")
-  );
-
-  return;
-}
-
-console.log("FRESH PROJECT:", freshProject);
-
-if (!freshProject.client_id) {
-  alert(
-    "قاعدة البيانات تقول إن المشروع غير مرتبط بعميل.\n\n" +
-      `Project ID: ${freshProject.id}\n` +
-      `Client ID: ${freshProject.client_id}`
-  );
-
-  return;
-}
-
-const { data: freshClient, error: freshClientError } =
-  await supabase
-    .from("clients")
-    .select("*")
-    .eq("id", manualId)
-    .single();
-
-if (freshClientError || !freshClient) {
-  console.error("FRESH CLIENT ERROR:", freshClientError);
-
-  alert(
-    "المشروع مرتبط بالعميل رقم " +
-      freshProject.client_id +
-      " لكن تعذر تحميل بيانات العميل.\n\n" +
-      (freshClientError?.message || "العميل غير موجود")
-  );
-
-  return;
-}
-
-console.log("FRESH CLIENT:", freshClient);
 
   try {
     // ==========================================
-    // جلب العميل مباشرة من قاعدة البيانات
+    // جلب أحدث بيانات المشروع
     // ==========================================
 
-    const { data: clientData, error: clientError } =
-      await supabase
-        .from("clients")
-        .select("*")
-        .eq("id", Number(project.client_id))
-        .maybeSingle();
+    const {
+      data: freshProject,
+      error: freshProjectError,
+    } = await supabase
+      .from("projects")
+      .select("id, project_name, client_id")
+      .eq("id", Number(id))
+      .single();
 
-    if (clientError) {
-      console.error("CLIENT FETCH BEFORE CONTRACT ERROR:", clientError);
+    if (freshProjectError || !freshProject) {
+      console.error(
+        "FRESH PROJECT ERROR:",
+        freshProjectError
+      );
 
       alert(
-        "حدث خطأ أثناء تحميل بيانات العميل:\n\n" +
-          clientError.message
+        "تعذر تحميل المشروع من قاعدة البيانات.\n\n" +
+          (freshProjectError?.message || "المشروع غير موجود")
       );
 
       return;
     }
 
-    if (!clientData) {
+    console.log("FRESH PROJECT:", freshProject);
+
+    // ==========================================
+    // التأكد أن المشروع مرتبط بعميل
+    // ==========================================
+
+    if (
+      freshProject.client_id === null ||
+      freshProject.client_id === undefined
+    ) {
       alert(
-        "لم يتم العثور على العميل المرتبط بالمشروع.\n\n" +
-          `Project ID: ${project.id}\n` +
-          `Client ID: ${project.client_id}`
+        "هذا المشروع غير مرتبط بعميل.\n\n" +
+          "يرجى ربط المشروع بعميل أولًا."
       );
 
       return;
     }
 
-    console.log("CLIENT FOUND BEFORE CONTRACT:", clientData);
+    // ==========================================
+    // Client ID يؤخذ تلقائيًا من المشروع
+    // ==========================================
+
+    const clientId = Number(freshProject.client_id);
+
+    console.log("CLIENT ID FROM PROJECT:", clientId);
+
+    // ==========================================
+    // جلب العميل المرتبط بالمشروع
+    // ==========================================
+
+    const {
+      data: freshClient,
+      error: freshClientError,
+    } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("id", clientId)
+      .single();
+
+    if (freshClientError || !freshClient) {
+      console.error(
+        "FRESH CLIENT ERROR:",
+        freshClientError
+      );
+
+      alert(
+        "المشروع مرتبط بالعميل رقم " +
+          clientId +
+          " لكن تعذر تحميل بيانات العميل.\n\n" +
+          (freshClientError?.message || "العميل غير موجود")
+      );
+
+      return;
+    }
+
+    console.log("FRESH CLIENT:", freshClient);
 
     // ==========================================
     // إنشاء رقم العقد والتوكن
@@ -348,15 +328,17 @@ console.log("FRESH CLIENT:", freshClient);
     // حفظ العقد
     // ==========================================
 
-    const { data, error } = await supabase
+    const {
+      data,
+      error,
+    } = await supabase
       .from("external_test_requests")
       .insert([
         {
           project_id: Number(freshProject.id),
 
-          // مهم جدًا:
-          // هذا هو clients.id الحقيقي
-         client_id: Number(freshClient.id),
+          // Client ID الحقيقي من المشروع
+          client_id: clientId,
 
           request_no: requestNo,
 
@@ -366,15 +348,16 @@ console.log("FRESH CLIENT:", freshClient);
 
           request_date: requestDate,
 
-         contact_person:
-  requestContactPerson ||
-  freshClient.contact_person ||
-  null,
+          contact_person:
+            requestContactPerson ||
+            freshClient.contact_person ||
+            null,
 
           telephone:
-  requestTelephone ||
-  freshClient.phone ||
-  null,
+            requestTelephone ||
+            freshClient.phone ||
+            null,
+
           sample_kind: sampleKind,
 
           quantity: sampleQuantity
@@ -394,7 +377,8 @@ console.log("FRESH CLIENT:", freshClient);
           technical_review_notes: null,
 
           customer_name:
-  freshClient.client_name || "العميل المرتبط بالمشروع",
+            freshClient.client_name ||
+            "العميل المرتبط بالمشروع",
 
           customer_approval_status: "Pending",
 
@@ -421,7 +405,7 @@ console.log("FRESH CLIENT:", freshClient);
     if (error) {
       console.error(
         "SAVE CLIENT CONTRACT ERROR:",
-        JSON.stringify(error, null, 2)
+        error
       );
 
       alert(
@@ -435,6 +419,11 @@ console.log("FRESH CLIENT:", freshClient);
       return;
     }
 
+    console.log(
+      "CLIENT CONTRACT CREATED:",
+      data
+    );
+
     alert(
       `تم إنشاء عقد العميل بنجاح\n\n` +
         `رقم العقد: ${data?.request_no || requestNo}\n\n` +
@@ -446,6 +435,7 @@ console.log("FRESH CLIENT:", freshClient);
     setShowRequestModal(false);
 
     await loadExternalRequests();
+
   } catch (error: any) {
     console.error(
       "UNEXPECTED CLIENT CONTRACT ERROR:",
@@ -456,6 +446,7 @@ console.log("FRESH CLIENT:", freshClient);
       "حدث خطأ غير متوقع:\n\n" +
         (error?.message || "خطأ غير معروف")
     );
+
   } finally {
     setSavingRequest(false);
   }
@@ -2686,19 +2677,7 @@ async function loadProject() {
               />
 
             </div>
-<div>
-  <label className="block mb-1 font-medium">
-    Client ID
-  </label>
 
-  <input
-    type="number"
-    value={manualClientId}
-    onChange={(e) => setManualClientId(e.target.value)}
-    placeholder="مثال: 9"
-    className="w-full border rounded-lg px-3 py-2"
-  />
-</div>
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">

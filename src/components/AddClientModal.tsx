@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -31,64 +32,30 @@ export default function AddClientModal({
   client,
   branchId,
 }: Props) {
-  const [clientName, setClientName] =
-    useState("");
-const [clientId, setClientId] =
-  useState("");
-  const [phone, setPhone] =
-    useState("");
-
-  const [city, setCity] =
-    useState("");
-
-  const [email, setEmail] =
-    useState("");
-
-  const [address, setAddress] =
-    useState("");
-
-  const [contactPerson, setContactPerson] =
-    useState("");
-
-  const [companyType, setCompanyType] =
-    useState("");
-
-  const [saving, setSaving] =
-    useState(false);
+  const [clientName, setClientName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [companyType, setCompanyType] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (client) {
-      setClientId(
-  client.id ? String(client.id) : ""
-);
-      setClientName(
-        client.client_name || ""
-      );
-
+      setClientName(client.client_name || "");
       setPhone(client.phone || "");
-
       setCity(client.city || "");
-
       setEmail(client.email || "");
-
       setAddress(client.address || "");
-
-      setContactPerson(
-        client.contact_person || ""
-      );
-
-      setCompanyType(
-        client.company_type || ""
-      );
+      setContactPerson(client.contact_person || "");
+      setCompanyType(client.company_type || "");
     } else {
       clearForm();
-      
     }
-    
   }, [client, open]);
 
   function clearForm() {
-    setClientId("");
     setClientName("");
     setPhone("");
     setCity("");
@@ -105,21 +72,7 @@ const [clientId, setClientId] =
       alert("Please enter the client name.");
       return;
     }
-if (!client && !clientId.trim()) {
-  alert("Please enter the Client ID.");
-  return;
-}
 
-const manualClientId = Number(clientId);
-
-if (
-  !client &&
-  (!Number.isInteger(manualClientId) ||
-    manualClientId <= 0)
-) {
-  alert("Client ID must be a positive number.");
-  return;
-}
     /*
      * عند إنشاء عميل جديد:
      * يجب أن يكون هناك branch_id.
@@ -128,7 +81,7 @@ if (
      * branchId يأتي من users.branch_id.
      *
      * Admin:
-     * إذا لم يكن مرتبطًا بفرع، سيبقى branch_id = null.
+     * إذا لم يكن مرتبطًا بفرع، سيتم رفض الإضافة هنا.
      */
     if (!client && !branchId) {
       alert(
@@ -148,19 +101,19 @@ if (
          *
          * لا نغير branch_id هنا.
          * العميل يبقى تابعًا لفرعه الأصلي.
+         *
+         * ولا نغير id.
          */
         const result = await supabase
           .from("clients")
           .update({
-            client_name: clientName,
-            phone,
-            city,
-            email,
-            address,
-            contact_person:
-              contactPerson,
-            company_type:
-              companyType,
+            client_name: clientName.trim(),
+            phone: phone.trim(),
+            city: city.trim(),
+            email: email.trim(),
+            address: address.trim(),
+            contact_person: contactPerson.trim(),
+            company_type: companyType.trim(),
           })
           .eq("id", client.id);
 
@@ -169,35 +122,33 @@ if (
         /*
          * إنشاء عميل جديد
          *
-         * ربط العميل تلقائيًا بفرع
-         * المستخدم الحالي.
+         * مهم جداً:
+         * لا نرسل id هنا.
+         *
+         * Supabase / PostgreSQL سيقوم
+         * بتوليد رقم id تلقائياً.
          */
         const result = await supabase
-  .from("clients")
-  .insert([
-    {
-      id: manualClientId,
-      client_name: clientName,
-      phone,
-      city,
-      email,
-      address,
-      contact_person:
-        contactPerson,
-      company_type:
-        companyType,
-      status: "Active",
-      branch_id: branchId,
-    },
-  ]);
+          .from("clients")
+          .insert([
+            {
+              client_name: clientName.trim(),
+              phone: phone.trim(),
+              city: city.trim(),
+              email: email.trim(),
+              address: address.trim(),
+              contact_person: contactPerson.trim(),
+              company_type: companyType.trim(),
+              status: "Active",
+              branch_id: branchId,
+            },
+          ]);
+
         error = result.error;
       }
 
       if (error) {
-        console.error(
-          "SAVE CLIENT ERROR:",
-          error
-        );
+        console.error("SAVE CLIENT ERROR:", error);
 
         alert(
           "حدث خطأ أثناء حفظ العميل:\n" +
@@ -228,7 +179,6 @@ if (
 
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
-
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-[600px] max-w-[95vw]">
 
         <h2 className="text-2xl font-bold mb-6">
@@ -241,25 +191,13 @@ if (
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
-            
             placeholder="Client Name"
             value={clientName}
             onChange={(e) =>
               setClientName(e.target.value)
             }
           />
-{!client && (
-  <input
-    type="number"
-    min="1"
-    className="border border-gray-300 rounded-lg p-3 text-black"
-    placeholder="Client ID"
-    value={clientId}
-    onChange={(e) =>
-      setClientId(e.target.value)
-    }
-  />
-)}
+
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
             placeholder="Phone"
@@ -341,7 +279,6 @@ if (
         </div>
 
       </div>
-
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -226,44 +227,34 @@ export default function TaskResultsPage() {
 
     setCurrentUser(user);
 
-    /*
-      مهم جداً:
-      نمرر المستخدم مباشرة إلى loadResults
-      حتى لا نعتمد على setState التي تعمل بشكل غير متزامن.
-    */
     loadResults(user);
   }, [router]);
 
   /* =======================================================
-     CHECK USER PERMISSION
+     PERMISSIONS
   ======================================================= */
 
-  function isTechnician(user: User) {
-    const role =
-      String(user.role || "")
-        .trim()
-        .toLowerCase();
+  function normalizedRole(user: User) {
+    return String(user.role || "")
+      .trim()
+      .toLowerCase()
+      .replace(/-/g, "_")
+      .replace(/\s+/g, "_");
+  }
 
-    return role === "technician";
+  function isTechnician(user: User) {
+    return normalizedRole(user) === "technician";
   }
 
   function canViewAllTasks(user: User) {
-    const role =
-      String(user.role || "")
-        .trim()
-        .toLowerCase();
+    const role = normalizedRole(user);
 
     return [
       "admin",
-      "lab manager",
       "lab_manager",
       "labmanager",
-
-      "technical manager",
       "technical_manager",
       "technicalmanager",
-
-      "branch manager",
       "branch_manager",
       "branchmanager",
     ].includes(role);
@@ -279,7 +270,7 @@ export default function TaskResultsPage() {
     );
 
     console.log(
-      "🔥 USER FOR RESULTS:",
+      "🔥 USER:",
       user
     );
 
@@ -299,13 +290,13 @@ export default function TaskResultsPage() {
       /* =====================================================
          1. LOAD TASKS
          
-         IMPORTANT:
-         
-         Technician:
-         technician_id = current user id
-         
-         Managers / Admin:
-         all tasks
+         الفني:
+         - فقط المهام المسندة له
+         - فقط المهام المنجزة
+         - completed_at يجب أن يكون موجوداً
+
+         المدير / الأدمن:
+         - يشاهد المهام المنجزة فقط
       ===================================================== */
 
       let tasksQuery = supabase
@@ -318,25 +309,22 @@ export default function TaskResultsPage() {
             username
           )
         `)
+        .not("completed_at", "is", null)
         .order("id", {
           ascending: false,
         });
 
-      /*
-        حماية الفني:
-
-        لا نسمح للفني بتحميل جميع المهام من قاعدة البيانات.
-
-        يتم إرسال شرط technician_id مباشرة إلى Supabase.
-      */
+      /* =====================================================
+         TECHNICIAN FILTER
+      ===================================================== */
 
       if (isTechnician(user)) {
         console.log(
-          "🔐 TECHNICIAN MODE ENABLED"
+          "🔐 TECHNICIAN MODE"
         );
 
         console.log(
-          "🔐 LOADING ONLY TASKS FOR TECHNICIAN:",
+          "🔐 TECHNICIAN ID:",
           user.id
         );
 
@@ -344,39 +332,29 @@ export default function TaskResultsPage() {
           "technician_id",
           Number(user.id)
         );
-      } else {
-        console.log(
-          "🔓 MANAGER / ADMIN MODE"
-        );
+      }
 
-        console.log(
-          "🔓 ROLE:",
+      /* =====================================================
+         OTHER ROLES
+      ===================================================== */
+
+      else if (!canViewAllTasks(user)) {
+        console.warn(
+          "⚠️ USER ROLE NOT ALLOWED:",
           user.role
         );
 
-        if (!canViewAllTasks(user)) {
-          console.warn(
-            "⚠️ USER ROLE IS NOT EXPLICITLY ALLOWED TO VIEW ALL TASKS:",
-            user.role
-          );
+        setTasks([]);
+        setImages([]);
+        setReviewers({});
+        setLoading(false);
 
-          /*
-            احتياط إضافي:
-
-            أي Role غير معروف لا يحصل على كل المهام.
-
-            إذا كان المستخدم ليس Technician
-            وليس من الأدوار الإدارية المعروفة،
-            لن نعرض له أي مهام.
-          */
-
-          setTasks([]);
-          setImages([]);
-          setLoading(false);
-
-          return;
-        }
+        return;
       }
+
+      /* =====================================================
+         EXECUTE TASK QUERY
+      ===================================================== */
 
       const {
         data: tasksData,
@@ -399,6 +377,8 @@ export default function TaskResultsPage() {
             tasksError.message
         );
 
+        setTasks([]);
+        setImages([]);
         return;
       }
 
@@ -406,16 +386,18 @@ export default function TaskResultsPage() {
         (tasksData || []) as any[];
 
       console.log(
-        "🔥 NUMBER OF TASKS:",
+        "🔥 COMPLETED TASKS COUNT:",
         rawTasks.length
       );
 
-      /*
-        حماية إضافية في الواجهة:
+      /* =====================================================
+         EXTRA FRONTEND SECURITY
 
-        حتى لو رجعت بيانات غير متوقعة،
-        الفني لا يمكن أن يرى مهمة ليست له.
-      */
+         الفني:
+         نتأكد مرة ثانية أن المهمة:
+         1. له
+         2. مكتملة
+      ===================================================== */
 
       const securedTasks =
         isTechnician(user)
@@ -423,12 +405,16 @@ export default function TaskResultsPage() {
               (task) =>
                 Number(
                   task.technician_id
-                ) === Number(user.id)
+                ) === Number(user.id) &&
+                task.completed_at != null
             )
-          : rawTasks;
+          : rawTasks.filter(
+              (task) =>
+                task.completed_at != null
+            );
 
       console.log(
-        "🔐 SECURED TASKS:",
+        "🔐 SECURED COMPLETED TASKS:",
         securedTasks
       );
 
@@ -440,11 +426,12 @@ export default function TaskResultsPage() {
       if (securedTasks.length === 0) {
         setTasks([]);
         setImages([]);
+        setReviewers({});
         return;
       }
 
       /* =====================================================
-         2. LOAD CONCRETE TESTS DIRECTLY
+         2. TASK IDS
       ===================================================== */
 
       const taskIds =
@@ -456,6 +443,10 @@ export default function TaskResultsPage() {
         "🔥 TASK IDS:",
         taskIds
       );
+
+      /* =====================================================
+         3. LOAD CONCRETE TESTS
+      ===================================================== */
 
       const {
         data: concreteTestsData,
@@ -469,32 +460,20 @@ export default function TaskResultsPage() {
         });
 
       console.log(
-        "🔥🔥 CONCRETE TESTS DATA:",
+        "🔥 CONCRETE TESTS:",
         concreteTestsData
       );
 
       console.log(
-        "🔥🔥 CONCRETE TESTS ERROR:",
+        "🔥 CONCRETE TESTS ERROR:",
         concreteTestsError
       );
-
-      if (concreteTestsError) {
-        console.error(
-          "❌ CONCRETE TESTS LOAD ERROR:",
-          concreteTestsError
-        );
-      }
 
       const rawConcreteTests =
         (concreteTestsData || []) as any[];
 
-      console.log(
-        "🔥 NUMBER OF CONCRETE TESTS:",
-        rawConcreteTests.length
-      );
-
       /* =====================================================
-         3. LOAD CONCRETE SAMPLE RESULTS
+         4. LOAD CONCRETE RESULTS
       ===================================================== */
 
       const concreteTestIds =
@@ -502,14 +481,12 @@ export default function TaskResultsPage() {
           (test) => Number(test.id)
         );
 
-      console.log(
-        "🔥 CONCRETE TEST IDS:",
-        concreteTestIds
-      );
+      let rawConcreteResults: any[] =
+        [];
 
-      let rawConcreteResults: any[] = [];
-
-      if (concreteTestIds.length > 0) {
+      if (
+        concreteTestIds.length > 0
+      ) {
         const {
           data,
           error,
@@ -525,33 +502,23 @@ export default function TaskResultsPage() {
           });
 
         console.log(
-          "🔥🔥 CONCRETE SAMPLE RESULTS:",
+          "🔥 CONCRETE RESULTS:",
           data
         );
 
         console.log(
-          "🔥🔥 CONCRETE SAMPLE RESULTS ERROR:",
+          "🔥 CONCRETE RESULTS ERROR:",
           error
         );
 
-        if (error) {
-          console.error(
-            "❌ CONCRETE RESULTS ERROR:",
-            error
-          );
-        } else {
+        if (!error) {
           rawConcreteResults =
             data || [];
         }
       }
 
-      console.log(
-        "🔥 NUMBER OF SAMPLE RESULTS:",
-        rawConcreteResults.length
-      );
-
       /* =====================================================
-         4. ATTACH SAMPLE RESULTS TO EACH CONCRETE TEST
+         5. ATTACH CONCRETE RESULTS
       ===================================================== */
 
       const concreteTests: ConcreteTest[] =
@@ -567,11 +534,6 @@ export default function TaskResultsPage() {
                     result.test_id
                   ) === testId
               );
-
-            console.log(
-              `🔥 TEST ${testId} SAMPLE RESULTS:`,
-              results
-            );
 
             return {
               ...test,
@@ -589,13 +551,8 @@ export default function TaskResultsPage() {
           }
         );
 
-      console.log(
-        "🔥🔥 CONCRETE TESTS WITH RESULTS:",
-        concreteTests
-      );
-
       /* =====================================================
-         5. LOAD FIELD DENSITY
+         6. LOAD FIELD DENSITY TESTS
       ===================================================== */
 
       const {
@@ -626,7 +583,7 @@ export default function TaskResultsPage() {
         (densityData || []) as any[];
 
       /* =====================================================
-         6. LOAD FIELD DENSITY RESULTS DIRECTLY
+         7. LOAD FIELD DENSITY RESULTS
       ===================================================== */
 
       const densityTestIds =
@@ -671,7 +628,7 @@ export default function TaskResultsPage() {
       }
 
       /* =====================================================
-         7. ATTACH FIELD DENSITY RESULTS
+         8. ATTACH FIELD DENSITY RESULTS
       ===================================================== */
 
       const fieldDensityTests:
@@ -706,7 +663,7 @@ export default function TaskResultsPage() {
         );
 
       /* =====================================================
-         8. BUILD FINAL TASKS
+         9. BUILD FINAL TASKS
       ===================================================== */
 
       const finalTasks: Task[] =
@@ -731,17 +688,6 @@ export default function TaskResultsPage() {
                   ) === taskId
               );
 
-            console.log(
-              `🔥🔥 TASK ${taskId}`,
-              {
-                concreteTests:
-                  taskConcreteTests,
-
-                densityTests:
-                  taskDensityTests,
-              }
-            );
-
             return {
               ...task,
 
@@ -756,8 +702,13 @@ export default function TaskResultsPage() {
           }
         );
 
+      console.log(
+        "🔥🔥 FINAL TASKS:",
+        finalTasks
+      );
+
       /* =====================================================
-         9. LOAD REVIEWERS
+         10. LOAD REVIEWERS
       ===================================================== */
 
       const reviewerIds =
@@ -781,11 +732,6 @@ export default function TaskResultsPage() {
         ),
       ];
 
-      console.log(
-        "🔥 REVIEWER IDS:",
-        uniqueReviewerIds
-      );
-
       if (
         uniqueReviewerIds.length >
         0
@@ -802,16 +748,6 @@ export default function TaskResultsPage() {
             "id",
             uniqueReviewerIds
           );
-
-        console.log(
-          "🔥 REVIEWERS DATA:",
-          reviewersData
-        );
-
-        console.log(
-          "🔥 REVIEWERS ERROR:",
-          reviewersError
-        );
 
         if (!reviewersError) {
           const map: Record<
@@ -836,13 +772,12 @@ export default function TaskResultsPage() {
 
           setReviewers(map);
         }
+      } else {
+        setReviewers({});
       }
 
       /* =====================================================
-         10. LOAD IMAGES
-         
-         IMPORTANT:
-         We only load images belonging to the secured tasks.
+         11. LOAD IMAGES
       ===================================================== */
 
       const {
@@ -857,7 +792,7 @@ export default function TaskResultsPage() {
         );
 
       console.log(
-        "🔥 IMAGES DATA:",
+        "🔥 IMAGES:",
         imagesData
       );
 
@@ -871,28 +806,16 @@ export default function TaskResultsPage() {
           (imagesData ||
             []) as TaskImage[]
         );
+      } else {
+        setImages([]);
       }
 
       /* =====================================================
-         FINAL
+         FINAL STATE
       ===================================================== */
 
-      console.log(
-        "🔥🔥🔥 FINAL TASKS:",
-        finalTasks
-      );
-
-      console.log(
-        "🔥🔥 FINAL CONCRETE TEST COUNT:",
-        concreteTests.length
-      );
-
-      console.log(
-        "🔥🔥 FINAL SAMPLE COUNT:",
-        rawConcreteResults.length
-      );
-
       setTasks(finalTasks);
+
     } catch (error) {
       console.error(
         "❌ LOAD TASK RESULTS ERROR:",
@@ -902,6 +825,10 @@ export default function TaskResultsPage() {
       alert(
         "حدث خطأ أثناء تحميل النتائج"
       );
+
+      setTasks([]);
+      setImages([]);
+
     } finally {
       setLoading(false);
     }
@@ -964,11 +891,9 @@ export default function TaskResultsPage() {
       "تم تسجيل المراجعة بنجاح ✅"
     );
 
-    if (currentUser) {
-      await loadResults(
-        currentUser
-      );
-    }
+    await loadResults(
+      currentUser
+    );
   }
 
   /* =======================================================
@@ -979,8 +904,9 @@ export default function TaskResultsPage() {
     taskId: number
   ) {
     if (
-      currentUser?.role !==
-      "admin"
+      normalizedRole(
+        currentUser as User
+      ) !== "admin"
     ) {
       alert(
         "ليس لديك صلاحية حذف المهام"
@@ -1049,12 +975,6 @@ export default function TaskResultsPage() {
   async function loadImages(
     taskId: number
   ) {
-    /*
-      حماية إضافية:
-      لا نحمل صور مهمة ليست موجودة ضمن المهام
-      التي تم تحميلها للمستخدم الحالي.
-    */
-
     const allowedTask =
       tasks.some(
         (task) =>
@@ -1064,7 +984,7 @@ export default function TaskResultsPage() {
 
     if (!allowedTask) {
       console.warn(
-        "🔐 BLOCKED IMAGE REQUEST FOR UNAUTHORIZED TASK:",
+        "🔐 BLOCKED IMAGE REQUEST:",
         taskId
       );
 
@@ -1154,9 +1074,7 @@ export default function TaskResultsPage() {
     <ProtectedRoute>
       <div className="p-6 bg-gray-100 min-h-screen">
 
-        {/* =================================================
-            BACK
-        ================================================= */}
+        {/* BACK */}
 
         <button
           onClick={() =>
@@ -1167,9 +1085,7 @@ export default function TaskResultsPage() {
           ← رجوع
         </button>
 
-        {/* =================================================
-            HEADER
-        ================================================= */}
+        {/* HEADER */}
 
         <div className="flex items-center justify-between mb-6">
 
@@ -1181,12 +1097,18 @@ export default function TaskResultsPage() {
 
             {currentUser && (
               <p className="text-sm text-gray-500 mt-1">
+
                 المستخدم:
+
                 {" "}
+
                 <span className="font-semibold">
+
                   {currentUser.full_name ||
                     currentUser.username}
+
                 </span>
+
               </p>
             )}
 
@@ -1203,25 +1125,27 @@ export default function TaskResultsPage() {
 
         </div>
 
-        {/* =================================================
-            LOADING
-        ================================================= */}
+        {/* LOADING */}
 
         {loading ? (
+
           <div className="bg-white rounded-xl p-6 shadow">
             جاري تحميل النتائج...
           </div>
+
         ) : tasks.length === 0 ? (
+
           <div className="bg-white rounded-xl p-6 shadow text-gray-500">
 
             {currentUser &&
             isTechnician(
               currentUser
             )
-              ? "لا توجد مهام مسندة إليك حالياً."
+              ? "لا توجد مهام منجزة مسندة إليك حالياً."
               : "لا توجد نتائج حالياً"}
 
           </div>
+
         ) : (
 
           <div className="space-y-6">
@@ -1253,9 +1177,7 @@ export default function TaskResultsPage() {
                     className="border rounded-xl p-5 shadow bg-white"
                   >
 
-                    {/* =================================================
-                        TASK HEADER
-                    ================================================= */}
+                    {/* TASK HEADER */}
 
                     <div className="flex items-start justify-between gap-4">
 
@@ -1266,17 +1188,25 @@ export default function TaskResultsPage() {
                         </h2>
 
                         <p className="mt-2">
+
                           🆔 رقم المهمة:
+
                           {" "}
+
                           <span className="font-semibold">
                             {task.id}
                           </span>
+
                         </p>
 
                       </div>
 
-                      {currentUser?.role ===
-                        "admin" && (
+                      {currentUser &&
+                        normalizedRole(
+                          currentUser
+                        ) ===
+                          "admin" && (
+
                         <button
                           onClick={() =>
                             deleteTask(
@@ -1287,81 +1217,115 @@ export default function TaskResultsPage() {
                         >
                           🗑️ حذف المهمة
                         </button>
+
                       )}
 
                     </div>
 
-                    {/* =================================================
-                        TASK INFO
-                    ================================================= */}
+                    {/* TASK INFO */}
 
                     <div className="grid md:grid-cols-2 gap-2 mt-4">
 
                       <p>
+
                         📍 وقت الوصول:
+
                         {" "}
+
                         <span className="font-semibold">
+
                           {formatSaudiDate(
                             task.arrival_time
                           )}
+
                         </span>
+
                       </p>
 
                       <p>
+
                         👷 الفني:
+
                         {" "}
+
                         <span className="font-semibold">
+
                           {task.users
                             ?.full_name ||
                             "غير محدد"}
+
                         </span>
+
                       </p>
 
                       <p>
+
                         النتيجة:
+
                         {" "}
+
                         <span className="font-semibold">
+
                           {task.field_result ||
                             "لا توجد"}
+
                         </span>
+
                       </p>
 
                       <p>
+
                         الملاحظات:
+
                         {" "}
+
                         <span className="font-semibold">
+
                           {task.field_notes ||
                             "لا توجد"}
+
                         </span>
+
                       </p>
 
                       <p>
+
                         الحالة:
+
                         {" "}
+
                         <span className="font-semibold">
+
                           {task.status ||
                             "غير محدد"}
+
                         </span>
+
                       </p>
 
                       <p>
+
                         تاريخ الإنجاز:
+
                         {" "}
+
                         <span className="font-semibold">
+
                           {formatSaudiDate(
                             task.completed_at
                           )}
+
                         </span>
+
                       </p>
 
                     </div>
 
-                    {/* =================================================
-                        PRINT BUTTON
-                    ================================================= */}
+                    {/* PRINT CONCRETE FORM */}
 
                     {concreteTests.length >
                       0 && (
+
                       <div className="flex justify-end mt-4 print:hidden">
 
                         <button
@@ -1376,11 +1340,10 @@ export default function TaskResultsPage() {
                         </button>
 
                       </div>
+
                     )}
 
-                    {/* =================================================
-                        DEBUG INFORMATION
-                    ================================================= */}
+                    {/* DEBUG */}
 
                     <div className="mt-4 bg-gray-50 border rounded-lg p-3 text-sm">
 
@@ -1393,8 +1356,11 @@ export default function TaskResultsPage() {
                       Concrete Tests:
 
                       <span className="font-bold text-blue-700">
+
                         {" "}
+
                         {concreteTests.length}
+
                       </span>
 
                       {" | "}
@@ -1402,7 +1368,9 @@ export default function TaskResultsPage() {
                       Samples:
 
                       <span className="font-bold text-blue-700">
+
                         {" "}
+
                         {concreteTests.reduce(
                           (
                             total,
@@ -1415,6 +1383,7 @@ export default function TaskResultsPage() {
                             ).length,
                           0
                         )}
+
                       </span>
 
                       {" | "}
@@ -1422,15 +1391,16 @@ export default function TaskResultsPage() {
                       Field Density:
 
                       <span className="font-bold text-orange-700">
+
                         {" "}
+
                         {fieldDensities.length}
+
                       </span>
 
                     </div>
 
-                    {/* =================================================
-                        FIELD DENSITY
-                    ================================================= */}
+                    {/* FIELD DENSITY */}
 
                     {fieldDensities.map(
                       (
@@ -1664,9 +1634,7 @@ export default function TaskResultsPage() {
                       )
                     )}
 
-                    {/* =================================================
-                        CONCRETE TESTS
-                    ================================================= */}
+                    {/* CONCRETE TESTS */}
 
                     {concreteTests.map(
                       (
@@ -1687,10 +1655,6 @@ export default function TaskResultsPage() {
                             className="mt-5 border border-blue-300 bg-blue-50 rounded-lg p-4"
                           >
 
-                            {/* =========================================
-                                TEST HEADER
-                            ========================================= */}
-
                             <div className="flex items-center justify-between gap-3 mb-4">
 
                               <h3 className="font-bold text-lg">
@@ -1698,16 +1662,16 @@ export default function TaskResultsPage() {
                               </h3>
 
                               <span className="text-xs bg-white border border-blue-300 rounded px-2 py-1">
+
                                 Test ID:
+
                                 {" "}
+
                                 {concreteTest.id}
+
                               </span>
 
                             </div>
-
-                            {/* =========================================
-                                TEST INFORMATION
-                            ========================================= */}
 
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
 
@@ -1841,9 +1805,7 @@ export default function TaskResultsPage() {
 
                             </div>
 
-                            {/* =========================================
-                                REVIEW
-                            ========================================= */}
+                            {/* REVIEW */}
 
                             <div className="mt-5 border-t border-blue-300 pt-4">
 
@@ -1911,9 +1873,7 @@ export default function TaskResultsPage() {
 
                             </div>
 
-                            {/* =========================================
-                                SAMPLE RESULTS
-                            ========================================= */}
+                            {/* SAMPLE RESULTS */}
 
                             <div className="mt-5">
 
@@ -1926,7 +1886,9 @@ export default function TaskResultsPage() {
                                 <span className="text-sm font-semibold">
 
                                   عدد العينات:
+
                                   {" "}
+
                                   {sampleResults.length}
 
                                 </span>
@@ -2160,10 +2122,6 @@ export default function TaskResultsPage() {
 
                             </div>
 
-                            {/* =========================================
-                                NOTES
-                            ========================================= */}
-
                             {concreteTest.notes && (
 
                               <div className="mt-4 bg-white border rounded-lg p-3">
@@ -2186,9 +2144,7 @@ export default function TaskResultsPage() {
                       }
                     )}
 
-                    {/* =================================================
-                        NO CONCRETE TEST
-                    ================================================= */}
+                    {/* NO CONCRETE TEST */}
 
                     {concreteTests.length ===
                       0 && (
@@ -2211,9 +2167,7 @@ export default function TaskResultsPage() {
 
                     )}
 
-                    {/* =================================================
-                        IMAGES
-                    ================================================= */}
+                    {/* IMAGES */}
 
                     <button
                       onClick={() =>

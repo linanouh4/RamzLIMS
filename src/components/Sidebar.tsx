@@ -112,32 +112,40 @@ export default function Sidebar({ user }: Props) {
         )}
 
         {role === "branch_manager" && (
-          <>
-            <Link href="/dashboard" className={linkClass("/dashboard")}>
-              🏠 Dashboard
-            </Link>
+  <>
+    <Link href="/dashboard" className={linkClass("/dashboard")}>
+      🏠 Dashboard
+    </Link>
 
-            <Link href="/clients" className={linkClass("/clients")}>
-              👥 عملاء الفرع
-            </Link>
+    <Link href="/clients" className={linkClass("/clients")}>
+      👥 عملاء الفرع
+    </Link>
 
-            <Link href="/projects" className={linkClass("/projects")}>
-              🏗 مشاريع الفرع
-            </Link>
+    <Link href="/projects" className={linkClass("/projects")}>
+      🏗 مشاريع الفرع
+    </Link>
 
-            <Link href="/contracts" className={linkClass("/contracts")}>
-              📝 عقود العملاء
-            </Link>
+    <Link href="/samples" className={linkClass("/samples")}>
+      🧪 Samples
+    </Link>
 
-            <Link href="/task-results" className={linkClass("/task-results")}>
-              📊 نتائج المهام
-            </Link>
+    <Link href="/tests" className={linkClass("/tests")}>
+      🔬 Tests
+    </Link>
 
-            <Link href="/reports" className={linkClass("/reports")}>
-              📑 تقارير الفرع
-            </Link>
-          </>
-        )}
+    <Link href="/contracts" className={linkClass("/contracts")}>
+      📝 عقود العملاء
+    </Link>
+
+    <Link href="/task-results" className={linkClass("/task-results")}>
+      📊 نتائج المهام
+    </Link>
+
+    <Link href="/reports" className={linkClass("/reports")}>
+      📑 تقارير الفرع
+    </Link>
+  </>
+)}
 
         {role === "lab_manager" && (
           <>

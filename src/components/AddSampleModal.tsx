@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { getSavedUser } from "@/lib/auth";
 
 type Props = {
   open: boolean;
@@ -27,30 +28,127 @@ export default function AddSampleModal({
   const [status, setStatus] = useState("Pending");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   useEffect(() => {
-    loadProjects();
-  }, []);
+    if (open) {
+      loadProjects();
+    }
+  }, [open]);
 
   async function loadProjects() {
-    const { data } = await supabase
-      .from("projects")
-      .select("*")
-      .order("project_name");
+    setLoadingProjects(true);
 
-    setProjects(data || []);
+    try {
+      const currentUser = getSavedUser();
+
+      if (!currentUser) {
+        alert("لم يتم التعرف على المستخدم الحالي.");
+        setProjects([]);
+        return;
+      }
+
+      let query = supabase
+        .from("projects")
+        .select("id, project_name, branch_id")
+        .order("project_name", {
+          ascending: true,
+        });
+
+      /*
+       * مدير الفرع:
+       * يشاهد مشاريع فرعه فقط.
+       */
+      if (currentUser.role === "branch_manager") {
+        if (!currentUser.branch_id) {
+          alert("مدير الفرع غير مرتبط بأي فرع.");
+          setProjects([]);
+          return;
+        }
+
+        query = query.eq(
+          "branch_id",
+          Number(currentUser.branch_id)
+        );
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error(
+          "LOAD PROJECTS FOR SAMPLE ERROR:",
+          error
+        );
+
+        alert(
+          error.message ||
+            "تعذر تحميل المشاريع."
+        );
+
+        setProjects([]);
+        return;
+      }
+
+      setProjects(data || []);
+
+      console.log(
+        "SAMPLE PROJECT FILTER:",
+        {
+          role: currentUser.role,
+          branch_id: currentUser.branch_id,
+          projects_count: data?.length || 0,
+        }
+      );
+    } catch (error: any) {
+      console.error(
+        "LOAD PROJECTS EXCEPTION:",
+        error
+      );
+
+      alert(
+        error?.message ||
+          "حدث خطأ أثناء تحميل المشاريع."
+      );
+
+      setProjects([]);
+    } finally {
+      setLoadingProjects(false);
+    }
   }
 
   useEffect(() => {
     if (sample) {
-      setProjectId(sample.project_id?.toString() || "");
-      setSampleNumber(sample.sample_number || "");
-      setSampleType(sample.sample_type || "");
-      setReceivedDate(sample.received_date || "");
-      setReceivedBy(sample.received_by || "");
-      setReceivedCondition(sample.received_condition || "");
-      setStatus(sample.status || "Pending");
-      setNotes(sample.notes || "");
+      setProjectId(
+        sample.project_id?.toString() || ""
+      );
+
+      setSampleNumber(
+        sample.sample_number || ""
+      );
+
+      setSampleType(
+        sample.sample_type || ""
+      );
+
+      setReceivedDate(
+        sample.received_date || ""
+      );
+
+      setReceivedBy(
+        sample.received_by || ""
+      );
+
+      setReceivedCondition(
+        sample.received_condition || ""
+      );
+
+      setStatus(
+        sample.status || "Pending"
+      );
+
+      setNotes(
+        sample.notes || ""
+      );
     } else {
       setProjectId("");
       setSampleNumber("");
@@ -66,15 +164,50 @@ export default function AddSampleModal({
   if (!open) return null;
 
   async function saveSample() {
-    setLoading(true);
-
-    let error;
-
     if (!projectId) {
       alert("Please select a project");
-      setLoading(false);
       return;
     }
+
+    const currentUser = getSavedUser();
+
+    if (!currentUser) {
+      alert(
+        "لم يتم التعرف على المستخدم الحالي."
+      );
+      return;
+    }
+
+    /*
+     * حماية إضافية في الواجهة:
+     * مدير الفرع لا يستطيع اختيار مشروع خارج فرعه.
+     */
+    if (currentUser.role === "branch_manager") {
+      const selectedProject = projects.find(
+        (project) =>
+          Number(project.id) ===
+          Number(projectId)
+      );
+
+      if (!selectedProject) {
+        alert(
+          "لا يمكنك اختيار مشروع تابع لفرع آخر."
+        );
+        return;
+      }
+
+      if (
+        Number(selectedProject.branch_id) !==
+        Number(currentUser.branch_id)
+      ) {
+        alert(
+          "لا يمكنك إضافة عينة إلى مشروع تابع لفرع آخر."
+        );
+        return;
+      }
+    }
+
+    setLoading(true);
 
     const payload = {
       project_id: Number(projectId),
@@ -87,20 +220,31 @@ export default function AddSampleModal({
       notes,
     };
 
+    let error;
+
     if (sample) {
-      ({ error } = await supabase
+      const response = await supabase
         .from("samples")
         .update(payload)
-        .eq("id", sample.id));
+        .eq("id", sample.id);
+
+      error = response.error;
     } else {
-      ({ error } = await supabase
+      const response = await supabase
         .from("samples")
-        .insert([payload]));
+        .insert([payload]);
+
+      error = response.error;
     }
 
     setLoading(false);
 
     if (error) {
+      console.error(
+        "SAVE SAMPLE ERROR:",
+        error
+      );
+
       alert(error.message);
       return;
     }
@@ -108,7 +252,8 @@ export default function AddSampleModal({
     onSaved();
     onClose();
   }
-    return (
+
+  return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-[600px] p-8">
 
@@ -121,10 +266,15 @@ export default function AddSampleModal({
           <select
             className="border rounded-lg p-3 col-span-2"
             value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
+            onChange={(e) =>
+              setProjectId(e.target.value)
+            }
+            disabled={loadingProjects}
           >
             <option value="">
-              Select Project
+              {loadingProjects
+                ? "Loading Projects..."
+                : "Select Project"}
             </option>
 
             {projects.map((project) => (
@@ -141,41 +291,53 @@ export default function AddSampleModal({
             className="border rounded-lg p-3"
             placeholder="Sample Number"
             value={sampleNumber}
-            onChange={(e) => setSampleNumber(e.target.value)}
+            onChange={(e) =>
+              setSampleNumber(e.target.value)
+            }
           />
 
           <input
             className="border rounded-lg p-3"
             placeholder="Sample Type"
             value={sampleType}
-            onChange={(e) => setSampleType(e.target.value)}
+            onChange={(e) =>
+              setSampleType(e.target.value)
+            }
           />
 
           <input
             type="date"
             className="border rounded-lg p-3"
             value={receivedDate}
-            onChange={(e) => setReceivedDate(e.target.value)}
+            onChange={(e) =>
+              setReceivedDate(e.target.value)
+            }
           />
 
           <input
             className="border rounded-lg p-3"
             placeholder="Received By"
             value={receivedBy}
-            onChange={(e) => setReceivedBy(e.target.value)}
+            onChange={(e) =>
+              setReceivedBy(e.target.value)
+            }
           />
 
           <input
             className="border rounded-lg p-3"
             placeholder="Received Condition"
             value={receivedCondition}
-            onChange={(e) => setReceivedCondition(e.target.value)}
+            onChange={(e) =>
+              setReceivedCondition(e.target.value)
+            }
           />
 
           <select
             className="border rounded-lg p-3"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) =>
+              setStatus(e.target.value)
+            }
           >
             <option>Pending</option>
             <option>In Progress</option>
@@ -188,7 +350,9 @@ export default function AddSampleModal({
             placeholder="Notes"
             rows={4}
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) =>
+              setNotes(e.target.value)
+            }
           />
 
         </div>
@@ -204,10 +368,16 @@ export default function AddSampleModal({
 
           <button
             onClick={saveSample}
-            disabled={loading}
-            className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
+            disabled={
+              loading ||
+              loadingProjects ||
+              projects.length === 0
+            }
+            className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg disabled:opacity-50"
           >
-            {loading ? "Saving..." : "Save"}
+            {loading
+              ? "Saving..."
+              : "Save"}
           </button>
 
         </div>

@@ -29,41 +29,14 @@ export default function ProjectsPage() {
   const [clientId, setClientId] = useState("");
 
   useEffect(() => {
-    loadProjects();
-    loadClients();
+    initializePage();
   }, []);
 
   // =========================
-  // LOAD CLIENTS
+  // INITIALIZE
   // =========================
 
-  async function loadClients() {
-    const { data, error } = await supabase
-      .from("clients")
-      .select("id, client_name")
-      .order("client_name", {
-        ascending: true,
-      });
-
-    if (error) {
-      console.error("LOAD CLIENTS ERROR:", error);
-
-      alert(
-        "تعذر تحميل العملاء:\n" +
-          error.message
-      );
-
-      return;
-    }
-
-    setClients(data || []);
-  }
-
-  // =========================
-  // LOAD PROJECTS
-  // =========================
-
-  async function loadProjects() {
+  async function initializePage() {
     setLoading(true);
 
     try {
@@ -121,20 +94,46 @@ export default function ProjectsPage() {
 
       setCurrentUser(current);
 
-      console.log(
-        "CURRENT USER:",
-        current
+      console.log("CURRENT USER:", current);
+
+      // مهم:
+      // ننتظر معرفة المستخدم أولًا
+      // ثم نحمل العملاء والمشاريع حسب الفرع.
+
+      await loadClients(current);
+      await loadProjects(current);
+    } catch (error: any) {
+      console.error(
+        "PROJECTS PAGE ERROR:",
+        error
       );
 
+      alert(
+        "حدث خطأ أثناء تحميل الصفحة:\n" +
+          (error?.message || "خطأ غير معروف")
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // =========================
+  // LOAD CLIENTS
+  // =========================
+
+  async function loadClients(
+    current: CurrentUser
+  ) {
+    try {
       let query = supabase
-        .from("projects")
-        .select("*")
-        .order("id", {
-          ascending: false,
+        .from("clients")
+        .select("id, client_name, branch_id")
+        .order("client_name", {
+          ascending: true,
         });
 
-      // ADMIN يشوف جميع المشاريع
-      // أي مستخدم آخر يشوف مشاريع فرعه فقط
+      // ADMIN يشوف جميع العملاء
+      // مدير الفرع يشوف عملاء فرعه فقط
 
       if (current.role !== "admin") {
         if (current.branch_id === null) {
@@ -142,8 +141,7 @@ export default function ProjectsPage() {
             "المستخدم الحالي غير مرتبط بأي فرع."
           );
 
-          setProjects([]);
-
+          setClients([]);
           return;
         }
 
@@ -160,34 +158,149 @@ export default function ProjectsPage() {
 
       if (error) {
         console.error(
-          "LOAD PROJECTS ERROR:",
+          "LOAD CLIENTS ERROR:",
           error
         );
 
-        alert(error.message);
+        alert(
+          "تعذر تحميل العملاء:\n" +
+            error.message
+        );
 
         return;
       }
 
       console.log(
-        "PROJECTS:",
+        "CLIENTS FOR CURRENT USER:",
+        data
+      );
+
+      setClients(data || []);
+    } catch (error: any) {
+      console.error(
+        "LOAD CLIENTS EXCEPTION:",
+        error
+      );
+
+      alert(
+        "حدث خطأ أثناء تحميل العملاء:\n" +
+          (error?.message || "خطأ غير معروف")
+      );
+    }
+  }
+
+  // =========================
+  // LOAD PROJECTS
+  // =========================
+
+  async function loadProjects(
+    current?: CurrentUser
+  ) {
+    try {
+      let user = current;
+
+      if (!user) {
+        const savedUser = getSavedUser();
+
+        if (!savedUser) {
+          router.push("/");
+          return;
+        }
+
+        const userId = Number(savedUser.id);
+
+        const {
+          data: userData,
+          error: userError,
+        } = await supabase
+          .from("users")
+          .select("id, role, branch_id")
+          .eq("id", userId)
+          .single();
+
+        if (userError || !userData) {
+          alert(
+            "تعذر تحميل بيانات المستخدم."
+          );
+          return;
+        }
+
+        user = {
+          id: Number(userData.id),
+
+          role: String(userData.role || "")
+            .trim()
+            .toLowerCase(),
+
+          branch_id:
+            userData.branch_id !== null &&
+            userData.branch_id !== undefined
+              ? Number(userData.branch_id)
+              : null,
+        };
+      }
+
+      let query = supabase
+        .from("projects")
+        .select("*")
+        .order("id", {
+          ascending: false,
+        });
+
+      // ADMIN يشوف جميع المشاريع
+      // مدير الفرع يشوف مشاريع فرعه فقط
+
+      if (user.role !== "admin") {
+        if (user.branch_id === null) {
+          alert(
+            "المستخدم الحالي غير مرتبط بأي فرع."
+          );
+
+          setProjects([]);
+          return;
+        }
+
+        query = query.eq(
+          "branch_id",
+          user.branch_id
+        );
+      }
+
+      const {
+        data,
+        error,
+      } = await query;
+
+      if (error) {
+        console.error(
+          "LOAD PROJECTS ERROR:",
+          error
+        );
+
+        alert(
+          "تعذر تحميل المشاريع:\n" +
+            error.message
+        );
+
+        return;
+      }
+
+      console.log(
+        "PROJECTS FOR CURRENT USER:",
         data
       );
 
       setProjects(data || []);
     } catch (error: any) {
       console.error(
-        "PROJECTS PAGE ERROR:",
+        "LOAD PROJECTS EXCEPTION:",
         error
       );
 
       alert(
         "حدث خطأ أثناء تحميل المشاريع:\n" +
-          (error?.message ||
-            "خطأ غير معروف")
+          (error?.message || "خطأ غير معروف")
       );
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -200,7 +313,6 @@ export default function ProjectsPage() {
       alert(
         "الرجاء إدخال اسم المشروع"
       );
-
       return;
     }
 
@@ -208,7 +320,6 @@ export default function ProjectsPage() {
       alert(
         "الرجاء اختيار العميل."
       );
-
       return;
     }
 
@@ -216,7 +327,6 @@ export default function ProjectsPage() {
       alert(
         "لم يتم التعرف على المستخدم الحالي."
       );
-
       return;
     }
 
@@ -227,7 +337,36 @@ export default function ProjectsPage() {
       alert(
         "المستخدم الحالي غير مرتبط بأي فرع."
       );
+      return;
+    }
 
+    // =========================
+    // حماية إضافية:
+    // التأكد أن العميل من نفس فرع المستخدم
+    // =========================
+
+    const selectedClient =
+      clients.find(
+        (client) =>
+          Number(client.id) ===
+          Number(clientId)
+      );
+
+    if (!selectedClient) {
+      alert(
+        "العميل غير موجود أو غير تابع لفرعك."
+      );
+      return;
+    }
+
+    if (
+      currentUser.role !== "admin" &&
+      Number(selectedClient.branch_id) !==
+        Number(currentUser.branch_id)
+    ) {
+      alert(
+        "لا يمكنك إنشاء مشروع لعميل تابع لفرع آخر."
+      );
       return;
     }
 
@@ -247,13 +386,15 @@ export default function ProjectsPage() {
       description:
         description.trim(),
 
-      // الربط الحقيقي مع العميل
       client_id:
         Number(clientId),
     };
 
-    // ADMIN يمكنه إنشاء مشروع بدون فرع
-    // المستخدم غير ADMIN ينشئ المشروع على فرعه
+    // ADMIN:
+    // إذا كان مرتبطًا بفرع، يحفظ المشروع على فرعه.
+    //
+    // مدير الفرع:
+    // دائمًا يحفظ المشروع على فرعه.
 
     if (
       currentUser.branch_id !== null
@@ -300,7 +441,7 @@ export default function ProjectsPage() {
     setDescription("");
     setClientId("");
 
-    await loadProjects();
+    await loadProjects(currentUser);
   }
 
   // =========================
@@ -314,7 +455,6 @@ export default function ProjectsPage() {
       alert(
         "لم يتم التعرف على المستخدم الحالي."
       );
-
       return;
     }
 
@@ -329,23 +469,19 @@ export default function ProjectsPage() {
       alert(
         "المشروع غير موجود."
       );
-
       return;
     }
 
-    // منع حذف مشروع تابع لفرع آخر
+    // مدير الفرع لا يستطيع حذف مشروع من فرع آخر
 
     if (
       currentUser.role !== "admin" &&
       Number(project.branch_id) !==
-        Number(
-          currentUser.branch_id
-        )
+        Number(currentUser.branch_id)
     ) {
       alert(
         "لا يمكنك حذف مشروع تابع لفرع آخر."
       );
-
       return;
     }
 
@@ -392,7 +528,7 @@ export default function ProjectsPage() {
       return;
     }
 
-    await loadProjects();
+    await loadProjects(currentUser);
   }
 
   // =========================
@@ -429,6 +565,7 @@ export default function ProjectsPage() {
           </button>
 
           <div>
+
             <h1 className="text-3xl font-bold">
               Projects
             </h1>
@@ -442,6 +579,7 @@ export default function ProjectsPage() {
                 ? "Manage all company projects."
                 : "Manage projects for your branch."}
             </p>
+
           </div>
 
         </div>
@@ -477,10 +615,12 @@ export default function ProjectsPage() {
                     key={client.id}
                     value={client.id}
                   >
-                    {client.client_name}
+                    {client.client_name}{" "}
+                    - ID: {client.id}
                   </option>
                 )
               )}
+
             </select>
 
             {/* PROJECT NAME */}
