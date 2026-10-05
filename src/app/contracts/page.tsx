@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +16,11 @@ type CurrentUser = {
 type Client = {
   id: number;
   client_name: string | null;
+  phone?: string | null;
+  city?: string | null;
+  email?: string | null;
+  address?: string | null;
+  contact_person?: string | null;
   branch_id: number | null;
   status: string | null;
 };
@@ -60,6 +66,26 @@ type ContractForm = {
   description: string;
 };
 
+type ContractSigning = {
+  id: number;
+  contract_id: number;
+  signing_token: string;
+  status: string;
+  customer_signed_by: string | null;
+  customer_signature: string | null;
+  customer_stamp_url: string | null;
+  sent_at: string | null;
+  opened_at: string | null;
+  customer_signed_at: string | null;
+  approved_by: number | null;
+  ramz_signature: string | null;
+  ramz_stamp_url: string | null;
+  approved_at: string | null;
+  ramz_signed_at: string | null;
+  ramz_stamped_at: string | null;
+  finalized_at: string | null;
+};
+
 const emptyForm: ContractForm = {
   contract_number: "",
   contract_name: "",
@@ -75,17 +101,13 @@ const emptyForm: ContractForm = {
 export default function ContractsPage() {
   const router = useRouter();
 
-  const [currentUser, setCurrentUser] =
-    useState<CurrentUser | null>(null);
-
-  const [contracts, setContracts] =
-    useState<Contract[]>([]);
-
-  const [clients, setClients] =
-    useState<Client[]>([]);
-
-  const [branches, setBranches] =
-    useState<Branch[]>([]);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [signings, setSignings] = useState<Record<number, ContractSigning>>(
+    {}
+  );
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -97,109 +119,94 @@ export default function ContractsPage() {
   const [statusFilter, setStatusFilter] = useState("All");
 
   const [openModal, setOpenModal] = useState(false);
-  const [editingContract, setEditingContract] =
-    useState<Contract | null>(null);
+  const [editingContract, setEditingContract] = useState<Contract | null>(
+    null
+  );
 
-  const [form, setForm] =
-    useState<ContractForm>(emptyForm);
+  const [form, setForm] = useState<ContractForm>(emptyForm);
 
-  const isAdmin =
-    currentUser?.role?.toLowerCase() === "admin";
+  const [signingContract, setSigningContract] = useState<Contract | null>(
+    null
+  );
+  const [signingLink, setSigningLink] = useState("");
 
+  const [sendingContractId, setSendingContractId] = useState<number | null>(
+    null
+  );
+
+  const isAdmin = currentUser?.role?.toLowerCase() === "admin";
   const isTechnicalManager =
-    currentUser?.role?.toLowerCase() ===
-    "technical_manager";
-
+    currentUser?.role?.toLowerCase() === "technical_manager";
   const isBranchManager =
-    currentUser?.role?.toLowerCase() ===
-    "branch_manager";
+    currentUser?.role?.toLowerCase() === "branch_manager";
 
-  const canManage =
-    isAdmin ||
-    isTechnicalManager ||
-    isBranchManager;
-
+  const canManage = isAdmin || isTechnicalManager || isBranchManager;
   const canDelete = isAdmin;
 
   useEffect(() => {
     initializePage();
   }, []);
 
-  async function initializePage() {
-    setLoading(true);
-    setError("");
+  useEffect(() => {
+    if (!success && !error) {
+      return;
+    }
 
+    const timer = setTimeout(() => {
+      setSuccess("");
+      setError("");
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [success, error]);
+
+  async function initializePage() {
     try {
+      setLoading(true);
+      setError("");
+
       const savedUser = getSavedUser();
 
-      if (!savedUser) {
-        router.push("/");
+      if (!savedUser?.id) {
+        router.push("/login");
         return;
       }
 
-      const userId = Number(savedUser.id);
-
-      if (!userId) {
-        setError("بيانات المستخدم الحالي غير صحيحة.");
-        return;
-      }
-
-      const {
-        data: userData,
-        error: userError,
-      } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from("users")
         .select("id, role, branch_id")
-        .eq("id", userId)
+        .eq("id", savedUser.id)
         .single();
 
-      if (userError || !userData) {
-        console.error(
-          "LOAD CURRENT USER ERROR:",
-          userError
-        );
-
-        setError(
-          userError?.message ||
-            "تعذر تحميل بيانات المستخدم الحالي."
-        );
-
-        return;
+      if (userError) {
+        throw userError;
       }
 
-      const current: CurrentUser = {
+      const user: CurrentUser = {
         id: Number(userData.id),
-        role: userData.role,
+        role: String(userData.role || ""),
         branch_id:
-          userData.branch_id != null
-            ? Number(userData.branch_id)
-            : null,
+          userData.branch_id === null || userData.branch_id === undefined
+            ? null
+            : Number(userData.branch_id),
       };
 
-      setCurrentUser(current);
+      setCurrentUser(user);
 
       await Promise.all([
-        loadContracts(current),
-        loadClients(current),
+        loadContracts(user),
+        loadClients(user),
         loadBranches(),
       ]);
-    } catch (err) {
-      console.error(
-        "CONTRACTS PAGE ERROR:",
-        err
-      );
-
-      setError(
-        "حدث خطأ أثناء تحميل صفحة العقود."
-      );
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "حدث خطأ أثناء تحميل العقود");
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadContracts(
-    user: CurrentUser
-  ) {
+  async function loadContracts(user: CurrentUser) {
     let query = supabase
       .from("contracts")
       .select(`
@@ -223,173 +230,158 @@ export default function ContractsPage() {
           branch_id
         )
       `)
-      .order("created_at", {
-        ascending: false,
-      });
+      .order("created_at", { ascending: false });
 
-    if (
-      user.role?.toLowerCase() ===
-      "branch_manager"
-    ) {
-      if (!user.branch_id) {
-        setContracts([]);
-        return;
-      }
-
-      query = query.eq(
-        "branch_id",
-        user.branch_id
-      );
+    if (user.role.toLowerCase() === "branch_manager") {
+      query = query.eq("branch_id", user.branch_id);
     }
 
-    const {
-      data,
-      error,
-    } = await query;
+    const { data, error: contractsError } = await query;
 
-    if (error) {
-      console.error(
-        "LOAD CONTRACTS ERROR:",
-        error
-      );
-
-      throw error;
+    if (contractsError) {
+      throw contractsError;
     }
 
-    setContracts(
-      (data as Contract[]) || []
-    );
+    setContracts((data || []) as Contract[]);
+
+    await loadContractSignings();
   }
 
-  async function loadClients(
-    user: CurrentUser
-  ) {
+  async function loadContractSignings() {
+    const { data, error: signingError } = await supabase
+      .from("contract_signing")
+      .select(`
+        id,
+        contract_id,
+        signing_token,
+        status,
+        customer_signed_by,
+        customer_signature,
+        customer_stamp_url,
+        sent_at,
+        opened_at,
+        customer_signed_at,
+        approved_by,
+        ramz_signature,
+        ramz_stamp_url,
+        approved_at,
+        ramz_signed_at,
+        ramz_stamped_at,
+        finalized_at
+      `);
+
+    if (signingError) {
+      throw signingError;
+    }
+
+    const mapped: Record<number, ContractSigning> = {};
+
+    (data || []).forEach((item: any) => {
+      mapped[Number(item.contract_id)] = item as ContractSigning;
+    });
+
+    setSignings(mapped);
+  }
+
+  async function loadClients(user: CurrentUser) {
     let query = supabase
       .from("clients")
-      .select(
-        "id, client_name, branch_id, status"
-      )
-      .order("client_name", {
-        ascending: true,
-      });
+      .select(`
+        id,
+        client_name,
+        phone,
+        city,
+        email,
+        address,
+        contact_person,
+        branch_id,
+        status
+      `)
+      .order("client_name", { ascending: true });
 
-    if (
-      user.role?.toLowerCase() ===
-      "branch_manager"
-    ) {
-      if (!user.branch_id) {
-        setClients([]);
-        return;
-      }
-
-      query = query.eq(
-        "branch_id",
-        user.branch_id
-      );
+    if (user.role.toLowerCase() === "branch_manager") {
+      query = query.eq("branch_id", user.branch_id);
     }
 
-    const {
-      data,
-      error,
-    } = await query;
+    const { data, error: clientsError } = await query;
 
-    if (error) {
-      console.error(
-        "LOAD CLIENTS ERROR:",
-        error
-      );
-
-      throw error;
+    if (clientsError) {
+      throw clientsError;
     }
 
-    setClients(
-      (data as Client[]) || []
-    );
+    setClients((data || []) as Client[]);
   }
 
   async function loadBranches() {
-    const {
-      data,
-      error,
-    } = await supabase
+    const { data, error: branchesError } = await supabase
       .from("branches")
       .select("*")
-      .order("id", {
-        ascending: true,
-      });
+      .order("id", { ascending: true });
 
-    if (error) {
-      console.error(
-        "LOAD BRANCHES ERROR:",
-        error
-      );
-
-      throw error;
+    if (branchesError) {
+      throw branchesError;
     }
 
-    setBranches(
-      (data as Branch[]) || []
-    );
+    setBranches(data || []);
   }
 
-  function getClient(
-    contract: Contract
-  ): ContractClient | null {
-    if (!contract.clients) {
-      return null;
-    }
-
+  function getClient(contract: Contract) {
     if (Array.isArray(contract.clients)) {
       return contract.clients[0] || null;
     }
 
-    return contract.clients;
+    return contract.clients || null;
   }
 
-  function getBranchName(
-    branchId: number | null
-  ) {
+  function getBranchName(branchId: number | null) {
     if (!branchId) {
       return "-";
     }
 
-    const branch = branches.find(
-      (item) =>
-        Number(item.id) ===
-        Number(branchId)
-    );
+    const branch = branches.find((item) => Number(item.id) === Number(branchId));
 
     if (!branch) {
-      return `فرع ${branchId}`;
+      return `Branch ${branchId}`;
     }
 
     return (
       branch.branch_name ||
       branch.name ||
       branch.title ||
-      branch.branch ||
-      `فرع ${branchId}`
+      branch.code ||
+      `Branch ${branchId}`
     );
   }
 
-  function formatDate(
-    date: string | null
-  ) {
-    if (!date) {
+  function formatDate(value: string | null) {
+    if (!value) {
       return "-";
     }
 
-    return new Date(
-      date
-    ).toLocaleDateString("ar-SA");
+    try {
+      return new Date(`${value}T00:00:00`).toLocaleDateString("en-GB");
+    } catch {
+      return value;
+    }
   }
 
-  function escapeHtml(
-    value: unknown
-  ) {
-    return String(
-      value ?? "-"
-    )
+  function formatDateTime(value: string | null) {
+    if (!value) {
+      return "-";
+    }
+
+    try {
+      return new Date(value).toLocaleString("en-GB", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+    } catch {
+      return value;
+    }
+  }
+
+  function escapeHtml(value: unknown) {
+    return String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -397,59 +389,472 @@ export default function ContractsPage() {
       .replace(/'/g, "&#039;");
   }
 
-  function printContract(
-    contract: Contract
-  ) {
+  function getSigningStatusLabel(signing: ContractSigning | undefined) {
+    if (!signing) {
+      return "غير مرسل";
+    }
+
+    switch (signing.status) {
+      case "Draft":
+        return "مسودة";
+      case "Sent":
+        return "تم إرسال الرابط";
+      case "Opened":
+        return "تم فتح الرابط";
+      case "Customer Signed":
+        return "تم توقيع العميل";
+      case "Pending Ramz Approval":
+        return "بانتظار اعتماد رامز";
+      case "Approved":
+        return "تم اعتماد العقد";
+      case "Finalized":
+        return "العقد نهائي";
+      default:
+        return signing.status;
+    }
+  }
+
+  function getSigningStatusClass(signing: ContractSigning | undefined) {
+    if (!signing) {
+      return "bg-gray-100 text-gray-700";
+    }
+
+    switch (signing.status) {
+      case "Sent":
+        return "bg-blue-100 text-blue-700";
+      case "Opened":
+        return "bg-indigo-100 text-indigo-700";
+      case "Customer Signed":
+        return "bg-purple-100 text-purple-700";
+      case "Pending Ramz Approval":
+        return "bg-orange-100 text-orange-700";
+      case "Approved":
+        return "bg-green-100 text-green-700";
+      case "Finalized":
+        return "bg-emerald-100 text-emerald-800";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  }
+
+  function canSendSigning(signing: ContractSigning | undefined) {
+    if (!signing) {
+      return true;
+    }
+
+    return ["Draft", "Sent", "Opened"].includes(signing.status);
+  }
+
+  const filteredContracts = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    return contracts.filter((contract) => {
+      const client = getClient(contract);
+      const signing = signings[contract.id];
+
+      const matchesSearch =
+        !term ||
+        String(contract.contract_number || "")
+          .toLowerCase()
+          .includes(term) ||
+        String(contract.contract_name || "")
+          .toLowerCase()
+          .includes(term) ||
+        String(client?.client_name || "")
+          .toLowerCase()
+          .includes(term);
+
+      const matchesStatus =
+        statusFilter === "All" ||
+        String(contract.status || "") === statusFilter;
+
+      const matchesBranch =
+        !currentUser ||
+        currentUser.role.toLowerCase() !== "branch_manager" ||
+        Number(contract.branch_id) === Number(currentUser.branch_id);
+
+      return matchesSearch && matchesStatus && matchesBranch;
+    });
+  }, [
+    contracts,
+    clients,
+    signings,
+    searchTerm,
+    statusFilter,
+    currentUser,
+  ]);
+
+  function openCreateModal() {
+    setEditingContract(null);
+
+    setForm({
+      ...emptyForm,
+      branch_id:
+        isBranchManager && currentUser?.branch_id
+          ? String(currentUser.branch_id)
+          : "",
+    });
+
+    setError("");
+    setSuccess("");
+    setOpenModal(true);
+  }
+
+  function openEditModal(contract: Contract) {
+    const signing = signings[contract.id];
+
+    if (signing?.status === "Finalized") {
+      setError("لا يمكن تعديل عقد تم إنهاؤه واعتماده نهائيًا.");
+      return;
+    }
+
+    setEditingContract(contract);
+
+    setForm({
+      contract_number: contract.contract_number || "",
+      contract_name: contract.contract_name || "",
+      client_id: contract.client_id ? String(contract.client_id) : "",
+      branch_id: contract.branch_id ? String(contract.branch_id) : "",
+      start_date: contract.start_date || "",
+      end_date: contract.end_date || "",
+      contract_value:
+        contract.contract_value !== null &&
+        contract.contract_value !== undefined
+          ? String(contract.contract_value)
+          : "",
+      status: contract.status || "Active",
+      description: contract.description || "",
+    });
+
+    setError("");
+    setSuccess("");
+    setOpenModal(true);
+  }
+
+  function closeModal() {
+    if (saving) {
+      return;
+    }
+
+    setOpenModal(false);
+    setEditingContract(null);
+    setForm(emptyForm);
+  }
+
+  async function saveContract() {
+    if (!canManage) {
+      setError("ليس لديك صلاحية لإدارة العقود.");
+      return;
+    }
+
+    if (!form.contract_number.trim()) {
+      setError("رقم العقد مطلوب.");
+      return;
+    }
+
+    if (!form.contract_name.trim()) {
+      setError("اسم العقد مطلوب.");
+      return;
+    }
+
+    if (!form.client_id) {
+      setError("يجب اختيار العميل.");
+      return;
+    }
+
+    if (!form.branch_id) {
+      setError("يجب اختيار الفرع.");
+      return;
+    }
+
+    if (isBranchManager && currentUser?.branch_id) {
+      if (Number(form.branch_id) !== Number(currentUser.branch_id)) {
+        setError("لا يمكنك إنشاء أو تعديل عقد خارج فرعك.");
+        return;
+      }
+    }
+
+    if (
+      form.start_date &&
+      form.end_date &&
+      form.end_date < form.start_date
+    ) {
+      setError("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ البداية.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+
+      const payload = {
+        contract_number: form.contract_number.trim(),
+        contract_name: form.contract_name.trim(),
+        client_id: Number(form.client_id),
+        branch_id: Number(form.branch_id),
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
+        contract_value: form.contract_value
+          ? Number(form.contract_value)
+          : null,
+        status: form.status,
+        description: form.description.trim() || null,
+      };
+
+      if (editingContract) {
+        const { error: updateError } = await supabase
+          .from("contracts")
+          .update(payload)
+          .eq("id", editingContract.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        setSuccess("تم تحديث العقد بنجاح.");
+      } else {
+        const { error: insertError } = await supabase
+          .from("contracts")
+          .insert(payload);
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        setSuccess("تم إنشاء العقد بنجاح.");
+      }
+
+      setOpenModal(false);
+      setEditingContract(null);
+      setForm(emptyForm);
+
+      if (currentUser) {
+        await loadContracts(currentUser);
+        await loadClients(currentUser);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "حدث خطأ أثناء حفظ العقد.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteContract(contract: Contract) {
+    if (!canDelete) {
+      setError("حذف العقود متاح للمدير فقط.");
+      return;
+    }
+
+    const signing = signings[contract.id];
+
+    if (signing?.status === "Finalized") {
+      setError("لا يمكن حذف عقد تم إنهاؤه نهائيًا.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `هل أنت متأكد من حذف العقد "${contract.contract_number || ""}"؟`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+
+      const { error: deleteError } = await supabase
+        .from("contracts")
+        .delete()
+        .eq("id", contract.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      setSuccess("تم حذف العقد بنجاح.");
+
+      if (currentUser) {
+        await loadContracts(currentUser);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "حدث خطأ أثناء حذف العقد.");
+    }
+  }
+
+  async function sendSigningLink(contract: Contract) {
+    if (!canManage) {
+      setError("ليس لديك صلاحية لإرسال رابط التوقيع.");
+      return;
+    }
+
+    const existingSigning = signings[contract.id];
+
+    if (!canSendSigning(existingSigning)) {
+      setError("لا يمكن إعادة إرسال رابط لهذا العقد في حالته الحالية.");
+      return;
+    }
+
+    try {
+      setSendingContractId(contract.id);
+      setError("");
+      setSuccess("");
+
+      let token = existingSigning?.signing_token || "";
+
+      if (existingSigning) {
+        const { error: updateError } = await supabase
+          .from("contract_signing")
+          .update({
+            status: "Sent",
+            sent_at: new Date().toISOString(),
+          })
+          .eq("id", existingSigning.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+      } else {
+        const { data, error: insertError } = await supabase
+          .from("contract_signing")
+          .insert({
+            contract_id: contract.id,
+            status: "Sent",
+            sent_at: new Date().toISOString(),
+          })
+          .select("id, contract_id, signing_token, status, sent_at")
+          .single();
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        token = data.signing_token;
+      }
+
+      if (!token) {
+        throw new Error("تعذر إنشاء رمز توقيع للعقد.");
+      }
+
+      await loadContractSignings();
+
+      const link = `${window.location.origin}/contract-approval/${token}`;
+
+      setSigningContract(contract);
+      setSigningLink(link);
+
+      setSuccess("تم تجهيز رابط توقيع العميل.");
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "حدث خطأ أثناء إنشاء رابط التوقيع.");
+    } finally {
+      setSendingContractId(null);
+    }
+  }
+
+  async function copySigningLink() {
+    if (!signingLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(signingLink);
+      setSuccess("تم نسخ رابط التوقيع.");
+    } catch {
+      setError("تعذر نسخ الرابط تلقائيًا. انسخه يدويًا.");
+    }
+  }
+
+  function closeSigningModal() {
+    setSigningContract(null);
+    setSigningLink("");
+  }
+
+  function printContract(contract: Contract) {
     const client = getClient(contract);
+    const signing = signings[contract.id];
 
-    const contractNumber =
-      contract.contract_number ||
-      "بدون رقم";
-
-    const contractName =
-      contract.contract_name ||
-      "بدون اسم";
-
-    const status =
-      contract.status ||
-      "غير محدد";
-
-    const branchName =
-      getBranchName(
-        contract.branch_id
-      );
-
+    const contractNumber = escapeHtml(contract.contract_number || "-");
+    const contractName = escapeHtml(contract.contract_name || "-");
+    const clientName = escapeHtml(client?.client_name || "-");
+    const clientPhone = escapeHtml(client?.phone || "-");
+    const clientCity = escapeHtml(client?.city || "-");
+    const contactPerson = escapeHtml(client?.contact_person || "-");
+    const branchName = escapeHtml(getBranchName(contract.branch_id));
+    const startDate = escapeHtml(formatDate(contract.start_date));
+    const endDate = escapeHtml(formatDate(contract.end_date));
     const contractValue =
       contract.contract_value !== null &&
       contract.contract_value !== undefined
-        ? `${Number(
-            contract.contract_value
-          ).toLocaleString("ar-SA")} ريال`
+        ? escapeHtml(
+            Number(contract.contract_value).toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })
+          )
         : "-";
 
-    const printWindow =
-      window.open(
-        "",
-        "_blank",
-        "width=1000,height=800"
-      );
+    const status = escapeHtml(contract.status || "-");
+    const description = escapeHtml(contract.description || "لا يوجد وصف.");
+
+    const signingStatus = escapeHtml(getSigningStatusLabel(signing));
+
+    const customerSignedBy = escapeHtml(
+      signing?.customer_signed_by || "-"
+    );
+    const customerSignedAt = escapeHtml(
+      formatDateTime(signing?.customer_signed_at || null)
+    );
+    const openedAt = escapeHtml(formatDateTime(signing?.opened_at || null));
+    const sentAt = escapeHtml(formatDateTime(signing?.sent_at || null));
+    const approvedAt = escapeHtml(
+      formatDateTime(signing?.approved_at || null)
+    );
+    const finalizedAt = escapeHtml(
+      formatDateTime(signing?.finalized_at || null)
+    );
+
+    const customerSignature = signing?.customer_signature
+      ? `<img class="signature-image" src="${escapeHtml(
+          signing.customer_signature
+        )}" alt="Customer Signature" />`
+      : `<div class="empty-signature">لم يتم التوقيع بعد</div>`;
+
+    const customerStamp = signing?.customer_stamp_url
+      ? `<img class="stamp-image" src="${escapeHtml(
+          signing.customer_stamp_url
+        )}" alt="Customer Stamp" />`
+      : `<div class="empty-stamp">لا يوجد ختم</div>`;
+
+    const ramzSignature = signing?.ramz_signature
+      ? `<img class="signature-image" src="${escapeHtml(
+          signing.ramz_signature
+        )}" alt="Ramz Signature" />`
+      : `<div class="empty-signature">لم يتم اعتماد توقيع رامز بعد</div>`;
+
+    const ramzStamp = signing?.ramz_stamp_url
+      ? `<img class="stamp-image" src="${escapeHtml(
+          signing.ramz_stamp_url
+        )}" alt="Ramz Stamp" />`
+      : `<div class="empty-stamp">لا يوجد ختم رامز</div>`;
+
+    const printWindow = window.open("", "_blank");
 
     if (!printWindow) {
-      alert(
-        "تعذر فتح نافذة الطباعة. تأكدي من السماح بالنوافذ المنبثقة لهذا الموقع."
-      );
+      setError("تعذر فتح نافذة الطباعة. تأكد من السماح بالنوافذ المنبثقة.");
       return;
     }
 
     const html = `
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>${escapeHtml(
-    `عقد ${contractNumber}`
-  )}</title>
-
+  <title>Contract ${contractNumber}</title>
   <style>
     @page {
       size: A4;
@@ -460,245 +865,254 @@ export default function ContractsPage() {
       box-sizing: border-box;
     }
 
-    html,
     body {
       margin: 0;
       padding: 0;
       background: #ffffff;
-      color: #1f2937;
-      font-family:
-        Arial,
-        "Tahoma",
-        sans-serif;
-    }
-
-    body {
-      direction: rtl;
-      font-size: 13px;
-      line-height: 1.7;
+      color: #111827;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11px;
+      direction: ltr;
     }
 
     .page {
       width: 100%;
-      max-width: 190mm;
-      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
     }
 
     .document-header {
-      border: 1px solid #9ca3af;
-      margin-bottom: 18px;
+      border: 1px solid #111827;
+      margin-bottom: 14px;
     }
 
-    .header-row {
+    .header-top {
       display: grid;
-      border-bottom: 1px solid #9ca3af;
+      grid-template-columns: 1fr 1.5fr 1fr;
+      border-bottom: 1px solid #111827;
     }
 
-    .header-row:last-child {
-      border-bottom: 0;
-    }
-
-    .header-row.top {
-      grid-template-columns: 1fr 2fr 1fr;
-    }
-
-    .header-row.bottom {
-      grid-template-columns:
-        1fr 1fr 1fr 1fr;
+    .header-bottom {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
     }
 
     .header-cell {
-      padding: 10px 12px;
-      border-left: 1px solid #9ca3af;
-      min-height: 52px;
+      padding: 7px 8px;
+      border-right: 1px solid #111827;
+      min-height: 38px;
     }
 
     .header-cell:last-child {
-      border-left: 0;
+      border-right: none;
     }
 
     .header-label {
-      color: #6b7280;
-      font-size: 9px;
+      display: block;
+      font-size: 8px;
+      color: #4b5563;
       margin-bottom: 3px;
-      font-weight: normal;
     }
 
     .header-value {
-      color: #111827;
-      font-size: 12px;
+      display: block;
       font-weight: bold;
+      font-size: 10px;
     }
 
-    .header-title {
+    .main-title {
       text-align: center;
       font-size: 17px;
-    }
-
-    .title {
-      font-size: 24px;
       font-weight: bold;
-      color: #111827;
-      margin: 8px 0 3px;
     }
 
-    .subtitle {
-      color: #6b7280;
+    .section {
+      border: 1px solid #9ca3af;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      background: #f3f4f6;
+      border-bottom: 1px solid #9ca3af;
+      padding: 7px 9px;
       font-size: 12px;
-      margin-bottom: 18px;
+      font-weight: bold;
     }
 
-    .contract-header {
-      background: #1e293b;
-      color: white;
-      padding: 18px;
-      border-radius: 8px 8px 0 0;
-      border: 1px solid #1e293b;
+    .section-body {
+      padding: 9px;
     }
 
-    .contract-number-label {
-      color: #cbd5e1;
-      font-size: 10px;
-      margin-bottom: 2px;
+    .contract-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
     }
 
     .contract-number {
-      font-size: 22px;
+      font-size: 16px;
       font-weight: bold;
-    }
-
-    .contract-name {
-      color: #cbd5e1;
-      font-size: 13px;
-      margin-top: 3px;
     }
 
     .status {
       display: inline-block;
-      margin-top: 10px;
       padding: 4px 12px;
       border-radius: 20px;
       background: #16a34a;
       color: white;
-      font-size: 11px;
-      font-weight: bold;
-    }
-
-    .contract-body {
-      border: 1px solid #d1d5db;
-      border-top: 0;
-      padding: 20px;
-      border-radius: 0 0 8px 8px;
-    }
-
-    .section-title {
-      font-size: 15px;
-      font-weight: bold;
-      color: #111827;
-      border-bottom: 2px solid #1e293b;
-      padding-bottom: 7px;
-      margin-bottom: 14px;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px 25px;
-    }
-
-    .info-item {
-      padding-bottom: 8px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .info-label {
-      color: #6b7280;
       font-size: 10px;
-      margin-bottom: 2px;
+      font-weight: bold;
     }
 
-    .info-value {
-      color: #111827;
-      font-size: 12px;
-      font-weight: bold;
-      min-height: 20px;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      border-top: 1px solid #d1d5db;
+      border-left: 1px solid #d1d5db;
+    }
+
+    .field {
+      padding: 8px;
+      border-right: 1px solid #d1d5db;
+      border-bottom: 1px solid #d1d5db;
+    }
+
+    .field-label {
+      display: block;
+      color: #6b7280;
+      font-size: 8px;
+      margin-bottom: 4px;
+    }
+
+    .field-value {
+      font-size: 10px;
+      font-weight: 600;
     }
 
     .description {
-      margin-top: 22px;
-      padding-top: 16px;
-      border-top: 1px solid #d1d5db;
-    }
-
-    .description-box {
-      background: #f8fafc;
-      border: 1px solid #e5e7eb;
-      padding: 12px;
-      border-radius: 5px;
+      line-height: 1.7;
       white-space: pre-wrap;
-      line-height: 1.8;
+      min-height: 60px;
     }
 
-    .signature-section {
-      margin-top: 45px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 45px;
-    }
-
-    .signature-box {
-      text-align: center;
-      padding-top: 10px;
-    }
-
-    .signature-title {
+    .signing-status {
+      display: inline-block;
+      padding: 4px 9px;
+      border-radius: 12px;
+      background: #f3f4f6;
       font-weight: bold;
-      margin-bottom: 35px;
-    }
-
-    .signature-line {
-      border-top: 1px solid #6b7280;
-      width: 80%;
-      margin: 0 auto;
-      padding-top: 5px;
-      color: #6b7280;
       font-size: 10px;
     }
 
-    .footer {
-      margin-top: 28px;
-      padding-top: 10px;
+    .audit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       border-top: 1px solid #d1d5db;
-      display: flex;
-      justify-content: space-between;
-      color: #6b7280;
-      font-size: 9px;
+      border-left: 1px solid #d1d5db;
+      margin-top: 9px;
     }
 
-    .print-button {
+    .audit-item {
+      padding: 7px;
+      border-right: 1px solid #d1d5db;
+      border-bottom: 1px solid #d1d5db;
+    }
+
+    .audit-label {
       display: block;
-      margin: 0 auto 20px;
-      padding: 10px 20px;
-      border: 0;
-      background: #1d4ed8;
-      color: white;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
+      font-size: 8px;
+      color: #6b7280;
+      margin-bottom: 3px;
+    }
+
+    .audit-value {
+      font-size: 9px;
+      font-weight: 600;
+    }
+
+    .signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .signature-box {
+      border: 1px solid #9ca3af;
+      min-height: 180px;
+      padding: 10px;
+    }
+
+    .signature-title {
+      text-align: center;
+      font-weight: bold;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .signature-row {
+      margin-bottom: 10px;
+    }
+
+    .signature-label {
+      display: block;
+      font-size: 8px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .signature-area {
+      height: 75px;
+      border-bottom: 1px solid #9ca3af;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .signature-image {
+      max-width: 180px;
+      max-height: 65px;
+      object-fit: contain;
+    }
+
+    .stamp-area {
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stamp-image {
+      max-width: 100px;
+      max-height: 65px;
+      object-fit: contain;
+    }
+
+    .empty-signature,
+    .empty-stamp {
+      color: #9ca3af;
+      font-size: 9px;
+      text-align: center;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      padding-top: 7px;
+      border-top: 1px solid #d1d5db;
+      font-size: 8px;
+      color: #6b7280;
+      text-align: center;
     }
 
     @media print {
-      .print-button {
-        display: none !important;
-      }
-
       body {
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
       }
 
       .page {
-        max-width: none;
+        min-height: auto;
       }
     }
   </style>
@@ -707,311 +1121,216 @@ export default function ContractsPage() {
 <body>
   <div class="page">
 
-    <button
-      class="print-button"
-      onclick="window.print()"
-    >
-      🖨️ طباعة / حفظ كـ PDF
-    </button>
-
     <div class="document-header">
-
-      <div class="header-row top">
-
+      <div class="header-top">
         <div class="header-cell">
-          <div class="header-label">
-            Document code
-          </div>
-          <div class="header-value">
-            QF 701/01
-          </div>
+          <span class="header-label">Document Code</span>
+          <span class="header-value">QF 701/01</span>
+        </div>
+
+        <div class="header-cell" style="text-align:center;">
+          <span class="header-label">Document Type</span>
+          <span class="header-value main-title">Customer Contract</span>
         </div>
 
         <div class="header-cell">
-          <div class="header-label">
-            Document Type
-          </div>
-          <div class="header-value header-title">
-            Customer Contract
-          </div>
+          <span class="header-label">Form</span>
+          <span class="header-value">Customer Contract</span>
         </div>
-
-        <div class="header-cell">
-          <div class="header-label">
-            Issue / Rev #
-          </div>
-          <div class="header-value">
-            1/3
-          </div>
-        </div>
-
       </div>
 
-      <div class="header-row bottom">
-
+      <div class="header-bottom">
         <div class="header-cell">
-          <div class="header-label">
-            Issue Date
-          </div>
-          <div class="header-value">
-            31/12/2023
-          </div>
+          <span class="header-label">Issue / Rev #</span>
+          <span class="header-value">1/3</span>
         </div>
 
         <div class="header-cell">
-          <div class="header-label">
-            Copy #
-          </div>
-          <div class="header-value">
-            -
-          </div>
+          <span class="header-label">Issue Date</span>
+          <span class="header-value">31/12/2023</span>
         </div>
 
         <div class="header-cell">
-          <div class="header-label">
-            Revision Date
-          </div>
-          <div class="header-value">
-            31/12/2024
-          </div>
+          <span class="header-label">Copy #</span>
+          <span class="header-value">-</span>
         </div>
 
         <div class="header-cell">
-          <div class="header-label">
-            Page
-          </div>
-          <div class="header-value">
-            Page 1 of 2
-          </div>
+          <span class="header-label">Revision Date</span>
+          <span class="header-value">31/12/2024</span>
         </div>
-
       </div>
-
     </div>
 
-    <div class="title">
-      Customer Contract
+    <div class="section">
+      <div class="section-title">Contract Information</div>
+
+      <div class="section-body">
+        <div class="contract-title">
+          <div>
+            <div class="contract-number">${contractNumber}</div>
+            <div style="margin-top:4px;font-size:12px;font-weight:600;">
+              ${contractName}
+            </div>
+          </div>
+
+          <div class="status">${status}</div>
+        </div>
+
+        <div class="grid">
+          <div class="field">
+            <span class="field-label">Client</span>
+            <span class="field-value">${clientName}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Contact Person</span>
+            <span class="field-value">${contactPerson}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Phone</span>
+            <span class="field-value">${clientPhone}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">City</span>
+            <span class="field-value">${clientCity}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Branch</span>
+            <span class="field-value">${branchName}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Contract Value</span>
+            <span class="field-value">${contractValue}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">Start Date</span>
+            <span class="field-value">${startDate}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">End Date</span>
+            <span class="field-value">${endDate}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="subtitle">
-      عقد العميل
+    <div class="section">
+      <div class="section-title">Description</div>
+
+      <div class="section-body">
+        <div class="description">${description}</div>
+      </div>
     </div>
 
-    <div class="contract-header">
+    <div class="section">
+      <div class="section-title">Electronic Signing Status</div>
 
-      <div class="contract-number-label">
-        رقم العقد
+      <div class="section-body">
+        <div>
+          <span class="signing-status">${signingStatus}</span>
+        </div>
+
+        <div class="audit-grid">
+          <div class="audit-item">
+            <span class="audit-label">Link Sent</span>
+            <span class="audit-value">${sentAt}</span>
+          </div>
+
+          <div class="audit-item">
+            <span class="audit-label">Link Opened</span>
+            <span class="audit-value">${openedAt}</span>
+          </div>
+
+          <div class="audit-item">
+            <span class="audit-label">Customer Signed By</span>
+            <span class="audit-value">${customerSignedBy}</span>
+          </div>
+
+          <div class="audit-item">
+            <span class="audit-label">Customer Signed At</span>
+            <span class="audit-value">${customerSignedAt}</span>
+          </div>
+
+          <div class="audit-item">
+            <span class="audit-label">Ramz Approved At</span>
+            <span class="audit-value">${approvedAt}</span>
+          </div>
+
+          <div class="audit-item">
+            <span class="audit-label">Finalized At</span>
+            <span class="audit-value">${finalizedAt}</span>
+          </div>
+        </div>
       </div>
-
-      <div class="contract-number">
-        ${escapeHtml(contractNumber)}
-      </div>
-
-      <div class="contract-name">
-        ${escapeHtml(contractName)}
-      </div>
-
-      <span class="status">
-        ${escapeHtml(status)}
-      </span>
-
     </div>
 
-    <div class="contract-body">
+    <div class="section">
+      <div class="section-title">Signatures and Stamps</div>
 
-      <div class="section-title">
-        بيانات العقد
+      <div class="section-body">
+        <div class="signatures">
+
+          <div class="signature-box">
+            <div class="signature-title">Customer</div>
+
+            <div class="signature-row">
+              <span class="signature-label">Representative</span>
+              <strong>${customerSignedBy}</strong>
+            </div>
+
+            <div class="signature-row">
+              <span class="signature-label">Electronic Signature</span>
+
+              <div class="signature-area">
+                ${customerSignature}
+              </div>
+            </div>
+
+            <div class="signature-row">
+              <span class="signature-label">Company Stamp</span>
+
+              <div class="stamp-area">
+                ${customerStamp}
+              </div>
+            </div>
+          </div>
+
+          <div class="signature-box">
+            <div class="signature-title">Ramz Emirates</div>
+
+            <div class="signature-row">
+              <span class="signature-label">Authorized Signature</span>
+
+              <div class="signature-area">
+                ${ramzSignature}
+              </div>
+            </div>
+
+            <div class="signature-row">
+              <span class="signature-label">Company Stamp</span>
+
+              <div class="stamp-area">
+                ${ramzStamp}
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
-
-      <div class="info-grid">
-
-        <div class="info-item">
-          <div class="info-label">
-            العميل
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              client?.client_name
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            جهة الاتصال
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              client?.contact_person
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            هاتف العميل
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              client?.phone
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            المدينة
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              client?.city
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            الفرع
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              branchName
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            رقم العميل
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              contract.client_id
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            قيمة العقد
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              contractValue
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            حالة العقد
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              status
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            تاريخ بداية العقد
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              formatDate(
-                contract.start_date
-              )
-            )}
-          </div>
-        </div>
-
-        <div class="info-item">
-          <div class="info-label">
-            تاريخ نهاية العقد
-          </div>
-          <div class="info-value">
-            ${escapeHtml(
-              formatDate(
-                contract.end_date
-              )
-            )}
-          </div>
-        </div>
-
-      </div>
-
-      ${
-        contract.description
-          ? `
-        <div class="description">
-
-          <div class="section-title">
-            وصف العقد
-          </div>
-
-          <div class="description-box">
-            ${escapeHtml(
-              contract.description
-            )}
-          </div>
-
-        </div>
-      `
-          : ""
-      }
-
-      <div class="signature-section">
-
-        <div class="signature-box">
-          <div class="signature-title">
-            ممثل العميل
-          </div>
-
-          <div class="signature-line">
-            الاسم والتوقيع
-          </div>
-        </div>
-
-        <div class="signature-box">
-          <div class="signature-title">
-            ممثل المختبر
-          </div>
-
-          <div class="signature-line">
-            الاسم والتوقيع
-          </div>
-        </div>
-
-      </div>
-
     </div>
 
-    <div class="footer">
-      <span>
-        QF 701/01
-      </span>
-
-      <span>
-        Customer Contract
-      </span>
-
-      <span>
-        Contract No:
-        ${escapeHtml(contractNumber)}
-      </span>
+    <div class="footer-note">
+      QF 701/01 | Customer Contract | Issue / Rev 1/3 | Page 1
     </div>
 
   </div>
-
-  <script>
-    window.onload = function () {
-      setTimeout(function () {
-        window.print();
-      }, 400);
-    };
-  </script>
-
 </body>
 </html>
 `;
@@ -1019,1367 +1338,608 @@ export default function ContractsPage() {
     printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
-  }
 
-  function openAddModal() {
-    setEditingContract(null);
-
-    setForm({
-      ...emptyForm,
-      branch_id:
-        isBranchManager &&
-        currentUser?.branch_id
-          ? String(currentUser.branch_id)
-          : "",
-    });
-
-    setError("");
-    setSuccess("");
-    setOpenModal(true);
-  }
-
-  function openEditModal(
-    contract: Contract
-  ) {
-    const client = getClient(contract);
-
-    if (
-      isBranchManager &&
-      Number(contract.branch_id) !==
-        Number(currentUser?.branch_id)
-    ) {
-      alert(
-        "لا يمكنك تعديل عقد تابع لفرع آخر."
-      );
-
-      return;
-    }
-
-    setEditingContract(contract);
-
-    setForm({
-      contract_number:
-        contract.contract_number || "",
-
-      contract_name:
-        contract.contract_name || "",
-
-      client_id:
-        contract.client_id != null
-          ? String(contract.client_id)
-          : "",
-
-      branch_id:
-        contract.branch_id != null
-          ? String(contract.branch_id)
-          : client?.branch_id != null
-          ? String(client.branch_id)
-          : "",
-
-      start_date:
-        contract.start_date || "",
-
-      end_date:
-        contract.end_date || "",
-
-      contract_value:
-        contract.contract_value != null
-          ? String(contract.contract_value)
-          : "",
-
-      status:
-        contract.status || "Active",
-
-      description:
-        contract.description || "",
-    });
-
-    setError("");
-    setSuccess("");
-    setOpenModal(true);
-  }
-
-  function closeModal() {
-    if (saving) return;
-
-    setOpenModal(false);
-    setEditingContract(null);
-    setForm(emptyForm);
-  }
-
-  function handleClientChange(
-    clientId: string
-  ) {
-    const selectedClient =
-      clients.find(
-        (client) =>
-          String(client.id) ===
-          clientId
-      );
-
-    setForm((prev) => ({
-      ...prev,
-      client_id: clientId,
-      branch_id:
-        selectedClient?.branch_id != null
-          ? String(selectedClient.branch_id)
-          : prev.branch_id,
-    }));
-  }
-
-  async function saveContract(
-    e: React.FormEvent
-  ) {
-    e.preventDefault();
-
-    if (!currentUser) {
-      alert(
-        "لم يتم التعرف على المستخدم الحالي."
-      );
-      return;
-    }
-
-    if (!canManage) {
-      alert(
-        "ليس لديك صلاحية لإضافة أو تعديل العقود."
-      );
-      return;
-    }
-
-    if (
-      !form.contract_number.trim() ||
-      !form.contract_name.trim() ||
-      !form.client_id
-    ) {
-      alert(
-        "يرجى تعبئة رقم العقد واسم العقد والعميل."
-      );
-      return;
-    }
-
-    const selectedClient =
-      clients.find(
-        (client) =>
-          Number(client.id) ===
-          Number(form.client_id)
-      );
-
-    if (!selectedClient) {
-      alert(
-        "العميل المحدد غير موجود."
-      );
-      return;
-    }
-
-    let branchId =
-      selectedClient.branch_id != null
-        ? Number(selectedClient.branch_id)
-        : form.branch_id
-        ? Number(form.branch_id)
-        : null;
-
-    if (isBranchManager) {
-      if (!currentUser.branch_id) {
-        alert(
-          "مدير الفرع غير مرتبط بأي فرع."
-        );
-        return;
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (err) {
+        console.error(err);
       }
-
-      if (
-        selectedClient.branch_id != null &&
-        Number(selectedClient.branch_id) !==
-          Number(currentUser.branch_id)
-      ) {
-        alert(
-          "لا يمكنك إنشاء عقد لعميل تابع لفرع آخر."
-        );
-        return;
-      }
-
-      branchId =
-        Number(currentUser.branch_id);
-    }
-
-    if (
-      !branchId &&
-      !isBranchManager
-    ) {
-      alert(
-        "تعذر تحديد فرع العقد. تأكدي من أن العميل مرتبط بفرع."
-      );
-      return;
-    }
-
-    if (
-      form.start_date &&
-      form.end_date &&
-      form.end_date <
-        form.start_date
-    ) {
-      alert(
-        "تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ البداية."
-      );
-      return;
-    }
-
-    const contractValue =
-      form.contract_value.trim() === ""
-        ? null
-        : Number(
-            form.contract_value
-          );
-
-    if (
-      contractValue !== null &&
-      Number.isNaN(contractValue)
-    ) {
-      alert(
-        "قيمة العقد يجب أن تكون رقمًا صحيحًا."
-      );
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
-    const payload = {
-      contract_number:
-        form.contract_number.trim(),
-
-      contract_name:
-        form.contract_name.trim(),
-
-      client_id:
-        Number(form.client_id),
-
-      branch_id: branchId,
-
-      start_date:
-        form.start_date || null,
-
-      end_date:
-        form.end_date || null,
-
-      contract_value:
-        contractValue,
-
-      status:
-        form.status || "Active",
-
-      description:
-        form.description.trim() || null,
-    };
-
-    try {
-      if (editingContract) {
-        const {
-          error,
-        } = await supabase
-          .from("contracts")
-          .update(payload)
-          .eq(
-            "id",
-            editingContract.id
-          );
-
-        if (error) {
-          console.error(
-            "UPDATE CONTRACT ERROR:",
-            error
-          );
-
-          alert(
-            error.message
-          );
-          return;
-        }
-
-        setSuccess(
-          "تم تعديل العقد بنجاح."
-        );
-      } else {
-        const {
-          error,
-        } = await supabase
-          .from("contracts")
-          .insert(payload);
-
-        if (error) {
-          console.error(
-            "INSERT CONTRACT ERROR:",
-            error
-          );
-
-          alert(
-            error.message
-          );
-          return;
-        }
-
-        setSuccess(
-          "تم إضافة العقد بنجاح."
-        );
-      }
-
-      setOpenModal(false);
-      setEditingContract(null);
-      setForm(emptyForm);
-
-      await loadContracts(
-        currentUser
-      );
-    } finally {
-      setSaving(false);
-    }
+    }, 500);
   }
-
-  async function deleteContract(
-    contract: Contract
-  ) {
-    if (!canDelete) {
-      alert(
-        "ليس لديك صلاحية حذف العقود."
-      );
-      return;
-    }
-
-    const confirmed =
-      confirm(
-        `هل أنت متأكد من حذف العقد رقم "${contract.contract_number || contract.id}"؟\n\nلا يمكن التراجع عن هذه العملية.`
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setError("");
-    setSuccess("");
-
-    const {
-      error,
-    } = await supabase
-      .from("contracts")
-      .delete()
-      .eq("id", contract.id);
-
-    if (error) {
-      console.error(
-        "DELETE CONTRACT ERROR:",
-        error
-      );
-
-      alert(
-        error.message
-      );
-
-      return;
-    }
-
-    setSuccess(
-      "تم حذف العقد بنجاح."
-    );
-
-    if (currentUser) {
-      await loadContracts(
-        currentUser
-      );
-    }
-  }
-
-  const filteredContracts =
-    useMemo(() => {
-      const search =
-        searchTerm
-          .trim()
-          .toLowerCase();
-
-      return contracts.filter(
-        (contract) => {
-          const client =
-            getClient(contract);
-
-          const matchesSearch =
-            !search ||
-            [
-              contract.contract_number,
-              contract.contract_name,
-              client?.client_name,
-              client?.phone,
-              client?.city,
-              client?.contact_person,
-            ]
-              .filter(Boolean)
-              .join(" ")
-              .toLowerCase()
-              .includes(search);
-
-          const normalizedStatus =
-            (
-              contract.status ||
-              "Active"
-            ).toLowerCase();
-
-          const matchesStatus =
-            statusFilter === "All" ||
-            normalizedStatus ===
-              statusFilter.toLowerCase();
-
-          return (
-            matchesSearch &&
-            matchesStatus
-          );
-        }
-      );
-    }, [
-      contracts,
-      searchTerm,
-      statusFilter,
-    ]);
-
-  const activeContracts =
-    contracts.filter(
-      (contract) =>
-        (
-          contract.status ||
-          "Active"
-        ).toLowerCase() ===
-        "active"
-    ).length;
-
-  const completedContracts =
-    contracts.filter(
-      (contract) =>
-        (
-          contract.status ||
-          ""
-        ).toLowerCase() ===
-        "completed"
-    ).length;
 
   return (
     <ProtectedRoute>
-      <main
-        className="min-h-screen bg-slate-100 p-6 md:p-8"
-        dir="rtl"
-      >
-        <div className="max-w-7xl mx-auto">
-
-          {/* Official Document Header */}
-          <div className="bg-white border border-gray-300 rounded-xl shadow-sm mb-8 overflow-hidden">
-
-            {/* Top row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 border-b border-gray-300">
-
-              <div className="p-4 border-b md:border-b-0 md:border-l border-gray-300">
-                <div className="text-xs text-gray-500 mb-1">
-                  Document code
-                </div>
-
-                <div className="font-bold text-gray-800">
-                  QF 701/01
-                </div>
-              </div>
-
-              <div className="p-4 text-center border-b md:border-b-0 md:border-l border-gray-300">
-                <div className="text-xs text-gray-500 mb-1">
-                  Document Type
-                </div>
-
-                <div className="font-bold text-gray-800 text-lg">
-                  Customer Contract
-                </div>
-              </div>
-
-              <div className="p-4">
-                <div className="text-xs text-gray-500 mb-1">
-                  Issue / Rev #
-                </div>
-
-                <div className="font-bold text-gray-800">
-                  1/3
-                </div>
-              </div>
-
-            </div>
-
-            {/* Second row */}
-            <div className="grid grid-cols-1 md:grid-cols-4">
-
-              <div className="p-4 border-b md:border-b-0 md:border-l border-gray-300">
-                <div className="text-xs text-gray-500 mb-1">
-                  Issue Date
-                </div>
-
-                <div className="font-semibold text-gray-800">
-                  31/12/2023
-                </div>
-              </div>
-
-              <div className="p-4 border-b md:border-b-0 md:border-l border-gray-300">
-                <div className="text-xs text-gray-500 mb-1">
-                  Copy #
-                </div>
-
-                <div className="font-semibold text-gray-800">
-                  -
-                </div>
-              </div>
-
-              <div className="p-4 border-b md:border-b-0 md:border-l border-gray-300">
-                <div className="text-xs text-gray-500 mb-1">
-                  Revision Date
-                </div>
-
-                <div className="font-semibold text-gray-800">
-                  31/12/2024
-                </div>
-              </div>
-
-              <div className="p-4">
-                <div className="text-xs text-gray-500 mb-1">
-                  Page
-                </div>
-
-                <div className="font-semibold text-gray-800">
-                  Page 1 of 2
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* Page title */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
-
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6" dir="rtl">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-6 flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">
-                العقود
-              </h1>
-
-              <p className="text-gray-500 mt-2">
-                إدارة ومتابعة عقود العملاء
+              <h1 className="text-2xl font-bold text-gray-900">العقود</h1>
+              <p className="mt-1 text-sm text-gray-500">
+                إدارة عقود العملاء ومتابعة حالة التوقيع الإلكتروني
               </p>
-
-              {currentUser && (
-                <div className="text-sm text-gray-400 mt-1">
-                  الصلاحية:
-                  <span className="font-semibold text-gray-600 mr-1">
-                    {currentUser.role}
-                  </span>
-                </div>
-              )}
             </div>
 
             {canManage && (
               <button
                 type="button"
-                onClick={openAddModal}
-                className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold shadow-sm"
+                onClick={openCreateModal}
+                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
               >
-                + إضافة عقد
+                + إنشاء عقد جديد
               </button>
             )}
-
           </div>
 
-          {/* Messages */}
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">
-              <div className="font-semibold">
-                حدث خطأ
-              </div>
-
-              <div className="text-sm mt-1">
-                {error}
-              </div>
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-6 bg-green-50 border border-green-200 text-green-700 rounded-xl p-4">
+            <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
               {success}
             </div>
           )}
 
-          {/* Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
+                  بحث
+                </label>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div className="text-sm text-gray-500">
-                إجمالي العقود
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="رقم العقد أو اسم العقد أو العميل..."
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
               </div>
 
-              <div className="text-3xl font-bold text-blue-700 mt-1">
-                {contracts.length}
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
+                  حالة العقد
+                </label>
+
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="All">الكل</option>
+                  <option value="Active">نشط</option>
+                  <option value="Expired">منتهي</option>
+                  <option value="Suspended">موقوف</option>
+                  <option value="Completed">مكتمل</option>
+                </select>
               </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div className="text-sm text-gray-500">
-                العقود النشطة
-              </div>
-
-              <div className="text-3xl font-bold text-green-600 mt-1">
-                {activeContracts}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div className="text-sm text-gray-500">
-                العقود المكتملة
-              </div>
-
-              <div className="text-3xl font-bold text-purple-600 mt-1">
-                {completedContracts}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Filters */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-            <div className="flex flex-col md:flex-row gap-4">
-
-              <input
-                value={searchTerm}
-                onChange={(e) =>
-                  setSearchTerm(
-                    e.target.value
-                  )
-                }
-                placeholder="بحث برقم العقد أو الاسم أو العميل أو الهاتف..."
-                className="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
-              />
-
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(
-                    e.target.value
-                  )
-                }
-                className="border border-gray-300 rounded-lg p-3 md:w-56"
-              >
-                <option value="All">
-                  جميع الحالات
-                </option>
-
-                <option value="Active">
-                  نشط
-                </option>
-
-                <option value="Completed">
-                  مكتمل
-                </option>
-
-                <option value="Expired">
-                  منتهي
-                </option>
-
-                <option value="Cancelled">
-                  ملغي
-                </option>
-
-                <option value="Draft">
-                  مسودة
-                </option>
-              </select>
-
             </div>
           </div>
 
-          {/* Contracts */}
           {loading ? (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center text-gray-500">
-              جاري تحميل العقود...
+            <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+              <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+              <p className="text-sm text-gray-500">جاري تحميل العقود...</p>
             </div>
           ) : filteredContracts.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-
-              <div className="text-5xl mb-4">
-                📄
-              </div>
-
-              <h2 className="text-xl font-bold text-gray-700">
+            <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+              <div className="mb-3 text-4xl">📄</div>
+              <h2 className="text-lg font-bold text-gray-800">
                 لا توجد عقود
               </h2>
-
-              <p className="text-gray-500 mt-2">
-                لا توجد عقود مطابقة للبحث أو الفلتر المحدد.
+              <p className="mt-1 text-sm text-gray-500">
+                لم يتم العثور على عقود مطابقة للبحث الحالي.
               </p>
-
-              {canManage && (
-                <button
-                  type="button"
-                  onClick={openAddModal}
-                  className="mt-5 bg-blue-700 hover:bg-blue-800 text-white px-5 py-3 rounded-lg font-semibold"
-                >
-                  + إضافة أول عقد
-                </button>
-              )}
-
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-right">
+                  <thead className="bg-gray-50">
+                    <tr className="border-b border-gray-200">
+                      <th className="px-4 py-4 text-xs font-bold text-gray-600">
+                        رقم العقد
+                      </th>
+                      <th className="px-4 py-4 text-xs font-bold text-gray-600">
+                        العقد
+                      </th>
+                      <th className="px-4 py-4 text-xs font-bold text-gray-600">
+                        العميل
+                      </th>
+                      <th className="px-4 py-4 text-xs font-bold text-gray-600">
+                        الفرع
+                      </th>
+                      <th className="px-4 py-4 text-xs font-bold text-gray-600">
+                        المدة
+                      </th>
+                      <th className="px-4 py-4 text-xs font-bold text-gray-600">
+                        الحالة
+                      </th>
+                      <th className="px-4 py-4 text-xs font-bold text-gray-600">
+                        التوقيع
+                      </th>
+                      <th className="px-4 py-4 text-xs font-bold text-gray-600">
+                        الإجراءات
+                      </th>
+                    </tr>
+                  </thead>
 
-              {filteredContracts.map(
-                (contract) => {
-                  const client =
-                    getClient(
-                      contract
-                    );
+                  <tbody>
+                    {filteredContracts.map((contract) => {
+                      const client = getClient(contract);
+                      const signing = signings[contract.id];
 
-                  const status =
-                    (
-                      contract.status ||
-                      "Active"
-                    ).toLowerCase();
+                      return (
+                        <tr
+                          key={contract.id}
+                          className="border-b border-gray-100 transition hover:bg-gray-50"
+                        >
+                          <td className="px-4 py-4 align-top">
+                            <div className="font-bold text-gray-900">
+                              {contract.contract_number || "-"}
+                            </div>
+                          </td>
 
-                  return (
-                    <div
-                      key={contract.id}
-                      className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
-                    >
-
-                      {/* Contract Header */}
-                      <div className="bg-slate-800 text-white p-6">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-
-                          <div>
-                            <div className="text-sm text-slate-300 mb-1">
-                              رقم العقد
+                          <td className="px-4 py-4 align-top">
+                            <div className="font-semibold text-gray-900">
+                              {contract.contract_name || "-"}
                             </div>
 
-                            <div className="text-2xl font-bold">
-                              {contract.contract_number ||
-                                "بدون رقم"}
+                            {contract.contract_value !== null &&
+                              contract.contract_value !== undefined && (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  القيمة:{" "}
+                                  {Number(
+                                    contract.contract_value
+                                  ).toLocaleString("en-US")}
+                                </div>
+                              )}
+                          </td>
+
+                          <td className="px-4 py-4 align-top">
+                            <div className="font-semibold text-gray-800">
+                              {client?.client_name || "-"}
                             </div>
 
-                            <div className="text-slate-300 mt-2">
-                              {contract.contract_name ||
-                                "بدون اسم"}
-                            </div>
-                          </div>
+                            {client?.contact_person && (
+                              <div className="mt-1 text-xs text-gray-500">
+                                {client.contact_person}
+                              </div>
+                            )}
+                          </td>
 
-                          <div className="flex items-center gap-3">
+                          <td className="px-4 py-4 align-top text-sm text-gray-700">
+                            {getBranchName(contract.branch_id)}
+                          </td>
 
+                          <td className="px-4 py-4 align-top text-xs text-gray-600">
+                            <div>{formatDate(contract.start_date)}</div>
+                            <div className="my-1 text-gray-400">إلى</div>
+                            <div>{formatDate(contract.end_date)}</div>
+                          </td>
+
+                          <td className="px-4 py-4 align-top">
                             <span
-                              className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                                status ===
-                                "active"
-                                  ? "bg-green-500 text-white"
-                                  : status ===
-                                    "completed"
-                                  ? "bg-blue-500 text-white"
-                                  : status ===
-                                    "expired"
-                                  ? "bg-orange-500 text-white"
-                                  : status ===
-                                    "cancelled"
-                                  ? "bg-red-500 text-white"
-                                  : "bg-white/20 text-white"
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                                contract.status === "Active"
+                                  ? "bg-green-100 text-green-700"
+                                  : contract.status === "Completed"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : contract.status === "Expired"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-gray-100 text-gray-700"
                               }`}
                             >
-                              {contract.status ||
-                                "غير محدد"}
+                              {contract.status === "Active"
+                                ? "نشط"
+                                : contract.status === "Completed"
+                                ? "مكتمل"
+                                : contract.status === "Expired"
+                                ? "منتهي"
+                                : contract.status === "Suspended"
+                                ? "موقوف"
+                                : contract.status || "-"}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-4 align-top">
+                            <span
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getSigningStatusClass(
+                                signing
+                              )}`}
+                            >
+                              {getSigningStatusLabel(signing)}
                             </span>
 
-                          </div>
+                            {signing?.customer_signed_by && (
+                              <div className="mt-2 text-xs text-gray-500">
+                                {signing.customer_signed_by}
+                              </div>
+                            )}
+                          </td>
 
-                        </div>
-                      </div>
-
-                      {/* Contract Body */}
-                      <div className="p-6">
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              العميل
-                            </div>
-
-                            <div className="font-semibold text-gray-800 mt-1">
-                              {client?.client_name ||
-                                "-"}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              جهة الاتصال
-                            </div>
-
-                            <div className="font-semibold text-gray-800 mt-1">
-                              {client?.contact_person ||
-                                "-"}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              هاتف العميل
-                            </div>
-
-                            <div className="font-semibold text-gray-800 mt-1">
-                              {client?.phone ||
-                                "-"}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              المدينة
-                            </div>
-
-                            <div className="font-semibold text-gray-800 mt-1">
-                              {client?.city ||
-                                "-"}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              الفرع
-                            </div>
-
-                            <div className="font-semibold text-gray-800 mt-1">
-                              {getBranchName(
-                                contract.branch_id
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              قيمة العقد
-                            </div>
-
-                            <div className="font-bold text-blue-700 text-lg mt-1">
-                              {contract.contract_value !==
-                              null
-                                ? `${Number(
-                                    contract.contract_value
-                                  ).toLocaleString(
-                                    "ar-SA"
-                                  )} ريال`
-                                : "-"}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              بداية العقد
-                            </div>
-
-                            <div className="font-semibold text-gray-800 mt-1">
-                              {formatDate(
-                                contract.start_date
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              نهاية العقد
-                            </div>
-
-                            <div className="font-semibold text-gray-800 mt-1">
-                              {formatDate(
-                                contract.end_date
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm text-gray-500">
-                              رقم العميل
-                            </div>
-
-                            <div className="font-semibold text-gray-800 mt-1">
-                              {contract.client_id ||
-                                "-"}
-                            </div>
-                          </div>
-
-                        </div>
-
-                        {contract.description && (
-                          <div className="mt-7 pt-6 border-t border-gray-200">
-
-                            <div className="text-sm text-gray-500 mb-2">
-                              وصف العقد
-                            </div>
-
-                            <div className="bg-slate-50 rounded-xl p-5 text-gray-700 leading-7">
-                              {contract.description}
-                            </div>
-
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="mt-6 pt-5 border-t border-gray-200 flex flex-wrap gap-3">
-
-                          {/* Print / PDF */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              printContract(
-                                contract
-                              )
-                            }
-                            className="bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-semibold"
-                          >
-                            🖨️ طباعة / PDF
-                          </button>
-
-                          {canManage && (
-                            <>
+                          <td className="px-4 py-4 align-top">
+                            <div className="flex min-w-[170px] flex-col gap-2">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  openEditModal(
-                                    contract
-                                  )
-                                }
-                                className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2.5 rounded-lg font-semibold"
+                                onClick={() => printContract(contract)}
+                                className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 transition hover:bg-gray-100"
                               >
-                                تعديل العقد
+                                🖨️ طباعة
                               </button>
+
+                              {canManage && canSendSigning(signing) && (
+                                <button
+                                  type="button"
+                                  onClick={() => sendSigningLink(contract)}
+                                  disabled={sendingContractId === contract.id}
+                                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {sendingContractId === contract.id
+                                    ? "جاري تجهيز الرابط..."
+                                    : signing
+                                    ? "🔗 إعادة إرسال الرابط"
+                                    : "🔗 إرسال رابط التوقيع"}
+                                </button>
+                              )}
+
+                              {canManage && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEditModal(contract)}
+                                  disabled={signing?.status === "Finalized"}
+                                  className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  ✏️ تعديل
+                                </button>
+                              )}
 
                               {canDelete && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    deleteContract(
-                                      contract
-                                    )
-                                  }
-                                  className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-semibold"
+                                  onClick={() => deleteContract(contract)}
+                                  disabled={signing?.status === "Finalized"}
+                                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                  حذف العقد
+                                  🗑️ حذف
                                 </button>
                               )}
-
-                              {client?.id && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    router.push(
-                                      `/clients/${client.id}`
-                                    )
-                                  }
-                                  className="bg-green-700 hover:bg-green-800 text-white px-5 py-2.5 rounded-lg font-semibold"
-                                >
-                                  فتح ملف العميل
-                                </button>
-                              )}
-                            </>
-                          )}
-
-                        </div>
-
-                        <div className="mt-5 pt-4 border-t border-gray-100 text-sm text-gray-400 flex flex-wrap gap-5">
-
-                          <div>
-                            رقم السجل:
-                            <span className="font-semibold text-gray-600 mr-2">
-                              {contract.id}
-                            </span>
-                          </div>
-
-                          <div>
-                            تاريخ الإنشاء:
-                            <span className="font-semibold text-gray-600 mr-2">
-                              {formatDate(
-                                contract.created_at
-                              )}
-                            </span>
-                          </div>
-
-                        </div>
-
-                      </div>
-                    </div>
-                  );
-                }
-              )}
-
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
+        </div>
 
-          {/* Modal */}
-          {openModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        {openModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {editingContract ? "تعديل العقد" : "إنشاء عقد جديد"}
+                  </h2>
 
-              <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
+                  <p className="mt-1 text-xs text-gray-500">
+                    أدخل بيانات العقد الأساسية
+                  </p>
+                </div>
 
-                <div className="bg-slate-800 text-white px-6 py-5 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-lg px-3 py-2 text-xl text-gray-500 hover:bg-gray-100"
+                >
+                  ×
+                </button>
+              </div>
 
+              <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    رقم العقد *
+                  </label>
+
+                  <input
+                    type="text"
+                    value={form.contract_number}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        contract_number: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="مثال: CTR-2026-0001"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    اسم العقد *
+                  </label>
+
+                  <input
+                    type="text"
+                    value={form.contract_name}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        contract_name: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="اسم المشروع أو العقد"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    العميل *
+                  </label>
+
+                  <select
+                    value={form.client_id}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        client_id: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">اختر العميل</option>
+
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.client_name || `Client ${client.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    الفرع *
+                  </label>
+
+                  <select
+                    value={form.branch_id}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        branch_id: event.target.value,
+                      }))
+                    }
+                    disabled={isBranchManager}
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                  >
+                    <option value="">اختر الفرع</option>
+
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {getBranchName(branch.id)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    تاريخ البداية
+                  </label>
+
+                  <input
+                    type="date"
+                    value={form.start_date}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        start_date: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    تاريخ النهاية
+                  </label>
+
+                  <input
+                    type="date"
+                    value={form.end_date}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        end_date: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    قيمة العقد
+                  </label>
+
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.contract_value}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        contract_value: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    حالة العقد
+                  </label>
+
+                  <select
+                    value={form.status}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        status: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="Active">نشط</option>
+                    <option value="Expired">منتهي</option>
+                    <option value="Suspended">موقوف</option>
+                    <option value="Completed">مكتمل</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    وصف العقد
+                  </label>
+
+                  <textarea
+                    value={form.description}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        description: event.target.value,
+                      }))
+                    }
+                    rows={5}
+                    className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="أدخل وصف العقد أو الملاحظات..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-5 py-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={saving}
+                  className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  إلغاء
+                </button>
+
+                <button
+                  type="button"
+                  onClick={saveContract}
+                  disabled={saving}
+                  className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving
+                    ? "جاري الحفظ..."
+                    : editingContract
+                    ? "حفظ التعديلات"
+                    : "إنشاء العقد"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {signingContract && signingLink && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+              <div className="border-b border-gray-200 px-5 py-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-bold">
-                      {editingContract
-                        ? "تعديل العقد"
-                        : "إضافة عقد جديد"}
+                    <h2 className="text-xl font-bold text-gray-900">
+                      رابط توقيع العميل
                     </h2>
 
-                    <p className="text-slate-300 text-sm mt-1">
-                      أدخل بيانات العقد الأساسية
+                    <p className="mt-1 text-xs text-gray-500">
+                      {signingContract.contract_number} -{" "}
+                      {signingContract.contract_name}
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={closeModal}
-                    disabled={saving}
-                    className="text-white text-2xl hover:text-gray-300"
+                    onClick={closeSigningModal}
+                    className="rounded-lg px-3 py-2 text-xl text-gray-500 hover:bg-gray-100"
                   >
                     ×
                   </button>
+                </div>
+              </div>
 
+              <div className="space-y-4 p-5">
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <p className="mb-2 text-sm font-bold text-blue-900">
+                    تم إنشاء رابط التوقيع
+                  </p>
+
+                  <p className="text-xs leading-6 text-blue-800">
+                    أرسل هذا الرابط للعميل. العميل سيتمكن من فتح العقد ومراجعته
+                    وتوقيعه وإضافة ختم شركته بدون تسجيل دخول.
+                  </p>
                 </div>
 
-                <form
-                  onSubmit={saveContract}
-                  className="p-6"
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    رابط التوقيع
+                  </label>
+
+                  <textarea
+                    readOnly
+                    value={signingLink}
+                    rows={3}
+                    className="w-full resize-none rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-700 outline-none"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={copySigningLink}
+                    className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700"
+                  >
+                    📋 نسخ الرابط
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => window.open(signingLink, "_blank")}
+                    className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  >
+                    🔗 فتح الرابط
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeSigningModal}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-100"
                 >
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                    {/* Contract Number */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        رقم العقد *
-                      </label>
-
-                      <input
-                        value={
-                          form.contract_number
-                        }
-                        onChange={(e) =>
-                          setForm(
-                            (prev) => ({
-                              ...prev,
-                              contract_number:
-                                e.target.value,
-                            })
-                          )
-                        }
-                        placeholder="مثال: CNT-2026-001"
-                        className="w-full border border-gray-300 rounded-lg p-3"
-                        required
-                      />
-                    </div>
-
-                    {/* Contract Name */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        اسم العقد *
-                      </label>
-
-                      <input
-                        value={
-                          form.contract_name
-                        }
-                        onChange={(e) =>
-                          setForm(
-                            (prev) => ({
-                              ...prev,
-                              contract_name:
-                                e.target.value,
-                            })
-                          )
-                        }
-                        placeholder="مثال: عقد اختبارات التربة"
-                        className="w-full border border-gray-300 rounded-lg p-3"
-                        required
-                      />
-                    </div>
-
-                    {/* Client */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        العميل *
-                      </label>
-
-                      <select
-                        value={
-                          form.client_id
-                        }
-                        onChange={(e) =>
-                          handleClientChange(
-                            e.target.value
-                          )
-                        }
-                        className="w-full border border-gray-300 rounded-lg p-3"
-                        required
-                      >
-                        <option value="">
-                          اختر العميل
-                        </option>
-
-                        {clients.map(
-                          (client) => (
-                            <option
-                              key={
-                                client.id
-                              }
-                              value={
-                                client.id
-                              }
-                            >
-                              {client.client_name ||
-                                `عميل ${client.id}`}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </div>
-
-                    {/* Branch */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        الفرع
-                      </label>
-
-                      <select
-                        value={
-                          form.branch_id
-                        }
-                        onChange={(e) =>
-                          setForm(
-                            (prev) => ({
-                              ...prev,
-                              branch_id:
-                                e.target.value,
-                            })
-                          )
-                        }
-                        disabled={
-                          isBranchManager ||
-                          Boolean(
-                            form.client_id &&
-                              clients.find(
-                                (c) =>
-                                  String(
-                                    c.id
-                                  ) ===
-                                  form.client_id
-                              )?.branch_id
-                          )
-                        }
-                        className="w-full border border-gray-300 rounded-lg p-3 disabled:bg-gray-100"
-                      >
-                        <option value="">
-                          اختر الفرع
-                        </option>
-
-                        {branches.map(
-                          (branch) => (
-                            <option
-                              key={
-                                branch.id
-                              }
-                              value={
-                                branch.id
-                              }
-                            >
-                              {getBranchName(
-                                branch.id
-                              )}
-                            </option>
-                          )
-                        )}
-                      </select>
-
-                      <p className="text-xs text-gray-400 mt-1">
-                        يتم تحديد الفرع تلقائيًا حسب العميل.
-                      </p>
-                    </div>
-
-                    {/* Start Date */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        تاريخ البداية
-                      </label>
-
-                      <input
-                        type="date"
-                        value={
-                          form.start_date
-                        }
-                        onChange={(e) =>
-                          setForm(
-                            (prev) => ({
-                              ...prev,
-                              start_date:
-                                e.target.value,
-                            })
-                          )
-                        }
-                        className="w-full border border-gray-300 rounded-lg p-3"
-                      />
-                    </div>
-
-                    {/* End Date */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        تاريخ النهاية
-                      </label>
-
-                      <input
-                        type="date"
-                        value={
-                          form.end_date
-                        }
-                        onChange={(e) =>
-                          setForm(
-                            (prev) => ({
-                              ...prev,
-                              end_date:
-                                e.target.value,
-                            })
-                          )
-                        }
-                        className="w-full border border-gray-300 rounded-lg p-3"
-                      />
-                    </div>
-
-                    {/* Value */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        قيمة العقد
-                      </label>
-
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={
-                          form.contract_value
-                        }
-                        onChange={(e) =>
-                          setForm(
-                            (prev) => ({
-                              ...prev,
-                              contract_value:
-                                e.target.value,
-                            })
-                          )
-                        }
-                        placeholder="مثال: 150000"
-                        className="w-full border border-gray-300 rounded-lg p-3"
-                      />
-                    </div>
-
-                    {/* Status */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        حالة العقد
-                      </label>
-
-                      <select
-                        value={
-                          form.status
-                        }
-                        onChange={(e) =>
-                          setForm(
-                            (prev) => ({
-                              ...prev,
-                              status:
-                                e.target.value,
-                            })
-                          )
-                        }
-                        className="w-full border border-gray-300 rounded-lg p-3"
-                      >
-                        <option value="Active">
-                          نشط
-                        </option>
-
-                        <option value="Completed">
-                          مكتمل
-                        </option>
-
-                        <option value="Expired">
-                          منتهي
-                        </option>
-
-                        <option value="Cancelled">
-                          ملغي
-                        </option>
-
-                        <option value="Draft">
-                          مسودة
-                        </option>
-                      </select>
-                    </div>
-
-                    {/* Description */}
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        وصف العقد
-                      </label>
-
-                      <textarea
-                        value={
-                          form.description
-                        }
-                        onChange={(e) =>
-                          setForm(
-                            (prev) => ({
-                              ...prev,
-                              description:
-                                e.target.value,
-                            })
-                          )
-                        }
-                        rows={5}
-                        placeholder="اكتب تفاصيل أو ملاحظات العقد..."
-                        className="w-full border border-gray-300 rounded-lg p-3 resize-none"
-                      />
-                    </div>
-
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="mt-7 pt-5 border-t border-gray-200 flex justify-end gap-3">
-
-                    <button
-                      type="button"
-                      onClick={closeModal}
-                      disabled={saving}
-                      className="px-5 py-3 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      إلغاء
-                    </button>
-
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="px-6 py-3 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-semibold disabled:opacity-50"
-                    >
-                      {saving
-                        ? "جاري الحفظ..."
-                        : editingContract
-                        ? "حفظ التعديلات"
-                        : "إضافة العقد"}
-                    </button>
-
-                  </div>
-
-                </form>
-
+                  إغلاق
+                </button>
               </div>
             </div>
-          )}
-
-        </div>
-      </main>
+          </div>
+        )}
+      </div>
     </ProtectedRoute>
   );
 }
+
