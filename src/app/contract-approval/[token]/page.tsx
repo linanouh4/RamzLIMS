@@ -97,60 +97,74 @@ return new Intl.NumberFormat("ar-SA", {
 };
 
 const loadContract = async () => {
-if (!token) return;
+  if (!token) return;
 
+  setLoading(true);
+  setError("");
 
-setLoading(true);
-setError("");
-
-const { data, error: loadError } = await supabase.rpc(
-  "get_public_contract_signing",
-  {
-    p_token: token,
-  }
-);
-
-if (loadError) {
-  console.error(loadError);
-  setError("تعذر تحميل بيانات العقد. قد يكون الرابط غير صحيح أو منتهي الصلاحية.");
-  setLoading(false);
-  return;
-}
-
-const row = Array.isArray(data) ? data[0] : data;
-
-if (!row) {
-  setError("العقد غير موجود أو أن رابط التوقيع غير صالح.");
-  setLoading(false);
-  return;
-}
-
-setContract(row as ContractSigning);
-
-if (row.customer_signed_by) {
-  setCustomerName(row.customer_signed_by);
-}
-
-if (row.customer_stamp_url) {
-  setStampPreview(row.customer_stamp_url);
-}
-
-setLoading(false);
-
-if (row.signing_status !== "Finalized") {
-  const { error: openedError } = await supabase.rpc(
-    "mark_public_contract_signing_opened",
+  const { data, error: loadError } = await supabase.rpc(
+    "get_public_contract_signing",
     {
-      p_token: token,
+      p_token: String(token),
     }
   );
 
-  if (openedError) {
-    console.error("Open tracking error:", openedError);
+  if (loadError) {
+    console.error("Contract loading error:", {
+      message: loadError.message,
+      details: loadError.details,
+      hint: loadError.hint,
+      code: loadError.code,
+    });
+
+    setError(
+      "تعذر تحميل بيانات العقد. قد يكون الرابط غير صحيح أو منتهي الصلاحية."
+    );
+    setLoading(false);
+    return;
   }
-}
 
+  const row = Array.isArray(data) ? data[0] : data;
 
+  if (!row) {
+    setError("العقد غير موجود أو أن رابط التوقيع غير صالح.");
+    setLoading(false);
+    return;
+  }
+
+  setContract(row as ContractSigning);
+
+  if (row.customer_signed_by) {
+    setCustomerName(row.customer_signed_by);
+  }
+
+  if (row.customer_stamp_url) {
+    setStampPreview(row.customer_stamp_url);
+  }
+
+  setLoading(false);
+
+  // تسجيل فتح الرابط لا يجب أن يمنع عرض العقد
+  if (row.signing_status !== "Finalized") {
+    const { data: openedData, error: openedError } =
+      await supabase.rpc(
+        "mark_public_contract_signing_opened",
+        {
+          p_token: String(token),
+        }
+      );
+
+    if (openedError) {
+      console.error("Open tracking error:", {
+        message: openedError.message,
+        details: openedError.details,
+        hint: openedError.hint,
+        code: openedError.code,
+      });
+    } else {
+      console.log("Contract opened successfully:", openedData);
+    }
+  }
 };
 
 useEffect(() => {
