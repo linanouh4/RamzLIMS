@@ -255,6 +255,7 @@ export default function ContractsPage() {
         contract_id,
         signing_token,
         status,
+        verification_code,
         customer_signed_by,
         customer_signature,
         customer_stamp_url,
@@ -775,90 +776,129 @@ export default function ContractsPage() {
   }
 
   function printContract(contract: Contract) {
-    const client = getClient(contract);
-    const signing = signings[contract.id];
+  const client = getClient(contract);
+  const signing = signings[contract.id];
 
-    const contractNumber = escapeHtml(contract.contract_number || "-");
-    const contractName = escapeHtml(contract.contract_name || "-");
-    const clientName = escapeHtml(client?.client_name || "-");
-    const clientPhone = escapeHtml(client?.phone || "-");
-    const clientCity = escapeHtml(client?.city || "-");
-    const contactPerson = escapeHtml(client?.contact_person || "-");
-    const branchName = escapeHtml(getBranchName(contract.branch_id));
-    const startDate = escapeHtml(formatDate(contract.start_date));
-    const endDate = escapeHtml(formatDate(contract.end_date));
-    const contractValue =
-      contract.contract_value !== null &&
-      contract.contract_value !== undefined
-        ? escapeHtml(
-            Number(contract.contract_value).toLocaleString("en-US", {
+  const contractNumber = escapeHtml(contract.contract_number || "-");
+  const contractName = escapeHtml(contract.contract_name || "-");
+
+  const clientName = escapeHtml(client?.client_name || "-");
+  const customerRepresentative = escapeHtml(
+    signing?.customer_signed_by ||
+      client?.contact_person ||
+      "-"
+  );
+
+  const branchName = escapeHtml(
+    getBranchName(contract.branch_id)
+  );
+
+  const startDate = escapeHtml(
+    formatDate(contract.start_date)
+  );
+
+  const endDate = escapeHtml(
+    formatDate(contract.end_date)
+  );
+
+  const contractValue =
+    contract.contract_value !== null &&
+    contract.contract_value !== undefined
+      ? escapeHtml(
+          Number(contract.contract_value).toLocaleString(
+            "en-US",
+            {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
-            })
+            }
           )
-        : "-";
+        )
+      : "-";
 
-    const status = escapeHtml(contract.status || "-");
-    const description = escapeHtml(contract.description || "لا يوجد وصف.");
+  const description = escapeHtml(
+    contract.description || "لا يوجد وصف."
+  );
 
-    const signingStatus = escapeHtml(getSigningStatusLabel(signing));
+  const customerSignature = signing?.customer_signature
+    ? `<img
+        class="signature-image"
+        src="${escapeHtml(signing.customer_signature)}"
+        alt="توقيع ممثل العميل"
+      />`
+    : `<div class="empty-signature">
+        لم يتم توقيع العميل
+      </div>`;
 
-    const customerSignedBy = escapeHtml(
-      signing?.customer_signed_by || "-"
+  const customerStamp = signing?.customer_stamp_url
+    ? `<img
+        class="stamp-image"
+        src="${escapeHtml(signing.customer_stamp_url)}"
+        alt="ختم العميل"
+      />`
+    : `<div class="empty-stamp">
+        لا يوجد ختم
+      </div>`;
+
+  const ramzSignature = signing?.ramz_signature
+    ? `<img
+        class="signature-image"
+        src="${escapeHtml(signing.ramz_signature)}"
+        alt="توقيع مدير المختبر"
+      />`
+    : `<div class="empty-signature">
+        لم يتم اعتماد توقيع رامز
+      </div>`;
+
+  const ramzStamp = signing?.ramz_stamp_url
+    ? `<img
+        class="stamp-image"
+        src="${escapeHtml(signing.ramz_stamp_url)}"
+        alt="ختم شركة رمز الإمارات"
+      />`
+    : `<div class="empty-stamp">
+        لا يوجد ختم رامز
+      </div>`;
+
+  const customerSignedAt = escapeHtml(
+    formatDateTime(
+      signing?.customer_signed_at || null
+    )
+  );
+
+  const finalizedAt = escapeHtml(
+    formatDateTime(
+      signing?.finalized_at || null
+    )
+  );
+
+  const printWindow = window.open(
+    "",
+    "_blank"
+  );
+
+  if (!printWindow) {
+    setError(
+      "تعذر فتح نافذة الطباعة. تأكد من السماح بالنوافذ المنبثقة."
     );
-    const customerSignedAt = escapeHtml(
-      formatDateTime(signing?.customer_signed_at || null)
-    );
-    const openedAt = escapeHtml(formatDateTime(signing?.opened_at || null));
-    const sentAt = escapeHtml(formatDateTime(signing?.sent_at || null));
-    const approvedAt = escapeHtml(
-      formatDateTime(signing?.approved_at || null)
-    );
-    const finalizedAt = escapeHtml(
-      formatDateTime(signing?.finalized_at || null)
-    );
+    return;
+  }
 
-    const customerSignature = signing?.customer_signature
-      ? `<img class="signature-image" src="${escapeHtml(
-          signing.customer_signature
-        )}" alt="Customer Signature" />`
-      : `<div class="empty-signature">لم يتم التوقيع بعد</div>`;
-
-    const customerStamp = signing?.customer_stamp_url
-      ? `<img class="stamp-image" src="${escapeHtml(
-          signing.customer_stamp_url
-        )}" alt="Customer Stamp" />`
-      : `<div class="empty-stamp">لا يوجد ختم</div>`;
-
-    const ramzSignature = signing?.ramz_signature
-      ? `<img class="signature-image" src="${escapeHtml(
-          signing.ramz_signature
-        )}" alt="Ramz Signature" />`
-      : `<div class="empty-signature">لم يتم اعتماد توقيع رامز بعد</div>`;
-
-    const ramzStamp = signing?.ramz_stamp_url
-      ? `<img class="stamp-image" src="${escapeHtml(
-          signing.ramz_stamp_url
-        )}" alt="Ramz Stamp" />`
-      : `<div class="empty-stamp">لا يوجد ختم رامز</div>`;
-
-    const printWindow = window.open("", "_blank");
-
-    if (!printWindow) {
-      setError("تعذر فتح نافذة الطباعة. تأكد من السماح بالنوافذ المنبثقة.");
-      return;
-    }
-
-    const html = `
+  const html = `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8" />
-  <title>Contract ${contractNumber}</title>
+
+  <title>
+    عقد ${contractNumber}
+  </title>
+
   <style>
+
     @page {
       size: A4;
-      margin: 12mm;
+      margin: 15mm;
     }
 
     * {
@@ -870,507 +910,711 @@ export default function ContractsPage() {
       padding: 0;
       background: #ffffff;
       color: #111827;
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 11px;
-      direction: ltr;
+      font-family:
+        Arial,
+        "Tahoma",
+        sans-serif;
+      direction: rtl;
+      font-size: 12px;
+      line-height: 1.7;
     }
 
     .page {
       width: 100%;
-      min-height: 100vh;
-      position: relative;
     }
 
-    .document-header {
-      border: 1px solid #111827;
-      margin-bottom: 14px;
+    .header {
+      border: 1px solid #1f2937;
+      margin-bottom: 18px;
     }
 
-    .header-top {
+    .header-main {
       display: grid;
-      grid-template-columns: 1fr 1.5fr 1fr;
-      border-bottom: 1px solid #111827;
-    }
+      grid-template-columns:
+        1fr
+        2fr
+        1fr;
 
-    .header-bottom {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      border-bottom:
+        1px solid #1f2937;
     }
 
     .header-cell {
-      padding: 7px 8px;
-      border-right: 1px solid #111827;
-      min-height: 38px;
+      padding: 8px;
+      text-align: center;
+
+      border-left:
+        1px solid #1f2937;
     }
 
     .header-cell:last-child {
-      border-right: none;
+      border-left: none;
     }
 
     .header-label {
       display: block;
-      font-size: 8px;
-      color: #4b5563;
+      font-size: 9px;
+      color: #6b7280;
       margin-bottom: 3px;
     }
 
     .header-value {
       display: block;
       font-weight: bold;
-      font-size: 10px;
+      font-size: 11px;
     }
 
-    .main-title {
-      text-align: center;
-      font-size: 17px;
+    .title {
+      font-size: 18px;
       font-weight: bold;
     }
 
+    .header-info {
+      display: grid;
+      grid-template-columns:
+        repeat(4, 1fr);
+    }
+
     .section {
-      border: 1px solid #9ca3af;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
+      border:
+        1px solid #9ca3af;
     }
 
     .section-title {
+      padding: 7px 10px;
       background: #f3f4f6;
-      border-bottom: 1px solid #9ca3af;
-      padding: 7px 9px;
-      font-size: 12px;
+      border-bottom:
+        1px solid #9ca3af;
+
+      font-size: 13px;
       font-weight: bold;
     }
 
     .section-body {
-      padding: 9px;
+      padding: 10px;
     }
 
     .contract-title {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
+      gap: 20px;
+
       margin-bottom: 10px;
     }
 
     .contract-number {
-      font-size: 16px;
+      font-size: 17px;
       font-weight: bold;
     }
 
-    .status {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      background: #16a34a;
-      color: white;
-      font-size: 10px;
+    .contract-name {
+      margin-top: 3px;
+      font-size: 14px;
       font-weight: bold;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      border-top: 1px solid #d1d5db;
-      border-left: 1px solid #d1d5db;
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      border-top:
+        1px solid #d1d5db;
+
+      border-right:
+        1px solid #d1d5db;
     }
 
     .field {
       padding: 8px;
-      border-right: 1px solid #d1d5db;
-      border-bottom: 1px solid #d1d5db;
+
+      border-left:
+        1px solid #d1d5db;
+
+      border-bottom:
+        1px solid #d1d5db;
     }
 
     .field-label {
       display: block;
+
+      font-size: 9px;
       color: #6b7280;
-      font-size: 8px;
-      margin-bottom: 4px;
+
+      margin-bottom: 2px;
     }
 
     .field-value {
-      font-size: 10px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: bold;
     }
 
     .description {
-      line-height: 1.7;
+      min-height: 80px;
       white-space: pre-wrap;
-      min-height: 60px;
     }
 
-    .signing-status {
-      display: inline-block;
-      padding: 4px 9px;
-      border-radius: 12px;
-      background: #f3f4f6;
-      font-weight: bold;
-      font-size: 10px;
+    /*
+     * التوقيعات النهائية
+     */
+
+    .signature-section {
+      margin-top: 25px;
+
+      border:
+        1px solid #1f2937;
+
+      page-break-inside: avoid;
     }
 
-    .audit-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      border-top: 1px solid #d1d5db;
-      border-left: 1px solid #d1d5db;
-      margin-top: 9px;
-    }
+    .signature-heading {
+      padding: 8px;
 
-    .audit-item {
-      padding: 7px;
-      border-right: 1px solid #d1d5db;
-      border-bottom: 1px solid #d1d5db;
-    }
-
-    .audit-label {
-      display: block;
-      font-size: 8px;
-      color: #6b7280;
-      margin-bottom: 3px;
-    }
-
-    .audit-value {
-      font-size: 9px;
-      font-weight: 600;
-    }
-
-    .signatures {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .signature-box {
-      border: 1px solid #9ca3af;
-      min-height: 180px;
-      padding: 10px;
-    }
-
-    .signature-title {
       text-align: center;
+
+      background: #f3f4f6;
+
+      border-bottom:
+        1px solid #1f2937;
+
+      font-size: 14px;
       font-weight: bold;
-      font-size: 12px;
+    }
+
+    .signature-columns {
+      display: grid;
+
+      grid-template-columns:
+        1fr 1fr;
+    }
+
+    .signature-column {
+      min-height: 300px;
+
+      padding: 15px;
+
+      text-align: center;
+
+      border-left:
+        1px solid #1f2937;
+    }
+
+    .signature-column:last-child {
+      border-left: none;
+    }
+
+    .party-title {
+      font-size: 14px;
+      font-weight: bold;
+
       margin-bottom: 10px;
     }
 
-    .signature-row {
-      margin-bottom: 10px;
+    .party-company {
+      min-height: 50px;
+
+      font-size: 12px;
+      font-weight: bold;
+
+      margin-bottom: 8px;
+    }
+
+    .party-name {
+      min-height: 35px;
+
+      font-size: 12px;
+      font-weight: bold;
+
+      margin-bottom: 8px;
     }
 
     .signature-label {
-      display: block;
-      font-size: 8px;
+      font-size: 10px;
       color: #6b7280;
-      margin-bottom: 4px;
+
+      margin-top: 8px;
+      margin-bottom: 3px;
     }
 
     .signature-area {
-      height: 75px;
-      border-bottom: 1px solid #9ca3af;
+      height: 85px;
+
       display: flex;
       align-items: center;
       justify-content: center;
+
+      border-bottom:
+        1px solid #9ca3af;
     }
 
     .signature-image {
-      max-width: 180px;
-      max-height: 65px;
+      max-width: 210px;
+      max-height: 75px;
+
       object-fit: contain;
     }
 
     .stamp-area {
-      height: 70px;
+      height: 85px;
+
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .stamp-image {
-      max-width: 100px;
-      max-height: 65px;
+      max-width: 115px;
+      max-height: 75px;
+
       object-fit: contain;
     }
 
     .empty-signature,
     .empty-stamp {
       color: #9ca3af;
-      font-size: 9px;
-      text-align: center;
+      font-size: 10px;
     }
 
-    .footer-note {
-      margin-top: 18px;
-      padding-top: 7px;
-      border-top: 1px solid #d1d5db;
-      font-size: 8px;
-      color: #6b7280;
+    .date-line {
+      margin-top: 10px;
+
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+
+      font-size: 10px;
+      color: #4b5563;
+    }
+
+    .footer {
+      margin-top: 20px;
+
+      padding-top: 8px;
+
+      border-top:
+        1px solid #d1d5db;
+
       text-align: center;
+
+      font-size: 9px;
+      color: #6b7280;
     }
 
     @media print {
+
       body {
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
       }
 
-      .page {
-        min-height: auto;
+      .signature-section {
+        page-break-inside: avoid;
       }
+
     }
+
   </style>
 </head>
 
 <body>
+
   <div class="page">
 
-    <div class="document-header">
-      <div class="header-top">
-        <div class="header-cell">
-          <span class="header-label">Document Code</span>
-          <span class="header-value">QF 701/01</span>
-        </div>
+    <!-- رأس العقد -->
 
-        <div class="header-cell" style="text-align:center;">
-          <span class="header-label">Document Type</span>
-          <span class="header-value main-title">Customer Contract</span>
-        </div>
+    <div class="header">
+
+      <div class="header-main">
 
         <div class="header-cell">
-          <span class="header-label">Form</span>
-          <span class="header-value">Customer Contract</span>
+          <span class="header-label">
+            رمز النموذج
+          </span>
+
+          <span class="header-value">
+            QF 701/01
+          </span>
         </div>
+
+        <div class="header-cell">
+
+          <span class="header-label">
+            نوع الوثيقة
+          </span>
+
+          <span class="header-value title">
+            عقد خدمات فحص التربة والخرسانة
+          </span>
+
+        </div>
+
+        <div class="header-cell">
+
+          <span class="header-label">
+            رقم العقد
+          </span>
+
+          <span class="header-value">
+            ${contractNumber}
+          </span>
+
+        </div>
+
       </div>
 
-      <div class="header-bottom">
+      <div class="header-info">
+
         <div class="header-cell">
-          <span class="header-label">Issue / Rev #</span>
-          <span class="header-value">1/3</span>
+
+          <span class="header-label">
+            الفرع
+          </span>
+
+          <span class="header-value">
+            ${branchName}
+          </span>
+
         </div>
 
         <div class="header-cell">
-          <span class="header-label">Issue Date</span>
-          <span class="header-value">31/12/2023</span>
+
+          <span class="header-label">
+            بداية العقد
+          </span>
+
+          <span class="header-value">
+            ${startDate}
+          </span>
+
         </div>
 
         <div class="header-cell">
-          <span class="header-label">Copy #</span>
-          <span class="header-value">-</span>
+
+          <span class="header-label">
+            نهاية العقد
+          </span>
+
+          <span class="header-value">
+            ${endDate}
+          </span>
+
         </div>
 
         <div class="header-cell">
-          <span class="header-label">Revision Date</span>
-          <span class="header-value">31/12/2024</span>
+
+          <span class="header-label">
+            قيمة العقد
+          </span>
+
+          <span class="header-value">
+            ${contractValue} ريال
+          </span>
+
         </div>
+
       </div>
+
     </div>
 
+
+    <!-- بيانات العقد -->
+
     <div class="section">
-      <div class="section-title">Contract Information</div>
+
+      <div class="section-title">
+        بيانات العقد
+      </div>
 
       <div class="section-body">
+
         <div class="contract-title">
+
           <div>
-            <div class="contract-number">${contractNumber}</div>
-            <div style="margin-top:4px;font-size:12px;font-weight:600;">
+
+            <div class="contract-number">
+              ${contractNumber}
+            </div>
+
+            <div class="contract-name">
               ${contractName}
             </div>
+
           </div>
 
-          <div class="status">${status}</div>
         </div>
+
 
         <div class="grid">
+
           <div class="field">
-            <span class="field-label">Client</span>
-            <span class="field-value">${clientName}</span>
+
+            <span class="field-label">
+              اسم الشركة / العميل
+            </span>
+
+            <span class="field-value">
+              ${clientName}
+            </span>
+
+          </div>
+
+
+          <div class="field">
+
+            <span class="field-label">
+              ممثل العميل
+            </span>
+
+            <span class="field-value">
+              ${customerRepresentative}
+            </span>
+
           </div>
 
           <div class="field">
-            <span class="field-label">Contact Person</span>
-            <span class="field-value">${contactPerson}</span>
+
+            <span class="field-label">
+              المدينة
+            </span>
+
+            <span class="field-value">
+              ${escapeHtml(client?.city || "-")}
+            </span>
+
           </div>
 
           <div class="field">
-            <span class="field-label">Phone</span>
-            <span class="field-value">${clientPhone}</span>
+
+            <span class="field-label">
+              رقم الهاتف
+            </span>
+
+            <span class="field-value">
+              ${escapeHtml(client?.phone || "-")}
+            </span>
+
           </div>
 
-          <div class="field">
-            <span class="field-label">City</span>
-            <span class="field-value">${clientCity}</span>
-          </div>
-
-          <div class="field">
-            <span class="field-label">Branch</span>
-            <span class="field-value">${branchName}</span>
-          </div>
-
-          <div class="field">
-            <span class="field-label">Contract Value</span>
-            <span class="field-value">${contractValue}</span>
-          </div>
-
-          <div class="field">
-            <span class="field-label">Start Date</span>
-            <span class="field-value">${startDate}</span>
-          </div>
-
-          <div class="field">
-            <span class="field-label">End Date</span>
-            <span class="field-value">${endDate}</span>
-          </div>
         </div>
+
       </div>
+
     </div>
+
+
+    <!-- وصف / بنود العقد -->
 
     <div class="section">
-      <div class="section-title">Description</div>
 
-      <div class="section-body">
-        <div class="description">${description}</div>
+      <div class="section-title">
+        بنود العقد
       </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Electronic Signing Status</div>
 
       <div class="section-body">
-        <div>
-          <span class="signing-status">${signingStatus}</span>
+
+        <div class="description">
+          ${description}
         </div>
 
-        <div class="audit-grid">
-          <div class="audit-item">
-            <span class="audit-label">Link Sent</span>
-            <span class="audit-value">${sentAt}</span>
-          </div>
-
-          <div class="audit-item">
-            <span class="audit-label">Link Opened</span>
-            <span class="audit-value">${openedAt}</span>
-          </div>
-
-          <div class="audit-item">
-            <span class="audit-label">Customer Signed By</span>
-            <span class="audit-value">${customerSignedBy}</span>
-          </div>
-
-          <div class="audit-item">
-            <span class="audit-label">Customer Signed At</span>
-            <span class="audit-value">${customerSignedAt}</span>
-          </div>
-
-          <div class="audit-item">
-            <span class="audit-label">Ramz Approved At</span>
-            <span class="audit-value">${approvedAt}</span>
-          </div>
-
-          <div class="audit-item">
-            <span class="audit-label">Finalized At</span>
-            <span class="audit-value">${finalizedAt}</span>
-          </div>
-        </div>
       </div>
+
     </div>
 
-    <div class="section">
-      <div class="section-title">Signatures and Stamps</div>
 
-      <div class="section-body">
-        <div class="signatures">
+    <!-- التوقيعات -->
 
-          <div class="signature-box">
-            <div class="signature-title">Customer</div>
+    <div class="signature-section">
 
-            <div class="signature-row">
-              <span class="signature-label">Representative</span>
-              <strong>${customerSignedBy}</strong>
-            </div>
+      <div class="signature-heading">
+        التوقيعات والاعتماد
+      </div>
 
-            <div class="signature-row">
-              <span class="signature-label">Electronic Signature</span>
 
-              <div class="signature-area">
-                ${customerSignature}
-              </div>
-            </div>
+      <div class="signature-columns">
 
-            <div class="signature-row">
-              <span class="signature-label">Company Stamp</span>
 
-              <div class="stamp-area">
-                ${customerStamp}
-              </div>
-            </div>
+        <!-- العميل -->
+
+        <div class="signature-column">
+
+          <div class="party-title">
+            ممثل العميل
           </div>
 
-          <div class="signature-box">
-            <div class="signature-title">Ramz Emirates</div>
 
-            <div class="signature-row">
-              <span class="signature-label">Authorized Signature</span>
+          <div class="party-company">
+            السادة / ${clientName}
+          </div>
 
-              <div class="signature-area">
-                ${ramzSignature}
-              </div>
-            </div>
 
-            <div class="signature-row">
-              <span class="signature-label">Company Stamp</span>
+          <div class="party-name">
+            ${customerRepresentative}
+          </div>
 
-              <div class="stamp-area">
-                ${ramzStamp}
-              </div>
-            </div>
+
+          <div class="signature-label">
+            توقيع ممثل العميل
+          </div>
+
+          <div class="signature-area">
+            ${customerSignature}
+          </div>
+
+
+          <div class="signature-label">
+            ختم العميل
+          </div>
+
+          <div class="stamp-area">
+            ${customerStamp}
+          </div>
+
+
+          <div class="date-line">
+            <span>
+              تاريخ التوقيع:
+            </span>
+
+            <strong>
+              ${customerSignedAt}
+            </strong>
           </div>
 
         </div>
+
+
+        <!-- رامز الإمارات -->
+
+        <div class="signature-column">
+
+          <div class="party-title">
+            المدير الفني لشركة رمز الإمارات
+            لفحص التربة والخرسانة
+          </div>
+
+
+          <div class="party-company">
+            شركة رمز الإمارات
+            لفحص التربة والخرسانة
+          </div>
+
+
+          <div class="party-name">
+            مدير المختبر م. لينا نوح
+          </div>
+
+
+          <div class="signature-label">
+            التوقيع
+          </div>
+
+          <div class="signature-area">
+            ${ramzSignature}
+          </div>
+
+
+          <div class="signature-label">
+            ختم شركة رمز الإمارات
+          </div>
+
+          <div class="stamp-area">
+            ${ramzStamp}
+          </div>
+
+
+          <div class="date-line">
+            <span>
+              تاريخ الاعتماد:
+            </span>
+
+            <strong>
+              ${finalizedAt}
+            </strong>
+          </div>
+
+        </div>
+
+
       </div>
+
     </div>
 
-    <div class="footer-note">
-      QF 701/01 | Customer Contract | Issue / Rev 1/3 | Page 1
+
+    <div class="footer">
+
+      شركة رمز الإمارات لفحص التربة والخرسانة
+      |
+      عقد خدمات فحص التربة والخرسانة
+      |
+      ${contractNumber}
+
     </div>
 
   </div>
+
 </body>
 </html>
 `;
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
 
-    setTimeout(() => {
-      try {
-        printWindow.focus();
-        printWindow.print();
-      } catch (err) {
-        console.error(err);
-      }
-    }, 500);
-  }
+  setTimeout(() => {
+    try {
+      printWindow.focus();
+      printWindow.print();
+    } catch (err) {
+      console.error(err);
+    }
+  }, 500);
+}
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50 p-4 md:p-6" dir="rtl">
         <div className="mx-auto max-w-7xl">
           <div className="mb-6 flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">العقود</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                إدارة عقود العملاء ومتابعة حالة التوقيع الإلكتروني
-              </p>
-            </div>
+  <div className="flex items-start gap-3">
+    <button
+      type="button"
+      onClick={() => {
+        if (window.history.length > 1) {
+          router.back();
+        } else {
+          router.push("/dashboard");
+        }
+      }}
+      className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-xl font-bold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
+      title="رجوع"
+      aria-label="رجوع"
+    >
+      ←
+    </button>
 
-            {canManage && (
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
-              >
-                + إنشاء عقد جديد
-              </button>
-            )}
-          </div>
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900">
+        العقود
+      </h1>
+
+      <p className="mt-1 text-sm text-gray-500">
+        إدارة عقود العملاء ومتابعة حالة التوقيع الإلكتروني
+      </p>
+    </div>
+  </div>
+
+  {canManage && (
+    <button
+      type="button"
+      onClick={openCreateModal}
+      className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+    >
+      + إنشاء عقد جديد
+    </button>
+  )}
+</div>
 
           {error && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -1576,6 +1820,7 @@ export default function ContractsPage() {
                                 <button
                                   type="button"
                                   onClick={() => sendSigningLink(contract)}
+                                  
                                   disabled={sendingContractId === contract.id}
                                   className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
@@ -1586,7 +1831,18 @@ export default function ContractsPage() {
                                     : "🔗 إرسال رابط التوقيع"}
                                 </button>
                               )}
-
+{currentUser?.role?.toLowerCase() === "admin" &&
+  signing?.status === "Pending Ramz Approval" && (
+    <button
+      type="button"
+      onClick={() =>
+        router.push(`/contract-approval-admin/${contract.id}`)
+      }
+      className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-orange-600"
+    >
+      🔐 اعتماد العقد
+    </button>
+  )}
                               {canManage && (
                                 <button
                                   type="button"
