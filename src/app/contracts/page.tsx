@@ -688,6 +688,129 @@ export default function ContractsPage() {
     }
   }
 
+  function closeSigningModal() {
+    setSigningContract(null);
+    setSigningLink("");
+  }
+
+  async function copySigningLink() {
+    if (!signingLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(signingLink);
+      setSuccess("تم نسخ رابط التوقيع.");
+      setError("");
+    } catch (err) {
+      console.error(err);
+      setError("تعذر نسخ الرابط تلقائيًا. انسخه يدويًا.");
+    }
+  }
+
+  async function sendSigningLink(contract: Contract) {
+    if (!canManage) {
+      setError("ليس لديك صلاحية لإرسال رابط التوقيع.");
+      return;
+    }
+
+    const existingSigning = signings[contract.id];
+
+    if (!canSendSigning(existingSigning)) {
+      setError("لا يمكن إرسال رابط لهذا العقد في حالته الحالية.");
+      return;
+    }
+
+    try {
+      setSendingContractId(contract.id);
+      setError("");
+      setSuccess("");
+
+      const sentAt = new Date().toISOString();
+
+      const signingFields = `
+        id,
+        contract_id,
+        signing_token,
+        status,
+        verification_code,
+        customer_signed_by,
+        customer_signature,
+        customer_stamp_url,
+        sent_at,
+        opened_at,
+        customer_signed_at,
+        approved_by,
+        ramz_signature,
+        ramz_stamp_url,
+        approved_at,
+        ramz_signed_at,
+        ramz_stamped_at,
+        finalized_at
+      `;
+
+      let signingData: ContractSigning | null = null;
+
+      if (existingSigning) {
+        const { data, error: updateError } = await supabase
+          .from("contract_signing")
+          .update({
+            status: "Sent",
+            sent_at: sentAt,
+          })
+          .eq("id", existingSigning.id)
+          .select(signingFields)
+          .single();
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        signingData = data as ContractSigning;
+      } else {
+        const { data, error: insertError } = await supabase
+          .from("contract_signing")
+          .insert({
+            contract_id: contract.id,
+            status: "Sent",
+            sent_at: sentAt,
+          })
+          .select(signingFields)
+          .single();
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        signingData = data as ContractSigning;
+      }
+
+      if (!signingData?.signing_token) {
+        throw new Error(
+          "لم يتم إنشاء رمز التوقيع. تحققي من إعدادات جدول contract_signing في Supabase."
+        );
+      }
+
+      const link =
+        `${window.location.origin}/contract-approval/` +
+        encodeURIComponent(signingData.signing_token);
+
+      setSignings((previous) => ({
+        ...previous,
+        [contract.id]: signingData!,
+      }));
+
+      setSigningContract(contract);
+      setSigningLink(link);
+      setSuccess("تم تجهيز رابط التوقيع بنجاح.");
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "حدث خطأ أثناء تجهيز رابط التوقيع.");
+    } finally {
+      setSendingContractId(null);
+    }
+  }
+
 async function printContract(contract: Contract) {
   const printWindow = window.open("", "_blank");
 
@@ -730,28 +853,28 @@ async function printContract(contract: Contract) {
     );
 
     const customerSignature = signing?.customer_signature
-      ? <img class="signature-image" src="${escapeHtml(
+      ? <img className="signature-image" src="${escapeHtml(
           signing.customer_signature
         )}" alt="توقيع ممثل العميل" />
-      : <div class="empty-signature">لم يتم توقيع العميل</div>;
+      : <div className="empty-signature">لم يتم توقيع العميل</div>;
 
     const customerStamp = signing?.customer_stamp_url
-      ? <img class="stamp-image" src="${escapeHtml(
+      ? <img className="stamp-image" src="${escapeHtml(
           signing.customer_stamp_url
         )}" alt="ختم العميل" />
-      : <div class="empty-stamp">لا يوجد ختم</div>;
+      : <div className="empty-stamp">لا يوجد ختم</div>;
 
     const ramzSignature = signing?.ramz_signature
-      ? <img class="signature-image" src="${escapeHtml(
+      ? <img className="signature-image" src="${escapeHtml(
           signing.ramz_signature
         )}" alt="توقيع مدير المختبر" />
-      : <div class="empty-signature">لم يتم اعتماد توقيع رامز</div>;
+      : <div className="empty-signature">لم يتم اعتماد توقيع رامز</div>;
 
     const ramzStamp = signing?.ramz_stamp_url
-      ? <img class="stamp-image" src="${escapeHtml(
+      ? <img className="stamp-image" src="${escapeHtml(
           signing.ramz_stamp_url
         )}" alt="ختم شركة رمز الإمارات" />
-      : <div class="empty-stamp">لا يوجد ختم رامز</div>;
+      : <div className="empty-stamp">لا يوجد ختم رامز</div>;
 
     const customerSignedAt = escapeHtml(
       formatDateTime(signing?.customer_signed_at || null)
@@ -764,36 +887,39 @@ async function printContract(contract: Contract) {
     let verificationBlock = "";
 
     if (signing?.status === "Finalized" && signing.verification_code) {
-      const verificationUrl =
-        ${window.location.origin}/verify/ +
-        encodeURIComponent(signing.verification_code);
+      
+const verificationUrl =
+  `${window.location.origin}/verify/` +
+  encodeURIComponent(signing.verification_code);
 
-      const qrDataUrl = await QRCode.toDataURL(verificationUrl, {
-        width: 150,
-        margin: 2,
-        errorCorrectionLevel: "M",
-      });
+const qrDataUrl = await QRCode.toDataURL(verificationUrl, {
+  width: 150,
+  margin: 2,
+  errorCorrectionLevel: "M",
+});
 
-         verificationBlock = `
-        <div class="verification">
-          <div class="verification-title">التحقق من صحة العقد</div>
-          <img
-            class="verification-qr"
-            src="${qrDataUrl}"
-            alt="رمز التحقق من العقد"
-          />
-          <div>امسح الرمز للتحقق من بيانات العقد واعتماده</div>
-          <div class="verification-code">
-            رقم التحقق: ${escapeHtml(signing.verification_code)}
-          </div>
-          <div class="verification-url">${escapeHtml(verificationUrl)}</div>
-        </div>
-      ;
-    }
+      
+verificationBlock = `
+  <div class="verification">
+    <div class="verification-title">التحقق من صحة العقد</div>
+    <img
+      class="verification-qr"
+      src="${qrDataUrl}"
+      alt="رمز التحقق من العقد"
+    />
+    <div>امسح الرمز للتحقق من بيانات العقد واعتماده</div>
+    <div class="verification-code">
+      رقم التحقق: ${escapeHtml(signing.verification_code)}
+    </div>
+    <div class="verification-url">${escapeHtml(verificationUrl)}</div>
+  </div>
+`;
+}
 
-    const html = `
+const html = `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
   <meta charset="UTF-8" />
   <title>عقد ${contractNumber}</title>
@@ -1418,17 +1544,20 @@ async function printContract(contract: Contract) {
                             <div>{formatDate(contract.end_date)}</div>
                           </td>
 
+      
                           <td className="px-4 py-4 align-top">
                             <span
-                              className={inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
                                 contract.status === "Active"
                                   ? "bg-green-100 text-green-700"
                                   : contract.status === "Completed"
                                   ? "bg-blue-100 text-blue-700"
                                   : contract.status === "Expired"
                                   ? "bg-red-100 text-red-700"
+                                  : contract.status === "Suspended"
+                                  ? "bg-gray-100 text-gray-700"
                                   : "bg-gray-100 text-gray-700"
-                              }}
+                              }`}
                             >
                               {contract.status === "Active"
                                 ? "نشط"
@@ -1442,11 +1571,13 @@ async function printContract(contract: Contract) {
                             </span>
                           </td>
 
+
                           <td className="px-4 py-4 align-top">
+                            
                             <span
                               className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${getSigningStatusClass(
                                 signing
-                              )}}
+                              )}`}
                             >
                               {getSigningStatusLabel(signing)}
                             </span>
@@ -1488,7 +1619,7 @@ async function printContract(contract: Contract) {
     <button
       type="button"
       onClick={() =>
-        router.push(/contract-approval-admin/${contract.id})
+        router.push(`/contract-approval-admin/${contract.id}`)
       }
       className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-orange-600"
     >
