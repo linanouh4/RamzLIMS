@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -8,10 +8,6 @@ type VerificationData = {
   status: string;
   contract_number: string;
   contract_name: string;
-  client_name: string;
-  customer_signed_by: string | null;
-  customer_signed_at: string | null;
-  approved_at: string | null;
   finalized_at: string | null;
 };
 
@@ -25,64 +21,73 @@ export default function VerifyContractPage({
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     async function verifyContract() {
       try {
         const { code } = await params;
+        const cleanCode = (code || "").trim().toUpperCase();
 
-        if (!code) {
-          setError("رمز التحقق غير موجود.");
-          return;
+        if (!cleanCode) {
+          throw new Error("رمز التحقق غير موجود.");
         }
-
-        const cleanCode = decodeURIComponent(code).trim().toUpperCase();
 
         const { data: result, error: rpcError } = await supabase.rpc(
           "get_public_contract_verification",
-          {
-            p_code: cleanCode,
-          }
+          { p_code: cleanCode }
         );
 
         if (rpcError) {
-          console.error(rpcError);
-          throw rpcError;
+          console.error("Contract verification failed:", rpcError);
+          throw new Error("تعذر إكمال التحقق حاليًا.");
         }
 
         if (!result || result.length === 0) {
-          setError(
-            "لم يتم العثور على وثيقة معتمدة بهذا الرمز. تأكد من صحة رمز التحقق."
+          throw new Error(
+            "لم يتم العثور على سجل عقد نهائي مطابق لهذا الرمز. تحقق من صحة الرمز."
           );
-          return;
         }
 
         const verification = result[0];
 
-        setData({
-          verification_code: verification.verification_code,
-          status: verification.status,
-          contract_number: verification.contract_number || "-",
-          contract_name: verification.contract_name || "-",
-          client_name: verification.client_name || "-",
-          customer_signed_by:
-            verification.customer_signed_by || null,
-          customer_signed_at:
-            verification.customer_signed_at || null,
-          approved_at: verification.approved_at || null,
-          finalized_at: verification.finalized_at || null,
-        });
-      } catch (err: any) {
-        console.error(err);
+        if (
+          verification.status !== "Finalized" ||
+          !verification.finalized_at
+        ) {
+          throw new Error("لم يتم التأكد من الاعتماد النهائي لهذا العقد.");
+        }
 
-        setError(
-          err?.message ||
-            "حدث خطأ أثناء التحقق من الوثيقة."
-        );
+        if (!cancelled) {
+          setData({
+            verification_code: verification.verification_code,
+            status: verification.status,
+            contract_number: verification.contract_number || "-",
+            contract_name: verification.contract_name || "-",
+            finalized_at: verification.finalized_at,
+          });
+        }
+      } catch (err) {
+        console.error("Verification page error:", err);
+
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "حدث خطأ أثناء التحقق من الوثيقة."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     verifyContract();
+
+    return () => {
+      cancelled = true;
+    };
   }, [params]);
 
   function formatDate(value: string | null) {
@@ -90,9 +95,7 @@ export default function VerifyContractPage({
 
     const date = new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
-      return "-";
-    }
+    if (Number.isNaN(date.getTime())) return "-";
 
     return date.toLocaleString("ar-SA", {
       dateStyle: "medium",
@@ -104,17 +107,15 @@ export default function VerifyContractPage({
     return (
       <main
         dir="rtl"
-        className="min-h-screen bg-gray-100 flex items-center justify-center p-6"
+        className="flex min-h-screen items-center justify-center bg-gray-100 p-6"
       >
         <div className="w-full max-w-lg rounded-2xl bg-white p-8 text-center shadow-lg">
-          <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-green-600" />
-
+          <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-green-700" />
           <h1 className="text-xl font-bold text-gray-900">
-            جاري التحقق من الوثيقة
+            جارٍ التحقق من الوثيقة
           </h1>
-
           <p className="mt-2 text-sm text-gray-500">
-            يرجى الانتظار...
+            يرجى الانتظار حتى تكتمل عملية التحقق.
           </p>
         </div>
       </main>
@@ -125,10 +126,10 @@ export default function VerifyContractPage({
     return (
       <main
         dir="rtl"
-        className="min-h-screen bg-gray-100 flex items-center justify-center p-6"
+        className="flex min-h-screen items-center justify-center bg-gray-100 p-6"
       >
         <div className="w-full max-w-lg rounded-2xl bg-white p-8 text-center shadow-lg">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl text-red-700">
             ✕
           </div>
 
@@ -137,12 +138,12 @@ export default function VerifyContractPage({
           </h1>
 
           <p className="mt-4 text-sm leading-7 text-gray-600">
-            {error}
+            {error || "لم يتم العثور على بيانات للتحقق."}
           </p>
 
-          <div className="mt-6 rounded-xl bg-gray-50 p-4 text-xs text-gray-500">
-            إذا وصلت إلى هذه الصفحة من خلال QR Code الموجود على العقد،
-            تأكد من أن الرابط لم يتم تعديله.
+          <div className="mt-6 rounded-xl bg-gray-50 p-4 text-xs leading-6 text-gray-500">
+            إذا وصلت إلى هذه الصفحة من خلال رمز QR الموجود على العقد،
+            فتحقق من أن الرمز والرابط لم يتم تعديلهما.
           </div>
         </div>
       </main>
@@ -156,161 +157,100 @@ export default function VerifyContractPage({
     >
       <div className="mx-auto max-w-2xl">
         <div className="overflow-hidden rounded-3xl bg-white shadow-xl">
-
-          {/* Header */}
-          <div className="bg-green-700 px-6 py-8 text-center text-white">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white text-4xl text-green-700 shadow">
+          <header className="bg-green-800 px-6 py-8 text-center text-white">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white text-4xl text-green-800 shadow">
               ✓
             </div>
 
             <h1 className="text-2xl font-bold">
-              وثيقة أصلية ومعتمدة
+              تم التحقق من سجل العقد
             </h1>
 
-            <p className="mt-2 text-sm text-green-100">
-              تم التحقق من الوثيقة إلكترونيًا بواسطة نظام رمز الإمارات
+            <p className="mt-3 text-sm leading-7 text-green-100">
+              عُثر على سجل عقد معتمد ونهائي يطابق رمز التحقق الإلكتروني.
             </p>
-          </div>
+          </header>
 
-          {/* Verification Code */}
-          <div className="border-b border-gray-200 px-6 py-6 text-center">
+          <section className="border-b border-gray-200 px-6 py-6 text-center">
             <p className="text-xs font-medium text-gray-500">
-              Verification Code
+              رمز التحقق الإلكتروني
             </p>
 
-            <div className="mt-2 rounded-xl bg-gray-50 px-4 py-3 font-mono text-lg font-bold tracking-wider text-gray-900">
+            <div
+              dir="ltr"
+              className="mt-2 break-all rounded-xl bg-gray-50 px-4 py-3 font-mono text-lg font-bold tracking-wider text-gray-900"
+            >
               {data.verification_code}
             </div>
-          </div>
+          </section>
 
-          {/* Document Information */}
-          <div className="px-6 py-6">
+          <section className="px-6 py-6">
             <h2 className="mb-4 text-lg font-bold text-gray-900">
-              معلومات الوثيقة
+              معلومات العقد
             </h2>
 
             <div className="grid gap-3 sm:grid-cols-2">
-
               <div className="rounded-xl bg-gray-50 p-4">
-                <div className="text-xs text-gray-500">
-                  رقم العقد
-                </div>
-
-                <div className="mt-1 font-bold text-gray-900">
+                <div className="text-xs text-gray-500">رقم العقد</div>
+                <div className="mt-2 break-words font-bold text-gray-900">
                   {data.contract_number}
                 </div>
               </div>
 
               <div className="rounded-xl bg-gray-50 p-4">
-                <div className="text-xs text-gray-500">
-                  اسم العقد
-                </div>
-
-                <div className="mt-1 font-bold text-gray-900">
+                <div className="text-xs text-gray-500">اسم العقد</div>
+                <div className="mt-2 break-words font-bold text-gray-900">
                   {data.contract_name}
                 </div>
               </div>
 
-              <div className="rounded-xl bg-gray-50 p-4">
-                <div className="text-xs text-gray-500">
-                  العميل
+              <div className="rounded-xl bg-green-50 p-4 sm:col-span-2">
+                <div className="text-xs text-green-700">
+                  حالة سجل العقد
                 </div>
-
-                <div className="mt-1 font-bold text-gray-900">
-                  {data.client_name}
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-gray-50 p-4">
-                <div className="text-xs text-gray-500">
-                  الحالة
-                </div>
-
-                <div className="mt-1 font-bold text-green-700">
+                <div className="mt-2 font-bold text-green-800">
                   معتمد ونهائي
                 </div>
               </div>
 
+              <div className="rounded-xl bg-gray-50 p-4 sm:col-span-2">
+                <div className="text-xs text-gray-500">
+                  تاريخ الاعتماد النهائي
+                </div>
+                <div className="mt-2 font-bold text-gray-900">
+                  {formatDate(data.finalized_at)}
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
 
-          {/* Signing Information */}
-          <div className="border-t border-gray-200 px-6 py-6">
-            <h2 className="mb-4 text-lg font-bold text-gray-900">
-              معلومات الاعتماد
+          <section className="border-t border-amber-200 bg-amber-50 px-6 py-5">
+            <h2 className="font-bold text-amber-900">
+              تنبيه بشأن أصالة الملف
             </h2>
 
-            <div className="space-y-3">
+            <p className="mt-2 text-sm leading-7 text-amber-900">
+              يؤكد هذا الفحص وجود سجل عقد نهائي مطابق لرمز التحقق.
+              لكنه لا يثبت وحده أن نسخة PDF المعروضة أو المطبوعة لم يتم
+              تعديلها بعد إصدارها.
+            </p>
+          </section>
 
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 p-4">
-                <span className="text-sm text-gray-500">
-                  ممثل العميل
-                </span>
-
-                <span className="text-sm font-bold text-gray-900">
-                  {data.customer_signed_by || "-"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 p-4">
-                <span className="text-sm text-gray-500">
-                  توقيع العميل
-                </span>
-
-                <span className="text-sm font-bold text-green-700">
-                  تم التوقيع
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 p-4">
-                <span className="text-sm text-gray-500">
-                  تاريخ توقيع العميل
-                </span>
-
-                <span className="text-sm font-bold text-gray-900">
-                  {formatDate(data.customer_signed_at)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-gray-50 p-4">
-                <span className="text-sm text-gray-500">
-                  اعتماد رمز الإمارات
-                </span>
-
-                <span className="text-sm font-bold text-gray-900">
-                  {formatDate(data.approved_at)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 rounded-xl bg-green-50 p-4">
-                <span className="text-sm text-green-700">
-                  تاريخ الإنهاء النهائي
-                </span>
-
-                <span className="text-sm font-bold text-green-800">
-                  {formatDate(data.finalized_at)}
-                </span>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Company */}
-          <div className="border-t border-gray-200 px-6 py-6 text-center">
+          <footer className="border-t border-gray-200 px-6 py-6 text-center">
             <div className="text-sm font-bold text-gray-900">
               شركة رمز الإمارات لفحص التربة والخرسانة
             </div>
 
-            <div className="mt-1 text-xs text-gray-500">
+            <p className="mt-2 text-xs leading-6 text-gray-500">
               نظام التحقق الإلكتروني من الوثائق
-            </div>
-          </div>
-
+            </p>
+          </footer>
         </div>
 
-        <div className="mt-5 text-center text-xs text-gray-400">
-          هذه الصفحة مخصصة للتحقق من أصالة الوثيقة فقط.
-        </div>
+        <p className="mt-5 text-center text-xs leading-6 text-gray-500">
+          صفحة عامة للتحقق من سجل العقد. لا تعرض بيانات العميل أو تفاصيل
+          توقيعاته.
+        </p>
       </div>
     </main>
   );

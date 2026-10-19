@@ -341,80 +341,41 @@ export default function ContractApprovalAdminPage() {
       setError("");
       setSuccess("");
 
-      const now = new Date().toISOString();
-
-      console.log("STARTING CONTRACT APPROVAL", {
+      console.log("STARTING ATOMIC CONTRACT APPROVAL", {
         contractId: contract.id,
         signingId: signing.id,
-        userId: currentUser.id,
         status: signing.status,
       });
 
-      /*
-       * أولاً: اعتماد سجل التوقيع
-       */
-      const { data: updatedSigning, error: signingUpdateError } =
-        await supabase
-          .from("contract_signing")
-          .update({
-            status: "Finalized",
-            approved_by: currentUser.id,
-            ramz_signature: currentUser.signature,
-            ramz_stamp_url: ramzStamp,
-            approved_at: now,
-            ramz_signed_at: now,
-            ramz_stamped_at: now,
-            finalized_at: now,
-          })
-          .eq("id", signing.id)
-          .eq("status", "Pending Ramz Approval")
-          .select()
-          .maybeSingle();
-
-      console.log("SIGNING UPDATE RESULT:", {
-        updatedSigning,
-        signingUpdateError,
+      const {
+        data: finalizedData,
+        error: finalizeError,
+      } = await supabase.rpc("finalize_contract_signing", {
+        p_signing_id: signing.id,
+        p_ramz_stamp: ramzStamp,
       });
 
-      if (signingUpdateError) {
-        throw signingUpdateError;
+      if (finalizeError) {
+        throw finalizeError;
       }
 
-      /*
-       * إذا لم يرجع Supabase أي سجل،
-       * فهذا يعني أن التحديث لم يحصل فعليًا.
-       */
-      if (!updatedSigning) {
+      const finalizedResult = Array.isArray(finalizedData)
+        ? finalizedData[0]
+        : null;
+
+      if (!finalizedResult || !finalizedResult.finalized_at) {
         throw new Error(
-          "لم يتم حفظ اعتماد العقد. ربما تغيرت حالة العقد أو لا توجد صلاحية لتحديثه."
+          "The database did not return a successful finalization result."
         );
       }
 
-      /*
-       * ثانيًا: تحديث حالة العقد نفسه
-       */
-      const { error: contractUpdateError } =
-        await supabase
-          .from("contracts")
-          .update({
-            status: "Finalized",
-          })
-          .eq("id", contract.id);
+      const now = finalizedResult.finalized_at;
 
-      console.log("CONTRACT STATUS UPDATE:", {
-        contractUpdateError,
+      console.log("ATOMIC CONTRACT FINALIZATION SUCCESS", {
+        signingId: finalizedResult.signing_id,
+        contractId: finalizedResult.contract_id,
+        finalizedAt: now,
       });
-
-      if (contractUpdateError) {
-        /*
-         * سجل التوقيع تم اعتماده بالفعل،
-         * لذلك نوضح الخطأ بدل الادعاء أن العملية كلها فشلت.
-         */
-        throw new Error(
-          `تم اعتماد سجل التوقيع، لكن تعذر تحديث حالة العقد: ${contractUpdateError.message}`
-        );
-      }
-
       setSuccess(
         "✓ تم اعتماد العقد وتوقيعه وختمه من رامز بنجاح."
       );
