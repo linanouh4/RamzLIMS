@@ -852,29 +852,31 @@ async function printContract(contract: Contract) {
       contract.description || "لا يوجد وصف."
     );
 
+    
     const customerSignature = signing?.customer_signature
-      ? <img className="signature-image" src="${escapeHtml(
+      ? `<img class="signature-image" src="${escapeHtml(
           signing.customer_signature
-        )}" alt="توقيع ممثل العميل" />
-      : <div className="empty-signature">لم يتم توقيع العميل</div>;
+        )}" alt="Customer representative signature" />`
+      : `<div class="empty-signature">Customer signature not available</div>`;
 
     const customerStamp = signing?.customer_stamp_url
-      ? <img className="stamp-image" src="${escapeHtml(
+      ? `<img class="stamp-image" src="${escapeHtml(
           signing.customer_stamp_url
-        )}" alt="ختم العميل" />
-      : <div className="empty-stamp">لا يوجد ختم</div>;
+        )}" alt="Customer stamp" />`
+      : `<div class="empty-stamp">Customer stamp not available</div>`;
 
     const ramzSignature = signing?.ramz_signature
-      ? <img className="signature-image" src="${escapeHtml(
+      ? `<img class="signature-image" src="${escapeHtml(
           signing.ramz_signature
-        )}" alt="توقيع مدير المختبر" />
-      : <div className="empty-signature">لم يتم اعتماد توقيع رامز</div>;
+        )}" alt="Ramz representative signature" />`
+      : `<div class="empty-signature">Ramz signature not available</div>`;
 
     const ramzStamp = signing?.ramz_stamp_url
-      ? <img className="stamp-image" src="${escapeHtml(
+      ? `<img class="stamp-image" src="${escapeHtml(
           signing.ramz_stamp_url
-        )}" alt="ختم شركة رمز الإمارات" />
-      : <div className="empty-stamp">لا يوجد ختم رامز</div>;
+        )}" alt="Ramz company stamp" />`
+      : `<div class="empty-stamp">Ramz stamp not available</div>`;
+
 
     const customerSignedAt = escapeHtml(
       formatDateTime(signing?.customer_signed_at || null)
@@ -1294,12 +1296,10 @@ const html = `
 
         <div class="signature-column">
           <div class="party-title">
-            المدير الفني لشركة رمز الإمارات لفحص التربة والخرسانة
-          </div>
-
-          <div class="party-company">
             شركة رمز الإمارات لفحص التربة والخرسانة
           </div>
+
+
 
           <div class="party-name">مدير المختبر م. لينا نوح</div>
 
