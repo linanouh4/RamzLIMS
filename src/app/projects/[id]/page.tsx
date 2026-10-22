@@ -21,6 +21,7 @@ export default function ProjectDetailsPage() {
 
   const [loading, setLoading] = useState(true);
   const [savingRequest, setSavingRequest] = useState(false);
+  const [approvingTechnicalManager, setApprovingTechnicalManager] = useState<number | null>(null);
   const [approvingLabManager, setApprovingLabManager] = useState<
     number | null
   >(null);
@@ -478,15 +479,61 @@ export default function ProjectDetailsPage() {
     setPaymentMethod("");
   }
 
-  // =========================
-  // APPROVE LAB MANAGER
-  // =========================
+  // TECHNICAL MANAGER REVIEW
+  async function approveTechnicalManager(request: any) {
+    if (currentUser?.role !== "technical_manager") {
+      alert("هذه الصلاحية مخصصة للمدير الفني.");
+      return;
+    }
 
+    if (!currentUser?.id || request.technical_review_status === "Approved") {
+      alert("تعذر إتمام المراجعة أو أن الطلب معتمد فنيًا مسبقًا.");
+      return;
+    }
+
+    if (!window.confirm(`هل تؤكد المراجعة الفنية للطلب ${request.request_no}؟`)) return;
+
+    setApprovingTechnicalManager(request.id);
+    try {
+      const { data: latest, error: readError } = await supabase
+        .from("external_test_requests")
+        .select("technical_review_status, lab_manager_approval_status")
+        .eq("id", request.id)
+        .single();
+
+      if (readError) throw readError;
+      if (latest.technical_review_status === "Approved") {
+        alert("تمت المراجعة الفنية مسبقًا.");
+        await loadExternalRequests();
+        return;
+      }
+
+      const { error } = await supabase
+        .from("external_test_requests")
+        .update({
+          technical_review_status: "Approved",
+          reviewed_by: Number(currentUser.id),
+          reviewed_at: new Date().toISOString(),
+          status: latest.lab_manager_approval_status === "Approved" ? "Approved" : "Pending"
+        })
+        .eq("id", request.id)
+        .eq("technical_review_status", request.technical_review_status);
+
+      if (error) throw error;
+      alert("تم تسجيل المراجعة الفنية.");
+      await loadExternalRequests();
+    } catch (error: any) {
+      console.error("TECHNICAL REVIEW ERROR:", error);
+      alert("تعذرت المراجعة الفنية: " + (error?.message || "خطأ غير معروف"));
+    } finally {
+      setApprovingTechnicalManager(null);
+    }
+  }
+
+  // APPROVE LAB MANAGER
   async function approveLabManager(request: any) {
     if (!isLabManager) {
-      alert(
-        "ليس لديك صلاحية اعتماد العقد كمدير مختبر."
-      );
+      alert("هذه الصلاحية مخصصة لمدير المختبر.");
       return;
     }
 
@@ -495,80 +542,44 @@ export default function ProjectDetailsPage() {
       return;
     }
 
-    if (
-      request.lab_manager_approval_status ===
-      "Approved"
-    ) {
-      alert(
-        "العقد معتمد مسبقًا من مدير المختبر."
-      );
+    if (request.technical_review_status !== "Approved") {
+      alert("يجب اعتماد الطلب فنيًا أولًا قبل اعتماد مدير المختبر.");
       return;
     }
 
-    const confirmed = window.confirm(
-      `هل أنت متأكد من اعتماد العقد ${request.request_no} كمدير مختبر؟`
-    );
-
-    if (!confirmed) {
+    if (request.lab_manager_approval_status === "Approved") {
+      alert("الطلب معتمد مسبقًا من مدير المختبر.");
       return;
     }
+
+    if (!window.confirm(`هل تؤكد اعتماد الطلب ${request.request_no} كمدير مختبر؟`)) return;
 
     setApprovingLabManager(request.id);
-
     try {
-      const managerSignature =
-        currentUser.signature || null;
-
-      const managerName =
-        currentUser.full_name ||
-        currentUser.username ||
-        "مدير المختبر";
-
+      const managerName = currentUser.full_name || currentUser.username || "مدير المختبر";
       const { error } = await supabase
         .from("external_test_requests")
         .update({
           lab_manager_approval_status: "Approved",
-
-          lab_manager_approved_by:
-            Number(currentUser.id),
-
-          lab_manager_approved_at:
-            new Date().toISOString(),
-
-          lab_manager_signature:
-            managerSignature,
-
-          lab_manager_approved_by_name:
-            managerName,
-
-          status: "Approved",
+          lab_manager_approved_by: Number(currentUser.id),
+          lab_manager_approved_at: new Date().toISOString(),
+          lab_manager_signature: currentUser.signature || null,
+          lab_manager_approved_by_name: managerName,
+          status: "Approved"
         })
-        .eq("id", request.id);
+        .eq("id", request.id)
+        .eq("technical_review_status", "Approved");
 
-      if (error) {
-        console.error(
-          "LAB MANAGER APPROVAL ERROR:",
-          error
-        );
-
-        alert(
-          "حدث خطأ أثناء اعتماد العقد:\n\n" +
-            error.message
-        );
-
-        return;
-      }
-
-      alert(
-        "تم اعتماد العقد بنجاح من مدير المختبر."
-      );
-
+      if (error) throw error;
+      alert("تم اعتماد الطلب من مدير المختبر.");
       await loadExternalRequests();
+    } catch (error: any) {
+      console.error("LAB MANAGER APPROVAL ERROR:", error);
+      alert("تعذر اعتماد الطلب: " + (error?.message || "خطأ غير معروف"));
     } finally {
       setApprovingLabManager(null);
     }
   }
-
   // =========================
   // LOAD PROJECT
   // =========================
@@ -810,6 +821,8 @@ async function loadProject() {
         status,
         technical_review_status,
         technical_review_notes,
+        reviewed_by,
+        reviewed_at,
         approval_token,
         customer_approval_status,
         customer_approved_by,
