@@ -479,6 +479,7 @@ export default function ProjectDetailsPage() {
     setPaymentMethod("");
   }
 
+  
   // TECHNICAL MANAGER REVIEW
   async function approveTechnicalManager(request: any) {
     if (currentUser?.role !== "technical_manager") {
@@ -491,10 +492,35 @@ export default function ProjectDetailsPage() {
       return;
     }
 
-    if (!window.confirm(`هل تؤكد المراجعة الفنية للطلب ${request.request_no}؟`)) return;
+    if (!window.confirm(`هل تؤكد المراجعة الفنية للطلب ${request.request_no}؟`)) {
+      return;
+    }
 
     setApprovingTechnicalManager(request.id);
+
     try {
+      // جلب بيانات المدير الفني الحالية من قاعدة البيانات
+      const { data: reviewer, error: reviewerError } = await supabase
+        .from("users")
+        .select("id, full_name, username, signature")
+        .eq("id", Number(currentUser.id))
+        .single();
+
+      if (reviewerError) throw reviewerError;
+
+      if (!reviewer) {
+        throw new Error("تعذر العثور على بيانات المدير الفني.");
+      }
+
+      const reviewerName =
+        reviewer.full_name || reviewer.username || "المدير الفني";
+
+      if (!reviewer.signature) {
+        alert("لا يوجد توقيع محفوظ لهذا المستخدم. أضيفي توقيعه من صفحة الموظفين أولًا.");
+        return;
+      }
+
+      // التحقق من حالة الطلب الحالية
       const { data: latest, error: readError } = await supabase
         .from("external_test_requests")
         .select("technical_review_status, lab_manager_approval_status")
@@ -502,33 +528,50 @@ export default function ProjectDetailsPage() {
         .single();
 
       if (readError) throw readError;
+
       if (latest.technical_review_status === "Approved") {
-        alert("تمت المراجعة الفنية مسبقًا.");
+        alert("تم اعتماد الطلب فنيًا مسبقًا.");
         await loadExternalRequests();
         return;
       }
 
-      const { error } = await supabase
+      // حفظ الاعتماد الفني والاسم والتوقيع
+      const { data: updatedRequest, error: updateError } = await supabase
         .from("external_test_requests")
         .update({
           technical_review_status: "Approved",
-          reviewed_by: Number(currentUser.id),
+          reviewed_by: Number(reviewer.id),
           reviewed_at: new Date().toISOString(),
-          status: latest.lab_manager_approval_status === "Approved" ? "Approved" : "Pending"
+          technical_reviewed_by_name: reviewerName,
+          technical_manager_signature: reviewer.signature,
+          status:
+            latest.lab_manager_approval_status === "Approved"
+              ? "Approved"
+              : "Pending",
         })
         .eq("id", request.id)
-        .eq("technical_review_status", request.technical_review_status);
+        .neq("technical_review_status", "Approved")
+        .select("id");
 
-      if (error) throw error;
-      alert("تم تسجيل المراجعة الفنية.");
+      if (updateError) throw updateError;
+
+      if (!updatedRequest || updatedRequest.length === 0) {
+        throw new Error("لم يُحفظ الاعتماد؛ ربما اعتمد مستخدم آخر الطلب.");
+      }
+
+      alert("تم تسجيل الاعتماد الفني وحفظ الاسم والتوقيع.");
       await loadExternalRequests();
     } catch (error: any) {
       console.error("TECHNICAL REVIEW ERROR:", error);
-      alert("تعذرت المراجعة الفنية: " + (error?.message || "خطأ غير معروف"));
+      alert(
+        "تعذرت المراجعة الفنية: " +
+          (error?.message || "خطأ غير معروف")
+      );
     } finally {
       setApprovingTechnicalManager(null);
     }
   }
+
 
   // APPROVE LAB MANAGER
   async function approveLabManager(request: any) {
@@ -823,6 +866,9 @@ async function loadProject() {
         technical_review_notes,
         reviewed_by,
         reviewed_at,
+        technical_reviewed_by_name,
+        technical_manager_signature,
+        technical_manager_stamp,
         approval_token,
         customer_approval_status,
         customer_approved_by,
@@ -917,6 +963,77 @@ async function loadProject() {
   // PRINT CONTRACT
   // =========================
 
+  async function handleTechnicalManagerStampUpload(
+    request: any,
+    event: any
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    event.target.value = "";
+
+    if (
+      currentUser?.role !== "technical_manager" &&
+      currentUser?.role !== "admin"
+    ) {
+      alert("رفع الختم مخصص للمدير الفني أو مسؤول النظام.");
+      return;
+    }
+
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      alert("يرجى اختيار صورة PNG أو JPG أو WEBP.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("يجب ألا يتجاوز حجم صورة الختم 5 ميجابايت.");
+      return;
+    }
+
+    try {
+      const stampDataUrl: string = await new Promise(
+        (resolve, reject) => {
+          const reader = new FileReader();
+
+          reader.onload = () => {
+            const result = String(reader.result || "");
+
+            if (!result) {
+              reject(new Error("تعذرت قراءة صورة الختم."));
+              return;
+            }
+
+            resolve(result);
+          };
+
+          reader.onerror = () =>
+            reject(new Error("حدث خطأ أثناء قراءة صورة الختم."));
+
+          reader.readAsDataURL(file);
+        }
+      );
+
+      const { error } = await supabase
+        .from("external_test_requests")
+        .update({
+          technical_manager_stamp: stampDataUrl,
+        })
+        .eq("id", request.id);
+
+      if (error) throw error;
+
+      alert("تم حفظ ختم الشركة بنجاح.");
+      await loadExternalRequests();
+    } catch (error: any) {
+      console.error("TECHNICAL MANAGER STAMP ERROR:", error);
+      alert(
+        "تعذر حفظ الختم: " +
+          (error?.message || "خطأ غير معروف")
+      );
+    }
+  }
+
   function printExternalRequest(
     request: any
   ) {
@@ -952,6 +1069,16 @@ async function loadProject() {
       request.lab_manager_approved_at
         ? new Date(
             request.lab_manager_approved_at
+          ).toLocaleString("ar-SA")
+        : "-";
+
+    const technicalManagerApproved =
+      request.technical_review_status === "Approved";
+
+    const technicalManagerApprovalDate =
+      request.reviewed_at
+        ? new Date(
+            request.reviewed_at
           ).toLocaleString("ar-SA")
         : "-";
 
@@ -1495,6 +1622,87 @@ async function loadProject() {
                     `
                 }
 
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="section">
+
+            <div class="section-title">
+              اعتماد المدير الفني
+            </div>
+
+            <div class="section-body">
+
+              <div class="grid">
+
+                <div class="field">
+                  <div class="label">الحالة</div>
+                  <div class="value">
+                    ${
+                      technicalManagerApproved
+                        ? "تم الاعتماد"
+                        : "بانتظار الاعتماد الفني"
+                    }
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="label">اسم المدير الفني</div>
+                  <div class="value">
+                    ${request.technical_reviewed_by_name || "-"}
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="label">تاريخ الاعتماد</div>
+                  <div class="value">
+                    ${technicalManagerApprovalDate}
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="signature-box">
+                <div class="label">توقيع المدير الفني</div>
+
+                ${
+                  request.technical_manager_signature
+                    ? `
+                      <img
+                        src="${request.technical_manager_signature}"
+                        class="signature"
+                        alt="توقيع المدير الفني"
+                      />
+                    `
+                    : `
+                      <div class="empty">
+                        لم يتم حفظ توقيع المدير الفني
+                      </div>
+                    `
+                }
+              </div>
+
+              <div class="signature-box">
+                <div class="label">ختم الشركة</div>
+
+                ${
+                  request.technical_manager_stamp
+                    ? `
+                      <img
+                        src="${request.technical_manager_stamp}"
+                        class="signature"
+                        alt="ختم الشركة"
+                      />
+                    `
+                    : `
+                      <div class="empty">
+                        لم يتم حفظ ختم الشركة لهذا الطلب
+                      </div>
+                    `
+                }
               </div>
 
             </div>
@@ -2207,6 +2415,24 @@ async function loadProject() {
                       >
                         🖨️ طباعة العقد
                       </button>
+
+                      {(currentUser?.role === "technical_manager" ||
+                        currentUser?.role === "admin") && (
+                        <label className="border border-purple-700 text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-lg text-sm cursor-pointer">
+                          رفع ختم الشركة
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={(event) =>
+                              handleTechnicalManagerStampUpload(
+                                request,
+                                event
+                              )
+                            }
+                          />
+                        </label>
+                      )}
 
                       {customerApproved &&
                         request.customer_signature && (

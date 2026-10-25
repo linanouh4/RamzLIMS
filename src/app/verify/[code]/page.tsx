@@ -231,8 +231,8 @@ export default function VerifyContractPage({
 
             <p className="mt-2 text-sm leading-7 text-amber-900">
               يؤكد هذا الفحص وجود سجل عقد نهائي مطابق لرمز التحقق.
-              لكنه لا يثبت وحده أن نسخة PDF المعروضة أو المطبوعة لم يتم
-              تعديلها بعد إصدارها.
+                         
+             
             </p>
           </section>
 

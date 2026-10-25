@@ -1200,7 +1200,7 @@ const html = `
 
         <div class="header-cell">
           <span class="header-label">نوع الوثيقة</span>
-          <span class="header-value title">عقد خدمات فحص التربة والخرسانة</span>
+          <span class="header-value title">Customer Contract عقد العميل    </span>
         </div>
 
         <div class="header-cell">
@@ -1322,7 +1322,7 @@ const html = `
     <div class="footer">
       شركة رمز الإمارات لفحص التربة والخرسانة
       |
-      عقد خدمات فحص التربة والخرسانة
+     Customer Contract عقد العميل
       |
       ${contractNumber}
     </div>
