@@ -12,6 +12,10 @@ import AddSampleModal from "@/components/AddSampleModal";
 export default function SamplesPage() {
   const router = useRouter();
 
+  const [currentRole, setCurrentRole] = useState<string | null>(null);
+  const canDelete = Boolean(currentRole) && currentRole !== "technical_manager";
+  const canEdit = Boolean(currentRole) && currentRole !== "technical_manager";
+
   const [samples, setSamples] = useState<any[]>([]);
   const [filteredSamples, setFilteredSamples] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -66,6 +70,8 @@ export default function SamplesPage() {
         router.push("/");
         return;
       }
+
+      setCurrentRole(currentUser.role?.trim().toLowerCase() || null);
 
       /*
        * أولًا نجيب جميع العينات
@@ -248,6 +254,18 @@ export default function SamplesPage() {
   }
 
   function openEditModal(sample: any) {
+    const currentUser = getSavedUser();
+
+    if (!currentUser || !currentUser.role?.trim()) {
+      alert("لم يتم التعرف على المستخدم الحالي.");
+      return;
+    }
+
+    if (currentUser.role.trim().toLowerCase() === "technical_manager") {
+      alert("المدير الفني غير مخوّل بتعديل العينات.");
+      return;
+    }
+
     setSelectedSample(sample);
     setOpenModal(true);
   }
@@ -259,6 +277,11 @@ export default function SamplesPage() {
       alert(
         "لم يتم التعرف على المستخدم الحالي."
       );
+      return;
+    }
+
+    if (currentUser.role?.trim().toLowerCase() === "technical_manager") {
+      alert("المدير الفني غير مخوّل بحذف العينات.");
       return;
     }
 
@@ -339,11 +362,7 @@ export default function SamplesPage() {
 
             <button
               onClick={() => {
-                if (window.history.length > 1) {
-                  router.back();
-                } else {
-                  router.push("/dashboard");
-                }
+                router.replace("/dashboard");
               }}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
@@ -486,6 +505,7 @@ export default function SamplesPage() {
                             View
                           </Link>
 
+                          {canEdit && (
                           <button
                             onClick={() =>
                               openEditModal(sample)
@@ -494,7 +514,9 @@ export default function SamplesPage() {
                           >
                             Edit
                           </button>
+                          )}
 
+                          {canDelete && (
                           <button
                             onClick={() =>
                               deleteSample(
@@ -505,6 +527,7 @@ export default function SamplesPage() {
                           >
                             Delete
                           </button>
+                          )}
 
                         </div>
 

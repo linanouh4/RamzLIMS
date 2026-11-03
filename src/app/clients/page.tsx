@@ -28,6 +28,10 @@ export default function ClientsPage() {
 
   const [loading, setLoading] = useState(true);
 
+  const currentRole = currentUser?.role?.trim().toLowerCase();
+  const canEdit = Boolean(currentRole) && currentRole !== "technical_manager";
+  const canDelete = Boolean(currentRole) && currentRole !== "technical_manager";
+
   useEffect(() => {
     loadClients();
   }, []);
@@ -161,6 +165,11 @@ export default function ClientsPage() {
       return;
     }
 
+    if (currentUser.role?.trim().toLowerCase() === "technical_manager") {
+      alert("المدير الفني غير مخوّل بحذف العملاء.");
+      return;
+    }
+
     const client = clients.find(
       (item) => Number(item.id) === id
     );
@@ -221,6 +230,16 @@ export default function ClientsPage() {
   }
 
   function editClient(client: any) {
+    if (!currentUser || !currentRole) {
+      alert("لم يتم التعرف على المستخدم الحالي");
+      return;
+    }
+
+    if (currentRole === "technical_manager") {
+      alert("المدير الفني غير مخوّل بتعديل العملاء.");
+      return;
+    }
+
     /*
      * حماية إضافية لمدير الفرع
      */
@@ -523,6 +542,7 @@ export default function ClientsPage() {
                               Open
                             </button>
 
+                            {canEdit && (
                             <button
                               onClick={() =>
                                 editClient(
@@ -533,7 +553,9 @@ export default function ClientsPage() {
                             >
                               Edit
                             </button>
+                            )}
 
+                            {canDelete && (
                             <button
                               onClick={() =>
                                 deleteClient(
@@ -546,6 +568,7 @@ export default function ClientsPage() {
                             >
                               Delete
                             </button>
+                            )}
 
                           </div>
                         </td>

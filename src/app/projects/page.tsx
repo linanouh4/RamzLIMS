@@ -451,6 +451,11 @@ export default function ProjectsPage() {
   async function deleteProject(
     id: number
   ) {
+    if (currentUser?.role === "technical_manager") {
+      alert("المدير الفني غير مخوّل بحذف المشاريع.");
+      return;
+    }
+
     if (!currentUser) {
       alert(
         "لم يتم التعرف على المستخدم الحالي."
@@ -865,18 +870,21 @@ export default function ProjectsPage() {
                               Open
                             </button>
 
-                            <button
-                              onClick={() =>
-                                deleteProject(
-                                  Number(
-                                    project.id
-                                  )
-                                )
-                              }
-                              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
-                            >
-                              Delete
-                            </button>
+                            {currentUser &&
+                              currentUser.role !== "technical_manager" && (
+                                <button
+                                  onClick={() =>
+                                    deleteProject(
+                                      Number(
+                                        project.id
+                                      )
+                                    )
+                                  }
+                                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                                >
+                                  Delete
+                                </button>
+                              )}
 
                           </div>
 

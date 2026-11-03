@@ -300,6 +300,7 @@ export default function SampleDetailsPage() {
         <div className="flex items-center gap-3 mb-8">
           <Link
             href="/samples"
+            replace
             className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             ← Back to Samples

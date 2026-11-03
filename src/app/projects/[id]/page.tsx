@@ -973,11 +973,8 @@ async function loadProject() {
 
     event.target.value = "";
 
-    if (
-      currentUser?.role !== "technical_manager" &&
-      currentUser?.role !== "admin"
-    ) {
-      alert("رفع الختم مخصص للمدير الفني أو مسؤول النظام.");
+    if (currentUser?.role?.trim().toLowerCase() !== "admin") {
+      alert("رفع ختم الشركة مخصص لمسؤول النظام فقط.");
       return;
     }
 
@@ -2298,7 +2295,67 @@ async function loadProject() {
                       )}
 
                     </div>
+                    {/* TECHNICAL MANAGER */}
+                    <div className="mt-5 border-t pt-4">
+                      <h4 className="font-bold mb-2">
+                        اعتماد المدير الفني
+                      </h4>
 
+                      {request.technical_review_status === "Approved" ? (
+                        <div className="text-sm space-y-2">
+                          <p className="text-green-700 font-semibold">
+                            تم اعتماد الطلب فنيًا
+                          </p>
+
+                          <p>
+                            الاسم:{" "}
+                            <strong>
+                              {request.technical_reviewed_by_name || "-"}
+                            </strong>
+                          </p>
+
+                          <p>
+                            تاريخ الاعتماد:{" "}
+                            <strong>
+                              {request.reviewed_at
+                                ? new Date(request.reviewed_at).toLocaleString(
+                                    "ar-SA"
+                                  )
+                                : "-"}
+                            </strong>
+                          </p>
+
+                          {request.technical_manager_signature && (
+                            <img
+                              src={request.technical_manager_signature}
+                              alt="توقيع المدير الفني"
+                              className="max-w-[250px] max-h-[100px] object-contain border rounded-lg bg-white p-2"
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-amber-700 mb-3">
+                            بانتظار اعتماد المدير الفني
+                          </p>
+
+                          {currentUser?.role === "technical_manager" && (
+                            <button
+                              type="button"
+                              onClick={() => approveTechnicalManager(request)}
+                              disabled={
+                                approvingTechnicalManager === request.id
+                              }
+                              className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg"
+                            >
+                              {approvingTechnicalManager === request.id
+                                ? "جارٍ الاعتماد الفني..."
+                                : "اعتماد المدير الفني"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     {/* LAB MANAGER */}
 
                     <div className="mt-5 border-t pt-4">
@@ -2416,8 +2473,7 @@ async function loadProject() {
                         🖨️ طباعة العقد
                       </button>
 
-                      {(currentUser?.role === "technical_manager" ||
-                        currentUser?.role === "admin") && (
+                      {currentUser?.role?.trim().toLowerCase() === "admin" && (
                         <label className="border border-purple-700 text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-lg text-sm cursor-pointer">
                           رفع ختم الشركة
                           <input

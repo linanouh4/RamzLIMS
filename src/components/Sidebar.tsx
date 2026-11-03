@@ -146,6 +146,29 @@ export default function Sidebar({ user }: Props) {
     </Link>
   </>
 )}
+              {role === "technical_manager" && (
+          <>
+            <Link href="/dashboard" className={linkClass("/dashboard")}>
+              🏠 لوحة التحكم
+            </Link>
+
+            <Link href="/samples" className={linkClass("/samples")}>
+              🧪 إدارة العينات
+            </Link>
+
+            <Link href="/clients" className={linkClass("/clients")}>
+              👥 إدارة العملاء
+            </Link>
+
+            <Link href="/projects" className={linkClass("/projects")}>
+              📁 المشاريع وطلبات الفحص
+            </Link>
+
+            <Link href="/tests" className={linkClass("/tests")}>
+              🔬 إدارة الفحوصات
+            </Link>
+          </>
+        )}
 
         {role === "lab_manager" && (
           <>
