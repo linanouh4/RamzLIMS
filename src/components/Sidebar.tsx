@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearSavedUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 type Props = {
   user?: {
@@ -15,12 +17,24 @@ type Props = {
 export default function Sidebar({ user }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const role = user?.role?.toLowerCase();
 
-  const logout = () => {
-    clearSavedUser();
-    router.push("/");
+  const logout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setLogoutError("");
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) throw error;
+      clearSavedUser();
+      router.replace("/");
+    } catch {
+      setLogoutError("تعذر تسجيل الخروج. تحققي من الاتصال وأعيدي المحاولة.");
+      setLoggingOut(false);
+    }
   };
 
   const linkClass = (href: string) =>
@@ -52,35 +66,27 @@ export default function Sidebar({ user }: Props) {
             <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
-
             <Link href="/employees" className={linkClass("/employees")}>
               👤 Users / Employees
             </Link>
-
             <Link href="/clients" className={linkClass("/clients")}>
               👥 All Clients
             </Link>
-
             <Link href="/projects" className={linkClass("/projects")}>
               🏗 All Projects
             </Link>
-
             <Link href="/task-results" className={linkClass("/task-results")}>
               📊 Task Results
             </Link>
-
             <Link href="/samples" className={linkClass("/samples")}>
               🧪 Samples
             </Link>
-
             <Link href="/tests" className={linkClass("/tests")}>
               🔬 Tests
             </Link>
-
             <Link href="/reports" className={linkClass("/reports")}>
               📑 Reports
             </Link>
-
             <Link href="/contracts" className={linkClass("/contracts")}>
               📝 Contracts
             </Link>
@@ -92,19 +98,15 @@ export default function Sidebar({ user }: Props) {
             <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
-
             <Link href="/clients" className={linkClass("/clients")}>
               👥 All Clients
             </Link>
-
             <Link href="/projects" className={linkClass("/projects")}>
               🏗 All Projects
             </Link>
-
             <Link href="/contracts" className={linkClass("/contracts")}>
               📝 Contracts
             </Link>
-
             <Link href="/reports" className={linkClass("/reports")}>
               📑 Reports
             </Link>
@@ -112,58 +114,48 @@ export default function Sidebar({ user }: Props) {
         )}
 
         {role === "branch_manager" && (
-  <>
-    <Link href="/dashboard" className={linkClass("/dashboard")}>
-      🏠 Dashboard
-    </Link>
+          <>
+            <Link href="/dashboard" className={linkClass("/dashboard")}>
+              🏠 Dashboard
+            </Link>
+            <Link href="/clients" className={linkClass("/clients")}>
+              👥 عملاء الفرع
+            </Link>
+            <Link href="/projects" className={linkClass("/projects")}>
+              🏗 مشاريع الفرع
+            </Link>
+            <Link href="/samples" className={linkClass("/samples")}>
+              🧪 Samples
+            </Link>
+            <Link href="/tests" className={linkClass("/tests")}>
+              🔬 Tests
+            </Link>
+            <Link href="/contracts" className={linkClass("/contracts")}>
+              📝 عقود العملاء
+            </Link>
+            <Link href="/task-results" className={linkClass("/task-results")}>
+              📊 نتائج المهام
+            </Link>
+            <Link href="/reports" className={linkClass("/reports")}>
+              📑 تقارير الفرع
+            </Link>
+          </>
+        )}
 
-    <Link href="/clients" className={linkClass("/clients")}>
-      👥 عملاء الفرع
-    </Link>
-
-    <Link href="/projects" className={linkClass("/projects")}>
-      🏗 مشاريع الفرع
-    </Link>
-
-    <Link href="/samples" className={linkClass("/samples")}>
-      🧪 Samples
-    </Link>
-
-    <Link href="/tests" className={linkClass("/tests")}>
-      🔬 Tests
-    </Link>
-
-    <Link href="/contracts" className={linkClass("/contracts")}>
-      📝 عقود العملاء
-    </Link>
-
-    <Link href="/task-results" className={linkClass("/task-results")}>
-      📊 نتائج المهام
-    </Link>
-
-    <Link href="/reports" className={linkClass("/reports")}>
-      📑 تقارير الفرع
-    </Link>
-  </>
-)}
-              {role === "technical_manager" && (
+        {role === "technical_manager" && (
           <>
             <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 لوحة التحكم
             </Link>
-
             <Link href="/samples" className={linkClass("/samples")}>
               🧪 إدارة العينات
             </Link>
-
             <Link href="/clients" className={linkClass("/clients")}>
               👥 إدارة العملاء
             </Link>
-
             <Link href="/projects" className={linkClass("/projects")}>
               📁 المشاريع وطلبات الفحص
             </Link>
-
             <Link href="/tests" className={linkClass("/tests")}>
               🔬 إدارة الفحوصات
             </Link>
@@ -175,23 +167,18 @@ export default function Sidebar({ user }: Props) {
             <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
-
             <Link href="/projects" className={linkClass("/projects")}>
               🏗 Projects
             </Link>
-
             <Link href="/task-results" className={linkClass("/task-results")}>
               📊 Task Results
             </Link>
-
             <Link href="/samples" className={linkClass("/samples")}>
               🧪 Samples
             </Link>
-
             <Link href="/tests" className={linkClass("/tests")}>
               🔬 Tests
             </Link>
-
             <Link href="/reports" className={linkClass("/reports")}>
               📑 Reports
             </Link>
@@ -203,15 +190,12 @@ export default function Sidebar({ user }: Props) {
             <Link href="/dashboard" className={linkClass("/dashboard")}>
               🏠 Dashboard
             </Link>
-
             <Link href="/clients" className={linkClass("/clients")}>
               👥 Clients
             </Link>
-
             <Link href="/projects" className={linkClass("/projects")}>
               🏗 Projects
             </Link>
-
             <Link href="/contracts" className={linkClass("/contracts")}>
               📝 Contracts
             </Link>
@@ -223,32 +207,30 @@ export default function Sidebar({ user }: Props) {
             <Link href="/technician" className={linkClass("/technician")}>
               🏠 Dashboard
             </Link>
-
-            <Link
-              href="/technician/tasks"
-              className={linkClass("/technician/tasks")}
-            >
+            <Link href="/technician/tasks" className={linkClass("/technician/tasks")}>
               🛠️ My Tasks
             </Link>
-
-            <Link
-              href="/technician/tests"
-              className={linkClass("/technician/tests")}
-            >
+            <Link href="/technician/tests" className={linkClass("/technician/tests")}>
               🔬 My Tests
             </Link>
-
             <Link href="/task-results" className={linkClass("/task-results")}>
               📋 My Results
             </Link>
           </>
         )}
 
+        {logoutError && (
+          <p role="alert" dir="rtl" className="rounded-lg bg-red-100 p-3 text-sm text-red-800">
+            {logoutError}
+          </p>
+        )}
         <button
+          type="button"
           onClick={logout}
-          className="w-full text-right rounded-lg p-3 mt-8 bg-red-600 hover:bg-red-700 transition"
+          disabled={loggingOut}
+          className="w-full text-right rounded-lg p-3 mt-8 bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
         >
-          🚪 Logout
+          {loggingOut ? "جارٍ تسجيل الخروج..." : "🚪 Logout"}
         </button>
       </nav>
     </aside>
