@@ -39,6 +39,61 @@ export default function ProjectDetailsPage() {
   const [testType, setTestType] = useState("");
 
   // =========================
+  // Optional link to a specific test on a project sample.
+  const [linkTaskId, setLinkTaskId] = useState<number | null>(null);
+  const [sampleTestId, setSampleTestId] = useState("");
+  const [choices, setChoices] = useState<{ id: string; label: string }[]>([]);
+  const [choiceMessage, setChoiceMessage] = useState("");
+  const [savingTask, setSavingTask] = useState(false);
+
+  useEffect(() => {
+    if (!showTaskModal && linkTaskId === null) return;
+    let active = true;
+    setSampleTestId("");
+    setChoices([]);
+    setChoiceMessage("جارٍ تحميل فحوصات المشروع...");
+    async function loadChoices() {
+      const samplesResponse = await supabase.from("samples")
+        .select("id,sample_number").eq("project_id", Number(id));
+      if (samplesResponse.error) throw samplesResponse.error;
+      const projectSamples = samplesResponse.data || [];
+      if (!projectSamples.length) return [];
+      const rows = await supabase.from("sample_tests").select("id,sample_id,test_id")
+        .in("sample_id", projectSamples.map(s => s.id)).order("id");
+      if (rows.error) throw rows.error;
+      if (!rows.data?.length) return [];
+      const names = await supabase.from("tests").select("id,test_name")
+        .in("id", Array.from(new Set(rows.data.map(r => r.test_id))));
+      if (names.error) throw names.error;
+      return rows.data.map(r => ({
+        id: String(r.id),
+        label: "عينة " + (projectSamples.find(s => s.id === r.sample_id)?.sample_number || r.sample_id)
+          + " — " + (names.data?.find(t => t.id === r.test_id)?.test_name || "فحص " + r.test_id)
+          + " (#" + r.id + ")",
+      }));
+    }
+    loadChoices().then(items => {
+      if (!active) return;
+      setChoices(items);
+      setChoiceMessage(items.length ? "" : "لا توجد فحوصات عينات متاحة لهذا المشروع.");
+    }).catch(() => {
+      if (active) setChoiceMessage("تعذّر تحميل فحوصات المشروع. أعيدي فتح النافذة للمحاولة.");
+    });
+    return () => { active = false; };
+  }, [id, showTaskModal, linkTaskId]);
+
+  const sampleTestPicker = (
+    <div className="mb-4">
+      <label className="block mb-2" htmlFor="task-sample-test">فحص العينة</label>
+      <select id="task-sample-test" className="w-full border rounded-lg p-3"
+        value={sampleTestId} onChange={e => setSampleTestId(e.target.value)}>
+        <option value="">{linkTaskId === null ? "ربط الفحص لاحقًا" : "اختاري فحص العينة"}</option>
+        {choices.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+      </select>
+      {choiceMessage && <p className="mt-1 text-sm">{choiceMessage}</p>}
+    </div>
+  );
+
   // CURRENT USER
   // =========================
 
@@ -119,6 +174,7 @@ export default function ProjectDetailsPage() {
   // =========================
 
   async function saveTask() {
+    if (savingTask) return;
     if (!canAssignTask) {
       alert("ليس لديك صلاحية إسناد المهام.");
       return;
@@ -146,10 +202,13 @@ export default function ProjectDetailsPage() {
       return;
     }
 
+    setSavingTask(true);
+    try {
     const { error } = await supabase.from("tasks").insert([
       {
         project_id: Number(id),
         technician_id: Number(technicianId),
+        sample_test_id: sampleTestId ? Number(sampleTestId) : null,
         task_name: taskName,
         task_description: taskDescription,
         priority,
@@ -174,6 +233,33 @@ export default function ProjectDetailsPage() {
     setTestType("");
 
     await loadTasks();
+    } catch {
+      alert("تعذر تأكيد حفظ المهمة. حدّثي القائمة قبل إعادة المحاولة.");
+    } finally {
+      setSavingTask(false);
+    }
+  }
+
+  async function linkExistingTask() {
+    if (savingTask || !canAssignTask || !linkTaskId || !sampleTestId) return;
+    setSavingTask(true);
+    try {
+      const { data, error } = await supabase.from("tasks")
+        .update({ sample_test_id: Number(sampleTestId) })
+        .eq("id", linkTaskId).eq("project_id", Number(id))
+        .is("sample_test_id", null).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        alert("تعذّر الربط. تحققي من صلاحيتك وحدّثي قائمة المهام.");
+        return;
+      }
+      setLinkTaskId(null);
+      await loadTasks();
+    } catch {
+      alert("تعذّر تأكيد ربط الفحص. حدّثي قائمة المهام.");
+    } finally {
+      setSavingTask(false);
+    }
   }
 
   // =========================
@@ -1837,6 +1923,7 @@ async function loadProject() {
         priority,
         status,
         test_type,
+        sample_test_id,
         is_test,
         users:technician_id (
           id,
@@ -2793,6 +2880,14 @@ async function loadProject() {
                           <p className="text-xs text-gray-400">
                             رقم المهمة: {task.id}
                           </p>
+                          {task.sample_test_id ? (
+                            <p>رقم سجل فحص العينة: {task.sample_test_id}</p>
+                          ) : canAssignTask && (
+                            <button type="button" className="text-blue-700 underline"
+                              onClick={() => { setSampleTestId(""); setLinkTaskId(task.id); }}>
+                              ربط فحص عينة
+                            </button>
+                          )}
 
                         </div>
 
@@ -2955,6 +3050,8 @@ async function loadProject() {
 
             </div>
 
+            {sampleTestPicker}
+
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">
@@ -3035,6 +3132,7 @@ async function loadProject() {
               </button>
 
               <button
+                disabled={savingTask}
                 onClick={saveTask}
                 className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
               >
@@ -3047,6 +3145,20 @@ async function loadProject() {
 
         </div>
 
+      )}
+
+      {linkTaskId !== null && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg">
+            <h2 className="font-bold text-xl mb-4">ربط فحص بالمهمة رقم {linkTaskId}</h2>
+            {sampleTestPicker}
+            <div className="flex gap-3">
+              <button type="button" disabled={savingTask || !sampleTestId}
+                onClick={linkExistingTask} className="bg-blue-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">حفظ الربط</button>
+              <button type="button" disabled={savingTask} onClick={() => setLinkTaskId(null)}>إلغاء</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* =========================
