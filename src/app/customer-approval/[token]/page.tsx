@@ -3,6 +3,7 @@
 import SignatureCanvas from "react-signature-canvas";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import ExternalTestRequestForm, { printExternalForm } from "@/components/ExternalTestRequestForm";
 import { supabase } from "@/lib/supabase";
 
 export default function CustomerApprovalPage() {
@@ -15,6 +16,7 @@ export default function CustomerApprovalPage() {
 
   const [customerName, setCustomerName] = useState("");
   const [signature, setSignature] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const signatureRef = useRef<SignatureCanvas | null>(null);
 
@@ -27,29 +29,9 @@ export default function CustomerApprovalPage() {
   async function loadRequest() {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("external_test_requests")
-      .select(`
-        id,
-        request_no,
-        order_no,
-        request_date,
-        customer_name,
-        sample_kind,
-        quantity,
-        requested_test,
-        test_method,
-        payment_method,
-        status,
-        customer_approval_status,
-        customer_approved_by,
-        customer_approved_at,
-        customer_signature
-      `)
-      .eq("approval_token", token)
-      .single();
+    const { data, error } = await supabase.rpc("qf70102_customer_request", { p_token: token });
 
-    if (error) {
+    if (error || !data) {
       console.error("LOAD APPROVAL REQUEST ERROR:", error);
       setRequest(null);
       setLoading(false);
@@ -68,6 +50,8 @@ export default function CustomerApprovalPage() {
   }
 
   async function approveRequest() {
+    if (approving) return;
+    if (!acceptedTerms) { alert("يرجى تأكيد الموافقة على الاختبارات والمواصفات والمدة والشروط والفروق الموثقة."); return; }
     if (!customerName.trim()) {
       alert("الرجاء إدخال اسم العميل أو ممثل العميل");
       return;
@@ -95,34 +79,13 @@ export default function CustomerApprovalPage() {
     setApproving(true);
 
     try {
-      const { data, error } = await supabase
-        .from("external_test_requests")
-        .update({
-          customer_approval_status: "Approved",
-          customer_approved_by: customerName.trim(),
-          customer_approved_at: new Date().toISOString(),
-          customer_signature: signatureData,
-          status: "Customer Approved",
-        })
-        .eq("approval_token", token)
-        .select(`
-          id,
-          request_no,
-          order_no,
-          request_date,
-          customer_name,
-          sample_kind,
-          quantity,
-          requested_test,
-          test_method,
-          payment_method,
-          status,
-          customer_approval_status,
-          customer_approved_by,
-          customer_approved_at,
-          customer_signature
-        `)
-        .single();
+      const { data, error } = await supabase.rpc("qf70102_approve_customer", {
+        p_token: token,
+        p_name: customerName.trim(),
+        p_signature: signatureData,
+        p_accept_terms: acceptedTerms,
+        p_expected_updated_at: request.updated_at,
+      });
 
       if (error) {
         console.error("APPROVE REQUEST ERROR:", error);
@@ -155,7 +118,7 @@ export default function CustomerApprovalPage() {
   }
 
   function printRequest() {
-    window.print();
+    if (request) printExternalForm(request.id);
   }
 
   if (loading) {
@@ -416,79 +379,7 @@ export default function CustomerApprovalPage() {
               REQUEST DETAILS
           ================================================== */}
 
-          <div className="bg-white mb-6 print-card">
-
-            <div className="border-b p-5">
-              <h2 className="text-xl font-bold">
-                بيانات طلب الفحص
-              </h2>
-            </div>
-
-            <div className="p-6">
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                <Info
-                  label="اسم العميل"
-                  value={
-                    request.customer_name || "-"
-                  }
-                />
-
-                <Info
-                  label="رقم طلب العميل"
-                  value={
-                    request.order_no || "-"
-                  }
-                />
-
-                <Info
-                  label="تاريخ الطلب"
-                  value={
-                    request.request_date || "-"
-                  }
-                />
-
-                <Info
-                  label="نوع العينة"
-                  value={
-                    request.sample_kind || "-"
-                  }
-                />
-
-                <Info
-                  label="عدد العينات"
-                  value={
-                    request.quantity ?? "-"
-                  }
-                />
-
-                <Info
-                  label="الاختبار المطلوب"
-                  value={
-                    request.requested_test || "-"
-                  }
-                />
-
-                <Info
-                  label="طريقة / مواصفة الاختبار"
-                  value={
-                    request.test_method || "-"
-                  }
-                />
-
-                <Info
-                  label="طريقة الدفع"
-                  value={
-                    request.payment_method || "-"
-                  }
-                />
-
-              </div>
-
-            </div>
-
-          </div>
+          <ExternalTestRequestForm request={request} />
 
           {/* =================================================
               CUSTOMER DECLARATION
@@ -506,13 +397,7 @@ export default function CustomerApprovalPage() {
 
               <div className="border p-5 leading-8">
 
-                <p>
-                  أقر أنا الموقع أدناه بأنني اطلعت
-                  على بيانات طلب الفحص الموضحة أعلاه،
-                  وأنها تمثل متطلبات الفحص المطلوبة،
-                  وأوافق على تنفيذ الاختبارات المذكورة
-                  وفقًا للبيانات الموضحة في الطلب.
-                </p>
+                <p>أوافق على الاختبارات والمواصفات والمدة والشروط المدونة أعلاه وأي فروق موثقة.</p>
 
               </div>
 
@@ -585,6 +470,10 @@ export default function CustomerApprovalPage() {
 
               </div>
 
+              <label className="mb-5 flex items-start gap-3">
+                <input type="checkbox" checked={acceptedTerms} disabled={approving} onChange={e => setAcceptedTerms(e.target.checked)} className="mt-1" />
+                <span>أوافق على الاختبارات والمواصفات والمدة والشروط المدونة أعلاه وأي فروق موثقة، وأؤكد أنني العميل أو ممثله المخول.</span>
+              </label>
               {/* APPROVE */}
 
               <button
@@ -771,24 +660,3 @@ export default function CustomerApprovalPage() {
   );
 }
 
-function Info({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="border rounded-lg p-4 print-field">
-
-      <p className="text-sm text-gray-500 mb-1">
-        {label}
-      </p>
-
-      <p className="font-semibold break-words">
-        {value}
-      </p>
-
-    </div>
-  );
-}

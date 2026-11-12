@@ -406,7 +406,7 @@ export default function ContractsPage() {
       case "Customer Signed":
         return "تم توقيع العميل";
       case "Pending Ramz Approval":
-        return "بانتظار اعتماد رامز";
+        return "بانتظار اعتماد مدير المختبر";
       case "Approved":
         return "تم اعتماد العقد";
       case "Finalized":
@@ -1614,7 +1614,7 @@ const html = `
                                     : "🔗 إرسال رابط التوقيع"}
                                 </button>
                               )}
-{currentUser?.role?.trim().toLowerCase() === "lab_manager" &&
+{Number(currentUser?.id) === 1 && currentUser?.role?.trim().toLowerCase() === "admin" &&
   signing?.status === "Pending Ramz Approval" && (
     <button
       type="button"

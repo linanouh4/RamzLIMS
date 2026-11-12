@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 import { getSavedUser } from "@/lib/auth";
+import ExternalTestRequestForm, { RequestFields, requestFields, reviewFields, approvalFields, toDraft, toPayload, validateReview, printExternalForm, type RequestDraft } from "@/components/ExternalTestRequestForm";
 import { permissions } from "@/lib/permissions";
 
 export default function ProjectDetailsPage() {
@@ -116,15 +117,12 @@ export default function ProjectDetailsPage() {
 
   const isAdmin = userRole === "admin";
 
-  const canCreateContract =
-    userPermissions?.createContract === true;
+  const canCreateContract = userRole === "technical_manager" || userPermissions?.createContract === true;
 
   const canAssignTask =
     userPermissions?.assignTask === true;
 
-  const isLabManager =
-    currentUser?.role === "lab_manager" ||
-    currentUser?.role === "admin";
+  const isLabManager = Number(currentUser?.id) === 1 && currentUser?.role === "admin";
 
   // =========================
   // EXTERNAL TEST REQUEST
@@ -146,6 +144,15 @@ export default function ProjectDetailsPage() {
   const [requestedTest, setRequestedTest] = useState("");
   const [testMethod, setTestMethod] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [requestExtras, setRequestExtras] = useState<RequestDraft>({});
+  const [reviewRequest, setReviewRequest] = useState<any>(null);
+  const [reviewDraft, setReviewDraft] = useState<RequestDraft>({});
+  const [decisionRequest, setDecisionRequest] = useState<any>(null);
+  const [executionDecision, setExecutionDecision] = useState("");
+  const [consentRequest, setConsentRequest] = useState<any>(null);
+  const [consentDraft, setConsentDraft] = useState<RequestDraft>({});
+  const [consentName, setConsentName] = useState("");
+  const [savingConsent, setSavingConsent] = useState(false);
 
   // =========================
   // LOAD
@@ -302,6 +309,7 @@ export default function ProjectDetailsPage() {
   // =========================
 
  async function saveExternalRequest() {
+  if (savingRequest) return;
   if (!canCreateContract) {
     alert("ليس لديك صلاحية إنشاء عقد العميل.");
     return;
@@ -317,6 +325,10 @@ export default function ProjectDetailsPage() {
     return;
   }
 
+  if (sampleQuantity && (!Number.isInteger(Number(sampleQuantity)) || Number(sampleQuantity) < 1)) {
+    alert("عدد العينات يجب أن يكون عددًا صحيحًا موجبًا.");
+    return;
+  }
   setSavingRequest(true);
 
   try {
@@ -445,6 +457,8 @@ export default function ProjectDetailsPage() {
             freshClient.phone ||
             null,
 
+          ...toPayload(requestExtras, requestFields),
+          project_name: freshProject.project_name || null,
           sample_kind: sampleKind,
 
           quantity: sampleQuantity
@@ -563,11 +577,15 @@ export default function ProjectDetailsPage() {
     setRequestedTest("");
     setTestMethod("");
     setPaymentMethod("");
+    setRequestExtras({});
   }
 
   
   // TECHNICAL MANAGER REVIEW
-  async function approveTechnicalManager(request: any) {
+  async function approveTechnicalManager(request: any, draft: RequestDraft) {
+    if (approvingTechnicalManager !== null) return;
+    const validation = validateReview(draft);
+    if (validation) { alert(validation); return; }
     if (currentUser?.role !== "technical_manager") {
       alert("هذه الصلاحية مخصصة للمدير الفني.");
       return;
@@ -615,6 +633,9 @@ export default function ProjectDetailsPage() {
 
       if (readError) throw readError;
 
+      if (latest.lab_manager_approval_status === "Approved") {
+        throw new Error("الطلب معتمد من مدير المختبر ولا يمكن تغيير مراجعته الفنية.");
+      }
       if (latest.technical_review_status === "Approved") {
         alert("تم اعتماد الطلب فنيًا مسبقًا.");
         await loadExternalRequests();
@@ -625,18 +646,17 @@ export default function ProjectDetailsPage() {
       const { data: updatedRequest, error: updateError } = await supabase
         .from("external_test_requests")
         .update({
-          technical_review_status: "Approved",
+          ...toPayload(draft, reviewFields),
+          technical_review_status: draft.technical_review_decision === "رفض" ? "Rejected" : "Approved",
           reviewed_by: Number(reviewer.id),
           reviewed_at: new Date().toISOString(),
           technical_reviewed_by_name: reviewerName,
           technical_manager_signature: reviewer.signature,
-          status:
-            latest.lab_manager_approval_status === "Approved"
-              ? "Approved"
-              : "Pending",
+          status: draft.technical_review_decision === "رفض" ? "Rejected" : "Pending",
         })
         .eq("id", request.id)
         .neq("technical_review_status", "Approved")
+        .neq("lab_manager_approval_status", "Approved")
         .select("id");
 
       if (updateError) throw updateError;
@@ -645,7 +665,8 @@ export default function ProjectDetailsPage() {
         throw new Error("لم يُحفظ الاعتماد؛ ربما اعتمد مستخدم آخر الطلب.");
       }
 
-      alert("تم تسجيل الاعتماد الفني وحفظ الاسم والتوقيع.");
+      setReviewRequest(null);
+      alert("تم حفظ نتيجة المراجعة الفنية والاسم والتوقيع.");
       await loadExternalRequests();
     } catch (error: any) {
       console.error("TECHNICAL REVIEW ERROR:", error);
@@ -661,53 +682,72 @@ export default function ProjectDetailsPage() {
 
   // APPROVE LAB MANAGER
   async function approveLabManager(request: any) {
-    if (!isLabManager) {
-      alert("هذه الصلاحية مخصصة لمدير المختبر.");
-      return;
+    if (approvingLabManager !== null) return;
+    if (!isLabManager || !currentUser?.id) { alert("هذه الصلاحية مخصصة لمدير المختبر."); return; }
+    if (!["مقبول للتنفيذ", "مرفوض", "معلق حتى استكمال بيانات"].includes(executionDecision)) {
+      alert("يرجى اختيار قرار التنفيذ."); return;
     }
-
-    if (!currentUser?.id) {
-      alert("تعذر تحديد المستخدم الحالي.");
-      return;
-    }
-
-    if (request.technical_review_status !== "Approved") {
-      alert("يجب اعتماد الطلب فنيًا أولًا قبل اعتماد مدير المختبر.");
-      return;
-    }
-
     if (request.lab_manager_approval_status === "Approved") {
-      alert("الطلب معتمد مسبقًا من مدير المختبر.");
-      return;
+      alert("الطلب معتمد مسبقًا."); return;
     }
-
-    if (!window.confirm(`هل تؤكد اعتماد الطلب ${request.request_no} كمدير مختبر؟`)) return;
-
+    if (executionDecision === "مقبول للتنفيذ" && request.technical_review_status !== "Approved") {
+      alert("يلزم قبول المراجعة الفنية قبل قبول الطلب للتنفيذ."); return;
+    }
+    if (executionDecision === "مقبول للتنفيذ" && request.customer_approval_status !== "Approved") {
+      alert("يلزم تسجيل موافقة العميل قبل قبول الطلب للتنفيذ."); return;
+    }
+    if (!window.confirm("هل تؤكد تسجيل القرار: " + executionDecision + "؟")) return;
     setApprovingLabManager(request.id);
     try {
-      const managerName = currentUser.full_name || currentUser.username || "مدير المختبر";
-      const { error } = await supabase
-        .from("external_test_requests")
-        .update({
-          lab_manager_approval_status: "Approved",
-          lab_manager_approved_by: Number(currentUser.id),
-          lab_manager_approved_at: new Date().toISOString(),
-          lab_manager_signature: currentUser.signature || null,
-          lab_manager_approved_by_name: managerName,
-          status: "Approved"
-        })
-        .eq("id", request.id)
-        .eq("technical_review_status", "Approved");
-
+      const { data: manager, error: profileError } = await supabase.from("users")
+        .select("id,full_name,username,signature").eq("id", Number(currentUser.id)).single();
+      if (profileError) throw profileError;
+      if (!manager?.signature) throw new Error("يلزم توقيع محفوظ لمدير المختبر.");
+      const accepted = executionDecision === "مقبول للتنفيذ";
+      const rejected = executionDecision === "مرفوض";
+      let query = supabase.from("external_test_requests").update({
+        execution_decision: executionDecision,
+        lab_manager_approval_status: accepted ? "Approved" : rejected ? "Rejected" : "Pending",
+        lab_manager_approved_by: Number(manager.id),
+        lab_manager_approved_at: new Date().toISOString(),
+        lab_manager_signature: manager.signature,
+        lab_manager_approved_by_name: manager.full_name || manager.username,
+        status: accepted ? "Approved" : rejected ? "Rejected" : "Pending",
+      }).eq("id", request.id).neq("lab_manager_approval_status", "Approved");
+      if (accepted) query = query.eq("technical_review_status", "Approved").eq("customer_approval_status", "Approved");
+      const { data, error } = await query.select("id");
       if (error) throw error;
-      alert("تم اعتماد الطلب من مدير المختبر.");
+      if (!data?.length) throw new Error("لم يحفظ القرار. ربما تغيرت حالة الطلب. حدّثي الصفحة.");
+      setDecisionRequest(null);
       await loadExternalRequests();
+      alert("تم حفظ قرار مدير المختبر.");
     } catch (error: any) {
-      console.error("LAB MANAGER APPROVAL ERROR:", error);
-      alert("تعذر اعتماد الطلب: " + (error?.message || "خطأ غير معروف"));
-    } finally {
-      setApprovingLabManager(null);
+      alert("تعذر حفظ القرار: " + (error?.message || "خطأ غير معروف"));
+    } finally { setApprovingLabManager(null); }
+  }
+
+  async function saveDocumentedConsent() {
+    if (!canCreateContract || !consentRequest || savingConsent) return;
+    if (!["واتساب/بريد موثق", "أمر شراء"].includes(consentDraft.customer_approval_method) ||
+        !consentDraft.customer_approval_evidence?.trim() || !consentName.trim()) {
+      alert("يلزم اسم ممثل العميل وطريقة الموافقة ومرجع الدليل الموثق."); return;
     }
+    setSavingConsent(true);
+    try {
+      const { data, error } = await supabase.from("external_test_requests").update({
+        ...toPayload(consentDraft, approvalFields),
+        customer_approval_status: "Approved", customer_approved_by: consentName.trim(),
+        customer_approved_at: new Date().toISOString(),
+        status: consentRequest.technical_review_status === "Rejected" || consentRequest.lab_manager_approval_status === "Rejected" ? "Rejected" : "Customer Approved",
+      }).eq("id", consentRequest.id).eq("updated_at", consentRequest.updated_at).eq("customer_approval_status", "Pending")
+        .neq("lab_manager_approval_status", "Approved").select("id");
+      if (error) throw error;
+      if (!data?.length) throw new Error("تغيرت حالة الطلب أو تعذر حفظ الموافقة.");
+      setConsentRequest(null);
+      await loadExternalRequests();
+      alert("تم تسجيل موافقة العميل ومرجعها. احتفظي بالدليل الأصلي في سجلات المختبر.");
+    } catch (error: any) { alert(error?.message || "تعذر حفظ الموافقة."); }
+    finally { setSavingConsent(false); }
   }
   // =========================
   // LOAD PROJECT
@@ -949,7 +989,6 @@ async function loadProject() {
         payment_method,
         status,
         technical_review_status,
-        technical_review_notes,
         reviewed_by,
         reviewed_at,
         technical_reviewed_by_name,
@@ -965,7 +1004,11 @@ async function loadProject() {
         lab_manager_approved_by,
         lab_manager_approved_at,
         lab_manager_signature,
-        lab_manager_approved_by_name
+        lab_manager_approved_by_name,
+        project_name,
+        updated_at,
+        execution_decision,
+        sample_type,sample_quantity_or_weight,sample_receiving_date,sample_code,results_delivery_date,results_delivery_method,saac_scope_status,sample_status,rejection_reason,customer_requirements_clear,method_suitable_and_current,laboratory_sampling_required,conformity_statement_requested,customer_method_unsuitable,technical_review_decision,technical_review_notes,customer_approval_method,customer_approval_evidence
       `)
       .eq("project_id", Number(id))
       .order("id", {
@@ -1059,7 +1102,7 @@ async function loadProject() {
 
     event.target.value = "";
 
-    if (currentUser?.role?.trim().toLowerCase() !== "admin") {
+    if (!isLabManager) {
       alert("رفع ختم الشركة مخصص لمسؤول النظام فقط.");
       return;
     }
@@ -1117,791 +1160,8 @@ async function loadProject() {
     }
   }
 
-  function printExternalRequest(
-    request: any
-  ) {
-    const printWindow = window.open(
-      "",
-      "_blank",
-      "width=1000,height=900"
-    );
-
-    if (!printWindow) {
-      alert(
-        "يرجى السماح بفتح النوافذ الجديدة للطباعة."
-      );
-      return;
-    }
-
-    const customerApproved =
-      request.customer_approval_status ===
-      "Approved";
-
-    const labManagerApproved =
-      request.lab_manager_approval_status ===
-      "Approved";
-
-    const customerApprovalDate =
-      request.customer_approved_at
-        ? new Date(
-            request.customer_approved_at
-          ).toLocaleString("ar-SA")
-        : "-";
-
-    const labManagerApprovalDate =
-      request.lab_manager_approved_at
-        ? new Date(
-            request.lab_manager_approved_at
-          ).toLocaleString("ar-SA")
-        : "-";
-
-    const technicalManagerApproved =
-      request.technical_review_status === "Approved";
-
-    const technicalManagerApprovalDate =
-      request.reviewed_at
-        ? new Date(
-            request.reviewed_at
-          ).toLocaleString("ar-SA")
-        : "-";
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="ar" dir="rtl">
-
-      <head>
-
-        <meta charset="UTF-8" />
-
-        <title>
-          عقد العميل - ${
-            request.request_no || ""
-          }
-        </title>
-
-        <style>
-
-          * {
-            box-sizing: border-box;
-          }
-
-          body {
-            font-family: Arial, Tahoma, sans-serif;
-            margin: 0;
-            padding: 20px;
-            color: #000;
-            background: white;
-          }
-
-          .page {
-            width: 100%;
-            max-width: 900px;
-            margin: 0 auto;
-          }
-
-          .header {
-            border: 2px solid #000;
-            padding: 20px;
-            margin-bottom: 15px;
-          }
-
-          .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-          }
-
-          .company {
-            font-size: 24px;
-            font-weight: bold;
-          }
-
-          .title {
-            font-size: 21px;
-            font-weight: bold;
-            margin-top: 10px;
-          }
-
-          .subtitle {
-            font-size: 14px;
-            color: #444;
-            margin-top: 5px;
-          }
-
-          .contract-number {
-            border: 2px solid #000;
-            padding: 15px 25px;
-            text-align: center;
-            min-width: 180px;
-          }
-
-          .contract-number-label {
-            font-size: 13px;
-          }
-
-          .contract-number-value {
-            font-size: 20px;
-            font-weight: bold;
-            margin-top: 8px;
-          }
-
-          .section {
-            border: 1px solid #000;
-            margin-bottom: 15px;
-          }
-
-          .section-title {
-            background: #eee;
-            border-bottom: 1px solid #000;
-            padding: 10px 14px;
-            font-size: 17px;
-            font-weight: bold;
-          }
-
-          .section-body {
-            padding: 14px;
-          }
-
-          .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-          }
-
-          .field {
-            border: 1px solid #999;
-            padding: 10px;
-            min-height: 65px;
-          }
-
-          .label {
-            font-size: 12px;
-            color: #555;
-            margin-bottom: 6px;
-          }
-
-          .value {
-            font-size: 15px;
-            font-weight: bold;
-            word-break: break-word;
-          }
-
-          .status {
-            border: 2px solid #000;
-            padding: 12px;
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 15px;
-          }
-
-          .declaration {
-            border: 1px solid #000;
-            padding: 18px;
-            line-height: 2;
-            font-size: 15px;
-          }
-
-          .signature-box {
-            border: 1px solid #999;
-            margin-top: 15px;
-            padding: 12px;
-            min-height: 150px;
-          }
-
-          .signature {
-            display: block;
-            max-width: 400px;
-            height: 110px;
-            object-fit: contain;
-            margin: 10px auto;
-          }
-
-          .empty {
-            height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #777;
-          }
-
-          .footer {
-            border-top: 1px solid #000;
-            margin-top: 25px;
-            padding-top: 10px;
-            text-align: center;
-            font-size: 12px;
-          }
-
-          .print-button {
-            margin-top: 20px;
-            padding: 12px 25px;
-            background: #1d4ed8;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-          }
-
-          @media print {
-
-            @page {
-              size: A4 portrait;
-              margin: 10mm;
-            }
-
-            body {
-              padding: 0;
-            }
-
-            .print-button {
-              display: none;
-            }
-
-            .page {
-              max-width: none;
-            }
-
-          }
-
-        </style>
-
-      </head>
-
-      <body>
-
-        <div class="page">
-
-          <div class="header">
-
-            <div class="header-row">
-
-              <div>
-
-                <div class="company">
-                  شركة رمز الإمارات لفحص التربة والخرسانة
-                </div>
-
-                <div class="title">
-                  عقد العميل وطلب الفحص
-                </div>
-
-                <div class="subtitle">
-                  External Test Request - QF 701/02
-                </div>
-
-              </div>
-
-              <div class="contract-number">
-
-                <div class="contract-number-label">
-                  رقم العقد
-                </div>
-
-                <div class="contract-number-value">
-                  ${
-                    request.request_no ||
-                    "-"
-                  }
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="status">
-
-            ${
-              customerApproved
-                ? "تم اعتماد العقد من العميل"
-                : "بانتظار اعتماد العميل"
-            }
-
-          </div>
-
-          <div class="section">
-
-            <div class="section-title">
-              بيانات العميل والمشروع
-            </div>
-
-            <div class="section-body">
-
-              <div class="grid">
-
-                <div class="field">
-                  <div class="label">
-                    اسم العميل
-                  </div>
-                  <div class="value">
-                    ${
-                      request.customer_name ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    اسم المشروع
-                  </div>
-                  <div class="value">
-                    ${
-                      project?.project_name ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    مسؤول الاتصال
-                  </div>
-                  <div class="value">
-                    ${
-                      request.contact_person ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    الهاتف
-                  </div>
-                  <div class="value">
-                    ${
-                      request.telephone ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="section">
-
-            <div class="section-title">
-              بيانات الطلب
-            </div>
-
-            <div class="section-body">
-
-              <div class="grid">
-
-                <div class="field">
-                  <div class="label">
-                    رقم طلب العميل
-                  </div>
-                  <div class="value">
-                    ${
-                      request.order_no ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    تاريخ الطلب
-                  </div>
-                  <div class="value">
-                    ${
-                      request.request_date ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    نوع العينة
-                  </div>
-                  <div class="value">
-                    ${
-                      request.sample_kind ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    عدد العينات
-                  </div>
-                  <div class="value">
-                    ${
-                      request.quantity ??
-                      "-"
-                    }
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="section">
-
-            <div class="section-title">
-              بيانات الاختبار
-            </div>
-
-            <div class="section-body">
-
-              <div class="grid">
-
-                <div class="field">
-                  <div class="label">
-                    الاختبار المطلوب
-                  </div>
-                  <div class="value">
-                    ${
-                      request.requested_test ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    طريقة الاختبار
-                  </div>
-                  <div class="value">
-                    ${
-                      request.test_method ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    طريقة الدفع
-                  </div>
-                  <div class="value">
-                    ${
-                      request.payment_method ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    حالة العقد
-                  </div>
-                  <div class="value">
-                    ${
-                      request.status ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="section">
-
-            <div class="section-title">
-              إقرار وموافقة العميل
-            </div>
-
-            <div class="section-body">
-
-              <div class="declaration">
-
-                أقر أنا الموقع أدناه بأنني اطلعت
-                على بيانات عقد العميل وطلب الفحص
-                الموضحة أعلاه، وأنها تمثل متطلبات
-                الفحص المطلوبة، وأوافق على تنفيذ
-                الاختبارات المذكورة وفقًا للبيانات
-                الموضحة في الطلب.
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="section">
-
-            <div class="section-title">
-              اعتماد العميل
-            </div>
-
-            <div class="section-body">
-
-              <div class="grid">
-
-                <div class="field">
-                  <div class="label">
-                    الحالة
-                  </div>
-                  <div class="value">
-                    ${
-                      customerApproved
-                        ? "تم الاعتماد"
-                        : "بانتظار الاعتماد"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    اسم المعتمد
-                  </div>
-                  <div class="value">
-                    ${
-                      request.customer_approved_by ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    تاريخ الاعتماد
-                  </div>
-                  <div class="value">
-                    ${customerApprovalDate}
-                  </div>
-                </div>
-
-              </div>
-
-              <div class="signature-box">
-
-                <div class="label">
-                  توقيع العميل / ممثل العميل
-                </div>
-
-                ${
-                  request.customer_signature
-                    ? `
-                      <img
-                        src="${request.customer_signature}"
-                        class="signature"
-                        alt="توقيع العميل"
-                      />
-                    `
-                    : `
-                      <div class="empty">
-                        لم يتم توقيع العقد بعد
-                      </div>
-                    `
-                }
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="section">
-
-            <div class="section-title">
-              اعتماد المدير الفني
-            </div>
-
-            <div class="section-body">
-
-              <div class="grid">
-
-                <div class="field">
-                  <div class="label">الحالة</div>
-                  <div class="value">
-                    ${
-                      technicalManagerApproved
-                        ? "تم الاعتماد"
-                        : "بانتظار الاعتماد الفني"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">اسم المدير الفني</div>
-                  <div class="value">
-                    ${request.technical_reviewed_by_name || "-"}
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">تاريخ الاعتماد</div>
-                  <div class="value">
-                    ${technicalManagerApprovalDate}
-                  </div>
-                </div>
-
-              </div>
-
-              <div class="signature-box">
-                <div class="label">توقيع المدير الفني</div>
-
-                ${
-                  request.technical_manager_signature
-                    ? `
-                      <img
-                        src="${request.technical_manager_signature}"
-                        class="signature"
-                        alt="توقيع المدير الفني"
-                      />
-                    `
-                    : `
-                      <div class="empty">
-                        لم يتم حفظ توقيع المدير الفني
-                      </div>
-                    `
-                }
-              </div>
-
-              <div class="signature-box">
-                <div class="label">ختم الشركة</div>
-
-                ${
-                  request.technical_manager_stamp
-                    ? `
-                      <img
-                        src="${request.technical_manager_stamp}"
-                        class="signature"
-                        alt="ختم الشركة"
-                      />
-                    `
-                    : `
-                      <div class="empty">
-                        لم يتم حفظ ختم الشركة لهذا الطلب
-                      </div>
-                    `
-                }
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="section">
-
-            <div class="section-title">
-              اعتماد مدير المختبر
-            </div>
-
-            <div class="section-body">
-
-              <div class="grid">
-
-                <div class="field">
-                  <div class="label">
-                    الحالة
-                  </div>
-                  <div class="value">
-                    ${
-                      labManagerApproved
-                        ? "تم الاعتماد"
-                        : "بانتظار اعتماد مدير المختبر"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    اسم مدير المختبر
-                  </div>
-                  <div class="value">
-                    ${
-                      request.lab_manager_approved_by_name ||
-                      "-"
-                    }
-                  </div>
-                </div>
-
-                <div class="field">
-                  <div class="label">
-                    تاريخ الاعتماد
-                  </div>
-                  <div class="value">
-                    ${labManagerApprovalDate}
-                  </div>
-                </div>
-
-              </div>
-
-              <div class="signature-box">
-
-                <div class="label">
-                  توقيع مدير المختبر
-                </div>
-
-                ${
-                  request.lab_manager_signature
-                    ? `
-                      <img
-                        src="${request.lab_manager_signature}"
-                        class="signature"
-                        alt="توقيع مدير المختبر"
-                      />
-                    `
-                    : `
-                      <div class="empty">
-                        لم يتم اعتماد العقد من مدير المختبر بعد
-                      </div>
-                    `
-                }
-
-              </div>
-
-            </div>
-
-          </div>
-
-          <div class="footer">
-
-            <strong>
-              شركة رمز الإمارات لفحص التربة والخرسانة
-            </strong>
-
-            <br />
-
-            External Test Request - QF 701/02
-
-            <br />
-
-            رقم العقد:
-            ${
-              request.request_no ||
-              "-"
-            }
-
-          </div>
-
-          <button
-            class="print-button"
-            onclick="window.print()"
-          >
-            🖨️ طباعة العقد
-          </button>
-
-        </div>
-
-      </body>
-
-      </html>
-    `);
-
-    printWindow.document.close();
-    printWindow.focus();
+  function printExternalRequest(request: any) {
+    printExternalForm(request.id);
   }
 
   // =========================
@@ -2382,6 +1642,17 @@ async function loadProject() {
                       )}
 
                     </div>
+                    <details className="mt-5 border-t pt-4">
+                      <summary className="cursor-pointer font-bold">عرض نموذج طلب الفحص QF 701/02 كاملًا</summary>
+                      <ExternalTestRequestForm request={request} projectName={request.project_name || project.project_name} />
+                    </details>
+                    {canCreateContract && request.customer_approval_status === "Pending" && !labApproved && (
+                      <button type="button" className="mt-4 rounded-lg border px-4 py-2" onClick={() => {
+                        setConsentRequest(request);
+                        setConsentDraft(toDraft(request, approvalFields));
+                        setConsentName(request.customer_approved_by || "");
+                      }}>تسجيل موافقة موثقة أو أمر شراء</button>
+                    )}
                     {/* TECHNICAL MANAGER */}
                     <div className="mt-5 border-t pt-4">
                       <h4 className="font-bold mb-2">
@@ -2423,13 +1694,16 @@ async function loadProject() {
                       ) : (
                         <div>
                           <p className="text-amber-700 mb-3">
-                            بانتظار اعتماد المدير الفني
+                            {request.technical_review_status === "Rejected" ? "المراجعة الفنية مرفوضة" : "بانتظار المراجعة الفنية"}
                           </p>
 
                           {currentUser?.role === "technical_manager" && (
                             <button
                               type="button"
-                              onClick={() => approveTechnicalManager(request)}
+                              onClick={() => {
+                                setReviewRequest(request);
+                                setReviewDraft(toDraft(request, reviewFields));
+                              }}
                               disabled={
                                 approvingTechnicalManager === request.id
                               }
@@ -2481,18 +1755,17 @@ async function loadProject() {
                         <div>
 
                           <p className="text-purple-700 mb-3">
-                            🟡 بانتظار اعتماد مدير المختبر
+                            {request.execution_decision || "بانتظار قرار مدير المختبر"}
                           </p>
 
                           {isLabManager && (
 
                             <button
                               type="button"
-                              onClick={() =>
-                                approveLabManager(
-                                  request
-                                )
-                              }
+                              onClick={() => {
+                                setDecisionRequest(request);
+                                setExecutionDecision(request.execution_decision || "");
+                              }}
                               disabled={
                                 approvingLabManager ===
                                 request.id
@@ -2560,7 +1833,7 @@ async function loadProject() {
                         🖨️ طباعة العقد
                       </button>
 
-                      {currentUser?.role?.trim().toLowerCase() === "admin" && (
+                      {isLabManager && (
                         <label className="border border-purple-700 text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-lg text-sm cursor-pointer">
                           رفع ختم الشركة
                           <input
@@ -2583,71 +1856,23 @@ async function loadProject() {
                           <button
                             type="button"
                             onClick={() => {
-
-                              const newWindow =
-                                window.open(
-                                  "",
-                                  "_blank"
-                                );
-
-                              if (!newWindow) {
-                                alert(
-                                  "يرجى السماح بفتح النوافذ الجديدة."
-                                );
-                                return;
+                              const popup = window.open("", "_blank");
+                              if (!popup) { alert("يرجى السماح بالنوافذ المنبثقة."); return; }
+                              popup.opener = null;
+                              const title = popup.document.createElement("h2");
+                              title.textContent = "توقيع العميل";
+                              const name = popup.document.createElement("p");
+                              name.textContent = request.customer_approved_by || "";
+                              const image = popup.document.createElement("img");
+                              const source = String(request.customer_signature || "");
+                              if (/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=\s]+$/.test(source) || /^https:\/\//i.test(source)) {
+                                image.src = source;
                               }
-
-                              newWindow.document.write(`
-                                <html
-                                  dir="rtl"
-                                  lang="ar"
-                                >
-
-                                <head>
-                                  <meta charset="UTF-8" />
-                                  <title>
-                                    توقيع العميل
-                                  </title>
-                                </head>
-
-                                <body style="
-                                  margin:0;
-                                  padding:40px;
-                                  font-family:Arial;
-                                  text-align:center;
-                                  background:#f9fafb;
-                                ">
-
-                                  <h2>
-                                    توقيع العميل
-                                  </h2>
-
-                                  <p>
-                                    ${
-                                      request.customer_approved_by ||
-                                      ""
-                                    }
-                                  </p>
-
-                                  <img
-                                    src="${request.customer_signature}"
-                                    style="
-                                      max-width:600px;
-                                      max-height:400px;
-                                      border:1px solid #ddd;
-                                      border-radius:10px;
-                                      padding:20px;
-                                      background:white;
-                                    "
-                                  />
-
-                                </body>
-
-                                </html>
-                              `);
-
-                              newWindow.document.close();
-
+                              image.alt = "توقيع العميل";
+                              image.style.cssText = "max-width:100%;max-height:400px;object-fit:contain";
+                              popup.document.documentElement.dir = "rtl";
+                              popup.document.body.style.cssText = "font-family:Tahoma,Arial;text-align:center;padding:30px";
+                              popup.document.body.append(title, name, image);
                             }}
                             className="border border-green-600 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg text-sm"
                           >
@@ -3441,6 +2666,10 @@ async function loadProject() {
 
             </div>
 
+            <section className="mb-5 rounded-xl border p-4">
+              <h3 className="mb-4 font-bold">بيانات العينة وتسليم النتائج</h3>
+              <RequestFields fields={requestFields} value={requestExtras} onChange={setRequestExtras} disabled={savingRequest} />
+            </section>
             {/* PAYMENT */}
 
             <div className="border rounded-xl p-4 mb-6">
@@ -3525,6 +2754,52 @@ async function loadProject() {
 
       )}
 
+
+      {reviewRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="review-title">
+          <div dir="rtl" className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6">
+            <h2 id="review-title" className="mb-5 text-xl font-bold">المراجعة الفنية للطلب {reviewRequest.request_no}</h2>
+            <RequestFields fields={reviewFields} value={reviewDraft} onChange={setReviewDraft} disabled={approvingTechnicalManager !== null} />
+            <div className="mt-5 flex gap-3">
+              <button disabled={approvingTechnicalManager !== null} onClick={() => approveTechnicalManager(reviewRequest, reviewDraft)} className="rounded-lg bg-green-700 px-5 py-2 text-white disabled:opacity-50">{approvingTechnicalManager !== null ? "جارٍ الحفظ..." : "حفظ المراجعة والتوقيع"}</button>
+              <button disabled={approvingTechnicalManager !== null} onClick={() => setReviewRequest(null)} className="rounded-lg border px-5 py-2">إلغاء</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {decisionRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="decision-title">
+          <div dir="rtl" className="w-full max-w-lg rounded-xl bg-white p-6">
+            <h2 id="decision-title" className="mb-5 text-xl font-bold">قرار مدير المختبر — {decisionRequest.request_no}</h2>
+            <label className="block">قرار التنفيذ
+              <select value={executionDecision} disabled={approvingLabManager !== null} onChange={e => setExecutionDecision(e.target.value)} className="mt-2 w-full rounded-lg border p-3">
+                <option value="">اختاري القرار</option>
+                <option>مقبول للتنفيذ</option><option>مرفوض</option><option>معلق حتى استكمال بيانات</option>
+              </select>
+            </label>
+            <div className="mt-5 flex gap-3">
+              <button disabled={approvingLabManager !== null} onClick={() => approveLabManager(decisionRequest)} className="rounded-lg bg-purple-700 px-5 py-2 text-white disabled:opacity-50">{approvingLabManager !== null ? "جارٍ الحفظ..." : "تسجيل القرار والتوقيع"}</button>
+              <button disabled={approvingLabManager !== null} onClick={() => setDecisionRequest(null)} className="rounded-lg border px-5 py-2">إلغاء</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {consentRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+          <div dir="rtl" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6">
+            <h2 id="consent-title" className="mb-5 text-xl font-bold">توثيق موافقة العميل — {consentRequest.request_no}</h2>
+            <label className="mb-4 block">اسم العميل أو ممثله المخول
+              <input value={consentName} disabled={savingConsent} onChange={e => setConsentName(e.target.value)} className="mt-1 w-full rounded-lg border p-3" />
+            </label>
+            <RequestFields fields={approvalFields.map(field => field.key === "customer_approval_method" ? { ...field, options: ["واتساب/بريد موثق", "أمر شراء"] } : field)} value={consentDraft} onChange={setConsentDraft} disabled={savingConsent} />
+            <p className="mt-3 text-sm">سجلي مرجع رسالة الموافقة وتاريخها أو رقم أمر الشراء، واحتفظي بالدليل الأصلي.</p>
+            <div className="mt-5 flex gap-3">
+              <button disabled={savingConsent} onClick={saveDocumentedConsent} className="rounded-lg bg-blue-700 px-5 py-2 text-white disabled:opacity-50">{savingConsent ? "جارٍ الحفظ..." : "تسجيل موافقة العميل"}</button>
+              <button disabled={savingConsent} onClick={() => setConsentRequest(null)} className="rounded-lg border px-5 py-2">إلغاء</button>
+            </div>
+          </div>
+        </div>
+      )}
     </ProtectedRoute>
   );
 }

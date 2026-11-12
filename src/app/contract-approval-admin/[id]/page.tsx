@@ -265,7 +265,7 @@ export default function ContractApprovalAdminPage() {
       };
       setCurrentUser(user);
 
-      if (user.role.trim().toLowerCase() !== "lab_manager") {
+      if (Number(user.id) !== 1 || user.role.trim().toLowerCase() !== "admin") {
         setError("هذه الصفحة مخصصة لمدير المختبر فقط.");
         return;
       }
@@ -392,7 +392,7 @@ export default function ContractApprovalAdminPage() {
 
     if (saving) return;
 
-    if (currentUser.role.trim().toLowerCase() !== "lab_manager") {
+    if (Number(currentUser.id) !== 1 || currentUser.role.trim().toLowerCase() !== "admin") {
       setError("ليس لديك صلاحية اعتماد العقود.");
       return;
     }
@@ -547,7 +547,7 @@ export default function ContractApprovalAdminPage() {
   if (!contract || !signing || !currentUser) return null;
 
   const client = getClient(contract.clients);
-  const isLabManager = currentUser.role.trim().toLowerCase() === "lab_manager";
+  const isLabManager = Number(currentUser.id) === 1 && currentUser.role.trim().toLowerCase() === "admin";
   const isPending = signing.status === "Pending Ramz Approval";
   const isFinalized = signing.status === "Finalized";
 
@@ -598,7 +598,7 @@ export default function ContractApprovalAdminPage() {
               <div className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-bold ${
                 isFinalized ? "bg-green-100 text-green-700" : isPending ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-700"
               }`}>
-                {isFinalized ? "✓ عقد نهائي" : isPending ? "بانتظار اعتماد رامز" : signing.status}
+                {isFinalized ? "✓ عقد نهائي" : isPending ? "بانتظار اعتماد مدير المختبر" : signing.status}
               </div>
             </div>
           </section>
