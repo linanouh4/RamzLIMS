@@ -265,8 +265,8 @@ export default function ContractApprovalAdminPage() {
       };
       setCurrentUser(user);
 
-      if (user.role.toLowerCase() !== "admin") {
-        setError("هذه الصفحة مخصصة لمدير النظام فقط.");
+      if (user.role.trim().toLowerCase() !== "lab_manager") {
+        setError("هذه الصفحة مخصصة لمدير المختبر فقط.");
         return;
       }
 
@@ -392,7 +392,7 @@ export default function ContractApprovalAdminPage() {
 
     if (saving) return;
 
-    if (currentUser.role.toLowerCase() !== "admin") {
+    if (currentUser.role.trim().toLowerCase() !== "lab_manager") {
       setError("ليس لديك صلاحية اعتماد العقود.");
       return;
     }
@@ -547,7 +547,7 @@ export default function ContractApprovalAdminPage() {
   if (!contract || !signing || !currentUser) return null;
 
   const client = getClient(contract.clients);
-  const isAdmin = currentUser.role.toLowerCase() === "admin";
+  const isLabManager = currentUser.role.trim().toLowerCase() === "lab_manager";
   const isPending = signing.status === "Pending Ramz Approval";
   const isFinalized = signing.status === "Finalized";
 
@@ -634,13 +634,13 @@ export default function ContractApprovalAdminPage() {
 
           <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="mb-5 text-xl font-bold text-gray-900">اعتماد رامز الإمارات</h2>
-            {!isAdmin && (
+            {!isLabManager && (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-                لا تملك صلاحية اعتماد العقود. الاعتماد متاح لمدير النظام فقط.
+                لا تملك صلاحية اعتماد العقود. الاعتماد متاح لمدير المختبر فقط.
               </div>
             )}
 
-            {isAdmin && (
+            {isLabManager && (
               <>
                 <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
                   <div className="font-bold text-blue-900">المعتمد الحالي</div>

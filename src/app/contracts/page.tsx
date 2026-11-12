@@ -1614,7 +1614,7 @@ const html = `
                                     : "🔗 إرسال رابط التوقيع"}
                                 </button>
                               )}
-{currentUser?.role?.toLowerCase() === "admin" &&
+{currentUser?.role?.trim().toLowerCase() === "lab_manager" &&
   signing?.status === "Pending Ramz Approval" && (
     <button
       type="button"

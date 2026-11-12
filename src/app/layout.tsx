@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { CSSProperties, ReactNode } from "react";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const fonts = {
+  "--font-geist-sans": "Tahoma, Arial, sans-serif",
+  "--font-geist-mono": "Consolas, 'Courier New', monospace",
+} as CSSProperties;
 
 export const metadata: Metadata = {
   title: "RamzLIMS",
@@ -19,24 +14,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  
-  
+}: Readonly<{ children: ReactNode }>) {
   return (
-    <html
-      lang="ar"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      
-      <body className="min-h-full flex flex-col">
-        {children}
-        
-      </body>
-      
+    <html lang="ar" className="h-full antialiased" style={fonts}>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
-    
   );
-  
 }

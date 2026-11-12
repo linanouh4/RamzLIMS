@@ -137,7 +137,13 @@ return (
       </>
     )}
 
-    {role === "technical_manager" && (
+    {(role === "technical_manager" || role === "quality_manager" || role === "lab_manager") && (
+          <Link href="/contracts" className={linkClass("/contracts")}>
+            📝 العقود
+          </Link>
+        )}
+
+        {role === "technical_manager" && (
       <>
         <Link href="/dashboard" className={linkClass("/dashboard")}>
           🏠 لوحة التحكم

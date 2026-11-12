@@ -112,11 +112,10 @@ export default function ProtectedRoute({
           router.replace("/");
           return;
         }
-        if (session) scheduleVerification();
+        if (event === "INITIAL_SESSION" || session) scheduleVerification();
       }
     );
 
-    void verifyAccess();
     window.addEventListener("focus", scheduleVerification);
     return () => {
       active = false;
