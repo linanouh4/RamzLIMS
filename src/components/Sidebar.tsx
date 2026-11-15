@@ -223,6 +223,14 @@ return (
       </>
     )}
 
+    {(role === "accountant" ||
+      role === "technical_manager" ||
+      (role === "admin" && Number(user?.id) === 1)) && (
+      <Link href="/quotations" className={linkClass("/quotations")}>
+        عروض الأسعار
+      </Link>
+    )}
+
     {logoutError && (
       <p role="alert" dir="rtl" className="rounded-lg bg-red-100 p-3 text-sm text-red-800">
         {logoutError}
