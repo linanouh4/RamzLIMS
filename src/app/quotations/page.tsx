@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 
 type Quote = {
   id: number;
+  draft_version: number;
   quote_no: string;
   quote_date: string;
   customer_name: string;
@@ -19,6 +20,32 @@ function QuotationList() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const actor = getSavedUser();
+  const canDelete = Number(actor?.id) === 1 && actor?.role.trim().toLowerCase() === "admin";
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  async function deleteDraft(quote: Quote) {
+    if (!canDelete || quote.status !== "Draft" || deleting !== null) return;
+    const confirmed = window.confirm(
+      "حذف المسودة نهائيًا؟\nرقم العرض: " + quote.quote_no + "\nالعميل: " + quote.customer_name
+    );
+    if (!confirmed) return;
+
+    setDeleting(quote.id);
+    try {
+      const { error } = await supabase.rpc("delete_quotation_draft", {
+        p_quotation_id: quote.id,
+        p_expected_version: quote.draft_version,
+      });
+      if (error) throw new Error(error.message);
+      setQuotes(current => current.filter(row => row.id !== quote.id));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "تعذر حذف المسودة.");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -42,7 +69,7 @@ function QuotationList() {
 
         const { data, error: queryError } = await supabase
           .from("quotations")
-          .select("id, quote_no, quote_date, customer_name, subject, status")
+          .select("id, draft_version, quote_no, quote_date, customer_name, subject, status")
           .order("quote_date", { ascending: false })
           .order("id", { ascending: false });
 
@@ -96,7 +123,7 @@ function QuotationList() {
             <table className="w-full text-right">
               <thead className="border-b text-slate-600">
                 <tr>
-                  {["رقم العرض", "التاريخ", "العميل", "الموضوع", "الحالة"].map(label => (
+                  {["رقم العرض", "التاريخ", "العميل", "الموضوع", "الحالة", "الإجراءات"].map(label => (
                     <th key={label} scope="col" className="p-3">{label}</th>
                   ))}
                 </tr>
@@ -111,6 +138,21 @@ function QuotationList() {
                     <td className="p-3">
                       {quote.status === "Approved" ? "معتمد" :
                         quote.status === "Draft" ? "مسودة" : quote.status}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex flex-wrap gap-3 text-blue-800">
+                        <Link href={"/quotations/" + quote.id}>عرض</Link>
+                        <Link href={"/quotations/" + quote.id + "?action=print"}>طباعة</Link>
+                        {quote.status === "Draft" && (
+                          <Link href={"/quotations/" + quote.id + "?action=edit"}>تعديل</Link>
+                        )}
+                        {quote.status === "Draft" && canDelete && (
+                          <button type="button" disabled={deleting !== null}
+                            className="text-red-700" onClick={() => deleteDraft(quote)}>
+                            حذف
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
