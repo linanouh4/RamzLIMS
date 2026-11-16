@@ -1,6 +1,8 @@
 
 "use client";
 
+import { contractPrintFooter } from "@/components/contractPrintFooter";
+import { contractLetterhead } from "@/components/contractLetterhead";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -1186,29 +1188,34 @@ const html = `
 
       .signature-section { page-break-inside: avoid; }
     }
-  </style>
+      /* contracts-list-print-footer */
+    @media print {
+      footer.contract-branch-footer { display: none !important; }
+    }
+    @page {
+      size: A4 portrait;
+      margin-bottom: 30mm !important;
+      @bottom-center {
+        content: "المقر الرئيسي: مدينة القريات – مقابل البلدية القديمة – حي السديرية　 |　 الإدارة: ‎0509982399 – 0509173884‎\\A الخبر والدمام: ‎0554187910‎　 |　 مكة وجدة: ‎0576120827‎　 |　 للتواصل: info@ramzalemarat.com\\A سكاكا ودومة الجندل: ‎0532720004‎　 |　 طريف وعرعر: ‎0554596469‎　 |　 الموقع الإلكتروني: www.ramzalemarat.com";
+        direction: rtl;
+        text-align: right;
+        vertical-align: top;
+        white-space: pre-line;
+        width: 100%;
+        padding-top: 2mm;
+        border-top: 1px solid black;
+        color: black;
+        font: 9pt/1.5 Tahoma, Arial, sans-serif;
+      }
+    }
+</style>
 </head>
 
 <body>
+${contractPrintFooter}
   <div class="page">
     <div class="header">
-      <div class="header-main">
-        <div class="header-cell">
-          <span class="header-label">رمز النموذج</span>
-          <span class="header-value">QF 701/01</span>
-        </div>
-
-        <div class="header-cell">
-          <span class="header-label">نوع الوثيقة</span>
-          <span class="header-value title">Customer Contract عقد العميل    </span>
-        </div>
-
-        <div class="header-cell">
-          <span class="header-label">رقم العقد</span>
-          <span class="header-value">${contractNumber}</span>
-        </div>
-      </div>
-
+      ${contractLetterhead}
       <div class="header-info">
         <div class="header-cell">
           <span class="header-label">الفرع</span>

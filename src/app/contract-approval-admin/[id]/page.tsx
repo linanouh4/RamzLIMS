@@ -1,5 +1,6 @@
 "use client";
 
+import { contractPrintFooter } from "@/components/contractPrintFooter";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -350,7 +351,7 @@ export default function ContractApprovalAdminPage() {
   setError(message);
   console.error("Contract approval error:", err);
 } finally {
-  setSaving(false);
+  setLoading(false);
 }
   }
 
@@ -554,6 +555,29 @@ export default function ContractApprovalAdminPage() {
   return (
     <ProtectedRoute>
       <main dir="rtl" className="min-h-screen bg-gray-100 p-4 md:p-6">
+        <div dangerouslySetInnerHTML={{ __html: contractPrintFooter }} />
+        <style>{String.raw`
+          /* ramz-admin-page-footer */
+          @media print {
+            .contract-branch-footer { display: none !important; }
+          }
+          @page {
+            size: A4 portrait;
+            margin: 12mm 12mm 29mm;
+            @bottom-center {
+              content: "المقر الرئيسي: مدينة القريات – مقابل البلدية القديمة – حي السديرية　 |　 الإدارة: \200E 0509982399 – 0509173884\200E\A الخبر والدمام: \200E 0554187910\200E　 |　 مكة وجدة: \200E 0576120827\200E　 |　 للتواصل: info@ramzalemarat.com\A سكاكا ودومة الجندل: \200E 0532720004\200E　 |　 طريف وعرعر: \200E 0554596469\200E　 |　 الموقع الإلكتروني: www.ramzalemarat.com";
+              width: 100%;
+              direction: rtl;
+              text-align: right;
+              vertical-align: top;
+              white-space: pre-line;
+              border-top: 0.25mm solid #333;
+              padding-top: 2mm;
+              color: black;
+              font: 9pt/1.55 Tahoma, Arial, sans-serif;
+            }
+          }
+        `}</style>
         <div className="mx-auto max-w-6xl">
           <div className="no-print mb-6 flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">

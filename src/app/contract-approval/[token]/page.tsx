@@ -1,5 +1,7 @@
 "use client";
 
+import { contractPrintFooter } from "@/components/contractPrintFooter";
+import { contractLetterhead } from "@/components/contractLetterhead";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import SignatureCanvas from "react-signature-canvas";
@@ -405,51 +407,10 @@ background: white !important;
 
       {/* Header */}
       <div className="print-page bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div dangerouslySetInnerHTML={{ __html: contractPrintFooter }} />
 
-        <div className="border-b-4 border-slate-800 p-6">
-          <div className="grid grid-cols-3 gap-4 items-center">
-
-            <div className="text-right">
-              <div className="text-xl font-black text-slate-900">
-                رامز الإمارات
-              </div>
-
-              <div className="text-sm text-slate-500 mt-1">
-                مختبر التربة والخرسانة
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="text-2xl font-black text-slate-900">
-                عقد عميل
-              </div>
-
-              <div className="text-sm text-slate-500 mt-1">
-                Customer Contract
-              </div>
-            </div>
-
-            <div className="text-left text-xs text-slate-600">
-              <div>
-                <span className="font-bold">Document Code:</span>{" "}
-                QF 701/01
-              </div>
-
-              <div>
-                <span className="font-bold">Revision:</span>{" "}
-                1/3
-              </div>
-
-              <div>
-                <span className="font-bold">Issue Date:</span>{" "}
-                31/12/2023
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Contract title */}
+        <div className="p-3 sm:p-5" dangerouslySetInnerHTML={{ __html: contractLetterhead }} />
+      {/* Contract title */}
         <div className="p-6 border-b bg-slate-50">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 

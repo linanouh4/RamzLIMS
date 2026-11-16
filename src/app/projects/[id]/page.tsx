@@ -145,6 +145,7 @@ export default function ProjectDetailsPage() {
   const [testMethod, setTestMethod] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [requestExtras, setRequestExtras] = useState<RequestDraft>({});
+  const [creationReview, setCreationReview] = useState<RequestDraft>({});
   const [reviewRequest, setReviewRequest] = useState<any>(null);
   const [reviewDraft, setReviewDraft] = useState<RequestDraft>({});
   const [decisionRequest, setDecisionRequest] = useState<any>(null);
@@ -526,11 +527,15 @@ export default function ProjectDetailsPage() {
     );
 
     alert(
-      `تم إنشاء عقد العميل بنجاح\n\n` +
+      `تم إنشاء طلب الفحص بنجاح\n\n` +
         `رقم العقد: ${data?.request_no || requestNo}\n\n` +
         `تم إصدار رابط موافقة العميل.`
     );
 
+    if (currentUser?.role === "technical_manager" && data) {
+      setReviewRequest(data);
+      setReviewDraft({ ...toDraft(data, reviewFields), ...creationReview });
+    }
     resetExternalRequestForm();
 
     setShowRequestModal(false);
@@ -578,6 +583,7 @@ export default function ProjectDetailsPage() {
     setTestMethod("");
     setPaymentMethod("");
     setRequestExtras({});
+    setCreationReview({});
   }
 
   
@@ -2392,336 +2398,30 @@ async function loadProject() {
 
       {showRequestModal && (
 
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-
-          <div className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-
-            <div className="flex justify-between items-center mb-6">
-
-              <div>
-
-                <h2 className="text-2xl font-bold text-blue-900">
-                  📝 إنشاء عقد العميل
-                </h2>
-
-                <p className="text-sm text-gray-500 mt-1">
-                  External Test Request - QF 701/02
-                </p>
-
-              </div>
-
-              <button
-                onClick={() =>
-                  setShowRequestModal(false)
-                }
-                className="text-gray-500 hover:text-gray-800 text-2xl"
-              >
-                ×
-              </button>
-
-            </div>
-
-            {/* CUSTOMER */}
-
-            <div className="border rounded-xl p-4 mb-5">
-
-              <h3 className="font-bold mb-4">
-                بيانات العميل والمشروع
-              </h3>
-
-              <div className="grid md:grid-cols-2 gap-4">
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    اسم العميل
-                  </label>
-
-                  <input
-                    value={
-                      client?.client_name ||
-                      "غير مرتبط"
-                    }
-                    disabled
-                    className="w-full border rounded-lg p-3 bg-gray-100"
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    اسم المشروع
-                  </label>
-
-                  <input
-                    value={
-                      project.project_name ||
-                      ""
-                    }
-                    disabled
-                    className="w-full border rounded-lg p-3 bg-gray-100"
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    مسؤول الاتصال
-                  </label>
-
-                  <input
-                    value={
-                      requestContactPerson
-                    }
-                    onChange={(e) =>
-                      setRequestContactPerson(
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-lg p-3"
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    الهاتف
-                  </label>
-
-                  <input
-                    value={
-                      requestTelephone
-                    }
-                    onChange={(e) =>
-                      setRequestTelephone(
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-lg p-3"
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* REQUEST */}
-
-            <div className="border rounded-xl p-4 mb-5">
-
-              <h3 className="font-bold mb-4">
-                بيانات العقد
-              </h3>
-
-              <div className="grid md:grid-cols-2 gap-4">
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    رقم طلب العميل
-                  </label>
-
-                  <input
-                    value={orderNo}
-                    onChange={(e) =>
-                      setOrderNo(
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-lg p-3"
-                    placeholder="رقم طلب العميل"
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    تاريخ العقد
-                  </label>
-
-                  <input
-                    type="date"
-                    value={requestDate}
-                    onChange={(e) =>
-                      setRequestDate(
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-lg p-3"
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* SAMPLE */}
-
-            <div className="border rounded-xl p-4 mb-5">
-
-              <h3 className="font-bold mb-4">
-                بيانات العينة
-              </h3>
-
-              <div className="grid md:grid-cols-2 gap-4">
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    نوع العينة *
-                  </label>
-
-                  <input
-                    value={sampleKind}
-                    onChange={(e) =>
-                      setSampleKind(
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-lg p-3"
-                    placeholder="مثال: خرسانة / تربة"
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    عدد العينات
-                  </label>
-
-                  <input
-                    type="number"
-                    min="1"
-                    value={sampleQuantity}
-                    onChange={(e) =>
-                      setSampleQuantity(
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-lg p-3"
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* TEST */}
-
-            <div className="border rounded-xl p-4 mb-5">
-
-              <h3 className="font-bold mb-4">
-                بيانات الاختبار
-              </h3>
-
-              <div className="space-y-4">
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    الاختبار المطلوب *
-                  </label>
-
-                  <input
-                    value={requestedTest}
-                    onChange={(e) =>
-                      setRequestedTest(
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-lg p-3"
-                    placeholder="مثال: اختبار مقاومة الضغط"
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="block text-sm text-gray-600 mb-1">
-                    مواصفة / طريقة الاختبار
-                  </label>
-
-                  <input
-                    value={testMethod}
-                    onChange={(e) =>
-                      setTestMethod(
-                        e.target.value
-                      )
-                    }
-                    className="w-full border rounded-lg p-3"
-                    placeholder="مثال: ASTM / BS / SASO"
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
-            <section className="mb-5 rounded-xl border p-4">
-              <h3 className="mb-4 font-bold">بيانات العينة وتسليم النتائج</h3>
-              <RequestFields fields={requestFields} value={requestExtras} onChange={setRequestExtras} disabled={savingRequest} />
-            </section>
-            {/* PAYMENT */}
-
-            <div className="border rounded-xl p-4 mb-6">
-
-              <h3 className="font-bold mb-4">
-                المسائل المالية
-              </h3>
-
-              <select
-                value={paymentMethod}
-                onChange={(e) =>
-                  setPaymentMethod(
-                    e.target.value
-                  )
-                }
-                className="w-full border rounded-lg p-3"
-              >
-
-                <option value="">
-                  اختر طريقة الدفع
-                </option>
-
-                <option value="Cash">
-                  نقدي
-                </option>
-
-                <option value="Check">
-                  شيك
-                </option>
-
-                <option value="Bank Transfer">
-                  تحويل بنكي
-                </option>
-
-                <option value="Account">
-                  على الحساب
-                </option>
-
-              </select>
-
-            </div>
-
-            {/* INFO */}
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
-
-              بعد حفظ العقد سيتم إنشاء رابط خاص للعميل،
-              ويمكن نسخه وإرساله للعميل ليطلع على العقد
-              ويوافق عليه ويوقّعه إلكترونيًا.
-
-            </div>
-
+        <div role="dialog" aria-modal="true" aria-labelledby="qf-create-title" dir="rtl" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6">
+            <header className="mb-5 flex items-start justify-between border-b pb-3">
+              <div><h2 id="qf-create-title" className="text-xl font-bold">إنشاء طلب فحص خارجي</h2>
+                <p dir="ltr">External Test Request · QF 701/02</p>
+                <small>الإصدار/المراجعة 2/4 · تاريخ المراجعة 12/08/2026</small></div>
+              <button aria-label="إغلاق" disabled={savingRequest} onClick={() => setShowRequestModal(false)}>✕</button>
+            </header>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">العميل والمشروع</legend><div className="grid gap-3 sm:grid-cols-2"><label>اسم العميل<input className="mt-1 block w-full rounded border p-2" type="text" value={client?.client_name || ""} readOnly /></label>
+<label>اسم المشروع أو رقم القطعة<input className="mt-1 block w-full rounded border p-2" type="text" value={project.project_name || ""} readOnly /></label>
+<label>مسؤول الاتصال<input className="mt-1 block w-full rounded border p-2" type="text" value={requestContactPerson} onChange={e => setRequestContactPerson(e.target.value)} /></label>
+<label>الهاتف<input className="mt-1 block w-full rounded border p-2" type="tel" value={requestTelephone} onChange={e => setRequestTelephone(e.target.value)} /></label>
+<label>رقم طلب العميل<input className="mt-1 block w-full rounded border p-2" type="text" value={orderNo} onChange={e => setOrderNo(e.target.value)} /></label>
+<label>تاريخ الطلب<input className="mt-1 block w-full rounded border p-2" type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} /></label>
+</div></fieldset>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">العينات والفحص المطلوب</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><RequestFields fields={requestFields.filter(field => ["sample_receiving_date"].includes(field.key))} value={requestExtras} onChange={setRequestExtras} /></div><label>فئة العينات / Sample kind *<input className="mt-1 block w-full rounded border p-2" type="text" value={sampleKind} onChange={e => setSampleKind(e.target.value)} /></label>
+<label>عدد العينات<input className="mt-1 block w-full rounded border p-2" type="number" value={sampleQuantity} onChange={e => setSampleQuantity(e.target.value)} /></label>
+<label>الاختبار المطلوب *<input className="mt-1 block w-full rounded border p-2" type="text" value={requestedTest} onChange={e => setRequestedTest(e.target.value)} /></label>
+<label>مواصفة الاختبار<input className="mt-1 block w-full rounded border p-2" type="text" value={testMethod} onChange={e => setTestMethod(e.target.value)} /></label>
+<div className="sm:col-span-2"><RequestFields fields={requestFields.filter(field => ["sample_type", "sample_quantity_or_weight"].includes(field.key))} value={requestExtras} onChange={setRequestExtras} /></div></div></fieldset>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">المراجعة الفنية عند الاستلام</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><p className="mb-3 text-sm">يستكمل المدير الفني هذه البيانات ويوقّع المراجعة بعد حفظ الطلب.</p>
+<RequestFields fields={reviewFields} value={creationReview} onChange={setCreationReview} disabled={savingRequest || currentUser?.role !== "technical_manager"} /></div></div></fieldset>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">تسليم النتائج والمسائل المالية</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><RequestFields fields={requestFields.filter(field => ["sample_code", "results_delivery_date", "results_delivery_method"].includes(field.key))} value={requestExtras} onChange={setRequestExtras} /></div><label>طريقة الدفع<select className="mt-1 block w-full rounded border p-2" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}><option value="">اختاري</option><option value="Cash">نقدي</option><option value="Check">شيك</option><option value="Bank Transfer">تحويل بنكي</option><option value="Account">على الحساب</option></select></label></div></fieldset>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">موافقة العميل وقرار مدير المختبر</legend><div className="grid gap-3 sm:grid-cols-2"><p>موافقة العميل أو ممثله المخوّل<br/><small>توقيع من الرابط، أو توثيق موافقة واتساب/بريد أو أمر شراء بعد حفظ الطلب.</small></p><p>قرار مدير المختبر<br/><small>مقبول للتنفيذ / مرفوض / معلق حتى استكمال البيانات.</small></p></div></fieldset>
             {/* BUTTONS */}
 
             <div className="flex justify-end gap-3">
@@ -2742,8 +2442,8 @@ async function loadProject() {
                 className="bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg"
               >
                 {savingRequest
-                  ? "جاري إنشاء العقد..."
-                  : "📝 إنشاء العقد وإصدار الرابط"}
+                  ? "جارٍ حفظ طلب الفحص..."
+                  : "حفظ طلب الفحص وإصدار الرابط"}
               </button>
 
             </div>

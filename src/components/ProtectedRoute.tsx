@@ -31,10 +31,10 @@ export default function ProtectedRoute({
     setLoading(true);
     setMessage("");
 
-    async function verifyAccess() {
+    async function verifyAccess(background = false) {
       const run = ++generation;
       const isCurrent = () => active && run === generation;
-      setLoading(true);
+      if (!background) setLoading(true);
       setMessage("");
       try {
         const { data, error } = await supabase.auth.getUser();
@@ -93,11 +93,11 @@ export default function ProtectedRoute({
       }
     }
 
-    function scheduleVerification() {
+    function scheduleVerification(background = false) {
       if (!active) return;
       // Do not run Supabase requests inside the auth event callback.
       if (timer !== undefined) clearTimeout(timer);
-      timer = setTimeout(() => { void verifyAccess(); }, 0);
+      timer = setTimeout(() => { void verifyAccess(background); }, 0);
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -116,13 +116,14 @@ export default function ProtectedRoute({
       }
     );
 
-    window.addEventListener("focus", scheduleVerification);
+    const onFocus = () => scheduleVerification(true);
+    window.addEventListener("focus", onFocus);
     return () => {
       active = false;
       ++generation;
       if (timer !== undefined) clearTimeout(timer);
       subscription.unsubscribe();
-      window.removeEventListener("focus", scheduleVerification);
+      window.removeEventListener("focus", onFocus);
     };
   }, [router, adminOnly, rolesKey]);
 
