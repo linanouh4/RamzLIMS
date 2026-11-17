@@ -58,6 +58,34 @@ export default function QuotationPaper({ quote, total }: { quote: SavedQuote; to
     <article dir="rtl" className="qf-paper bg-white text-black">
       <style>{`
         .qf-paper { font-family: Tahoma, Arial, sans-serif; line-height: 1.55; }
+        .qf-paper .qf-approval-left {
+          position: relative;
+          width: max-content;
+          max-width: 100%;
+          margin: 3mm auto 0 0;
+          padding-top: 2mm;
+          direction: ltr;
+          text-align: left;
+          line-height: 1.4;
+          break-inside: avoid;
+        }
+        .qf-paper .qf-approval-left-stamps {
+          display: flex;
+          direction: ltr;
+          justify-content: flex-start;
+          align-items: center;
+          gap: 5mm;
+          margin-bottom: 2mm;
+        }
+        .qf-paper .qf-approval-left-stamps img {
+          position: static;
+          display: block;
+          width: auto;
+          height: 25mm;
+          max-width: 46mm;
+          object-fit: contain;
+        }
+        .qf-paper .qf-approval-left p { margin: 1mm 0; }
         .qf-paper p { margin: .35em 0; }
         .qf-paper h2 { font-weight: bold; margin-top: .8em; }
         .qf-lines { width: 100%; border-collapse: collapse; margin: .85em 0; font-size: .88em; }
@@ -73,16 +101,25 @@ export default function QuotationPaper({ quote, total }: { quote: SavedQuote; to
         }
       `}</style>
 
-      <QuotationHeader />
+      <table className="qf-stamped-document" dir="rtl">
+        <thead><tr><td><QuotationHeader /></td></tr></thead>
+        <tbody><tr><td>
+          
       <div dir="ltr" className="my-2 flex flex-wrap justify-between gap-2 text-sm">
         <span>File NO: Quote No- <bdi>{quote.quote_no}</bdi></span>
         <span>Date: <bdi>{quote.quote_date}</bdi> G</span>
       </div>
       {!approved && <p className="text-center font-bold">مسودة</p>}
 
-      <p>السادة / <strong>{quote.customer_name}</strong> المحترمين</p>
+      
+          <div className="qf-recipient-band">
+            <div>
+              <p>السادة / <strong>{quote.customer_name}</strong> المحترمين</p>
       <p>عناية المكرم / {quote.contact_person || "—"} المحترم</p>
       <p>إيميل: <bdi>{quote.email || "—"}</bdi>　 رقم جوال: <bdi>{quote.mobile || "—"}</bdi></p>
+                  </div>
+            
+          </div>
       <p>تحية طيبة وبعد ،،،،</p>
       <h2 className="text-center">الموضوع: {quote.subject}</h2>
       <p>
@@ -106,7 +143,7 @@ export default function QuotationPaper({ quote, total }: { quote: SavedQuote; to
               <td>{item.saac_scope_status || "لم تُحدّد"}</td>
             </tr>
           ))}
-          {Array.from({ length: Math.max(0, 4 - rows.length) }, (_, i) => (
+          {Array.from({ length: Math.max(0, 0) }, (_, i) => (
             <tr key={"empty-" + i}>
               <td>{rows.length + i + 1}</td>
               {Array.from({ length: 7 }, (_, j) => <td key={j}>&nbsp;</td>)}
@@ -128,13 +165,70 @@ export default function QuotationPaper({ quote, total }: { quote: SavedQuote; to
       <p dir="ltr" className="text-center">NO: 554608010658441　 IBAN: SA32 8000 0554 6080 1065 8441</p>
       <p>نأمل أن نوفّق بخدمتكم في جميع الأعمال المخبرية لمشاريعكم الجارية، وفي حالة وجود أي استفسار يرجى الاتصال بنا على الأرقام الموضحة أدناه.</p>
       <p>وتفضلوا بقبول فائق الاحترام ،،،،،</p>
-      <div className="mt-3 text-center">
-        <strong>شركة رمز الإمارات لفحص التربة والخرسانة</strong>
-        <p>مدير المختبر م. لينا نوح</p>
-        {approved && quote.approved_at && (
-          <p>تم الاعتماد بتاريخ {new Date(quote.approved_at).toLocaleDateString("ar-SA", { timeZone: "Asia/Riyadh" })}</p>
-        )}
-      </div>
+      <div className="qf-approval-left">
+            {approved && (
+              <div className="qf-approval-left-stamps">
+                {seal && <img src={seal} alt="ختم الشركة" />}
+                {signature && <img src={signature} alt="ختم مديرة المختبر" />}
+              </div>
+            )}
+            <strong>شركة رمز الإمارات لفحص التربة والخرسانة</strong>
+            <p>مدير المختبر م. لينا نوح</p>
+            {approved && quote.approved_at && (
+              <p>تم الاعتماد بتاريخ {new Date(quote.approved_at).toLocaleDateString("ar-SA", { timeZone: "Asia/Riyadh" })}</p>
+            )}
+          </div>
+        </td></tr></tbody>
+</table>
+      <style>{`
+        .qf-stamped-document { width: 100%; border-collapse: collapse; }
+        .qf-company-overlay {
+          position: relative;
+          text-align: center;
+          line-height: 1.4;
+          break-inside: avoid;
+        }
+        .qf-paper .qf-company-overlay .qf-company-imprint {
+          position: absolute;
+          width: 46mm;
+          height: 29mm;
+          max-width: 38%;
+          object-fit: contain;
+          left: 28%;
+          bottom: 0;
+          transform: translate(-50%, 15%);
+          pointer-events: none;
+        }
+        @media print {
+          .qf-paper .qf-lines > thead { display: table-row-group; }
+        }
+        .qf-stamped-document > thead > tr > td,
+        .qf-stamped-document > tbody > tr > td {
+          padding: 0; border: 0; vertical-align: top; text-align: start;
+        }
+        .qf-recipient-band {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 5mm; padding: 1mm 0;
+        }
+        .qf-recipient-band > div { min-width: 0; overflow-wrap: anywhere; }
+        .qf-company-imprint {
+          display: block; width: 46mm; height: 29mm;
+          flex: 0 0 auto; object-fit: contain;
+        }
+        .qf-manager-signoff {
+          display: flex; align-items: center; justify-content: center;
+          gap: 3mm; break-inside: avoid;
+        }
+        .qf-manager-signoff img {
+          display: block; width: 34mm; height: 14mm; object-fit: contain;
+        }
+        .qf-paper .qf-page-end .qf-approval-images { display: none; }
+        @media print {
+          .qf-stamped-document > thead { display: table-header-group; break-inside: avoid; }
+          .qf-paper .qf-stamped-document > tbody > tr { break-inside: auto; }
+        }
+      `}</style>
+      <div className="qf-page-end">
       {hasApprovalImages && (
         <div className="qf-approval-images" dir="rtl">
           <figure>
@@ -188,98 +282,145 @@ export default function QuotationPaper({ quote, total }: { quote: SavedQuote; to
           <div>* الموقع الإلكتروني: <a href="http://www.ramzalemarat.com"><bdi dir="ltr">www.ramzalemarat.com</bdi></a></div>
         </div>
       </footer>
-          <style>{`
-        /* QF70103 repeating print footer */
-        @page {
-          size: A4 portrait;
-          margin: 12mm 12mm 30mm;
+      </div>
+      <style>{`
+        .qf-page-end .qf-approval-images {
+          display: flex;
+          flex-direction: row;
+          direction: rtl;
+          justify-content: flex-end;
+          align-items: flex-end;
+          gap: 4mm;
+          margin: 3mm 0 1mm;
         }
+        .qf-page-end figure { margin: 0; text-align: center; }
+        .qf-page-end figure img {
+          display: block;
+          position: static;
+          width: 24mm;
+          height: 11mm;
+          margin: 0 auto;
+          object-fit: contain;
+        }
+        .qf-page-end figcaption { font: 7pt/1.1 Tahoma, Arial, sans-serif; }
+        .qf-page-end .qf-contact { margin-top: 1mm; }
+
         @media print {
-          .qf-paper .qf-contact {
+          @page {
+            size: A4 portrait;
+            margin: 10mm 12mm ${hasApprovalImages ? "35mm" : "20mm"};
+          }
+          .qf-paper {
+            min-height: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .qf-paper .qf-page-end {
             position: fixed;
             left: 0;
             right: 0;
-            bottom: -23mm;
-            box-sizing: border-box;
-            margin: 0;
-            padding: 2mm 0 0;
-            border-top: 1px solid #222;
-            background: white;
-            color: black;
-            font-size: 8.5pt;
-            line-height: 1.45;
+            bottom: ${hasApprovalImages ? "-30mm" : "-15mm"};
+            color: #111;
+            font-family: Tahoma, Arial, sans-serif;
           }
-          .qf-paper .qf-footer-branches {
-            display: grid;
-            grid-template-columns: 1.05fr 1fr 1.15fr;
-            gap: 1mm 3mm;
-          }
-          .qf-paper .qf-footer-address {
-            grid-column: span 2;
-          }
-        }
-      `}</style>
-          <style>{String.raw`
-        /* quotation-margin-footer-v2 */
-        @media print {
-          .qf-paper footer.qf-contact {
-            display: none !important;
-          }
-        }
-        @page {
-          size: A4 portrait;
-          margin: 12mm 12mm 30mm;
-          @bottom-center {
-            content: "المقر الرئيسي: مدينة القريات – مقابل البلدية القديمة – حي السديرية　 |　 الإدارة: \200E 0509982399 – 0509173884\200E\A الخبر والدمام: \200E 0554187910\200E　 |　 مكة وجدة: \200E 0576120827\200E　 |　 للتواصل: info@ramzalemarat.com\A سكاكا ودومة الجندل: \200E 0532720004\200E　 |　 طريف وعرعر: \200E 0554596469\200E　 |　 الموقع الإلكتروني: www.ramzalemarat.com";
-            width: 100%;
-            direction: rtl;
-            text-align: right;
-            vertical-align: top;
-            white-space: pre-line;
-            border-top: 1px solid black;
-            padding-top: 2mm;
-            color: black;
-            font: 9pt/1.5 Tahoma, Arial, sans-serif;
-          }
-        }
-      `}</style>
-          {hasApprovalImages && (
-        <style>{`
-          .qf-approval-images {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 18mm;
-            margin: 4mm 0;
-            break-inside: avoid;
-          }
-          .qf-approval-images figure { margin: 0; text-align: center; }
-          .qf-approval-images img {
+          .qf-page-end .qf-approval-images { margin: 0 0 1mm; }
+          .qf-paper .qf-page-end footer.qf-contact {
+            position: static;
             display: block;
-            width: 32mm;
-            height: 16mm;
-            object-fit: contain;
-            margin: 0 auto;
+            margin: 0;
+            padding: 1mm 0 0;
+            font-size: 8pt;
+            line-height: 1.25;
           }
-          .qf-approval-images figcaption { font: 9pt/1.2 Tahoma, Arial, sans-serif; }
-          @page {
-            margin-bottom: 46mm;
-            @bottom-center { padding-top: 23mm; }
+          .qf-page-end .qf-footer-branches {
+            grid-template-columns: 1fr 1fr 1.2fr;
+            gap: .5mm 2mm;
           }
-          @media print {
-            .qf-approval-images {
-              position: fixed;
-              left: 0;
-              right: 0;
-              bottom: -21mm;
-              height: 19mm;
-              margin: 0;
-              z-index: 2;
-            }
-            .qf-approval-images img { height: 14mm; }
-          }
-        `}</style>
-      )}
+        }
+      `}</style>
+    <style>{`
+        /* qf-approval-left-alignment-fix */
+        .qf-paper .qf-approval-left {
+          display: block !important;
+          width: max-content !important;
+          max-width: 100% !important;
+          margin: 3mm auto 0 0 !important;
+          direction: ltr !important;
+          text-align: left !important;
+        }
+        .qf-paper .qf-approval-left-stamps {
+          display: flex !important;
+          width: 100% !important;
+          direction: ltr !important;
+          justify-content: flex-start !important;
+          align-items: center !important;
+          gap: 5mm !important;
+          margin: 0 0 2mm !important;
+        }
+        .qf-paper .qf-approval-left-stamps img {
+          position: static !important;
+          inset: auto !important;
+          display: block !important;
+          width: auto !important;
+          height: 25mm !important;
+          max-width: 46mm !important;
+          margin: 0 !important;
+          transform: none !important;
+          object-fit: contain !important;
+        }
+        .qf-paper .qf-approval-left > strong,
+        .qf-paper .qf-approval-left > p {
+          display: block !important;
+          margin: 1mm 0 !important;
+          text-align: left !important;
+        }
+      `}</style>
+    <style>{`
+        /* qf-approval-overlay-print-fix */
+        .qf-paper .qf-approval-left {
+          position: relative !important;
+          display: block !important;
+          width: max-content !important;
+          max-width: 100% !important;
+          margin: 3mm auto 0 0 !important;
+          padding: 0 !important;
+          direction: ltr !important;
+          text-align: left !important;
+          break-inside: auto !important;
+          overflow: visible !important;
+        }
+        .qf-paper .qf-approval-left-stamps {
+          position: absolute !important;
+          top: -24mm !important;
+          left: 0 !important;
+          right: auto !important;
+          display: flex !important;
+          width: max-content !important;
+          direction: ltr !important;
+          justify-content: flex-start !important;
+          align-items: center !important;
+          gap: 4mm !important;
+          margin: 0 !important;
+          z-index: 5 !important;
+        }
+        .qf-paper .qf-approval-left-stamps img {
+          position: static !important;
+          display: block !important;
+          width: auto !important;
+          height: 29mm !important;
+          max-width: 46mm !important;
+          margin: 0 !important;
+          transform: none !important;
+          object-fit: contain !important;
+        }
+        .qf-paper .qf-approval-left > strong,
+        .qf-paper .qf-approval-left > p {
+          display: block !important;
+          margin: 1mm 0 !important;
+          text-align: left !important;
+          break-inside: auto !important;
+        }
+      `}</style>
     </article>
   );
 }
