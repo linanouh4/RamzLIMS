@@ -306,8 +306,8 @@ export default function Home() {
         {/* Logo / Title */}
         {/* ================================================= */}
 
-        <h1 className="text-4xl font-bold text-center text-blue-700">
-          RamzLIMS
+        <h1 className="text-2xl font-bold leading-snug text-center text-blue-700">
+          {ui("شركة رمز الأمارات لفحص التربة والخرسانة")}
         </h1>
 
         <p className="text-center text-gray-500 mt-2">

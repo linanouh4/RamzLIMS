@@ -14,6 +14,7 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function applyLanguage(language: Language) {
   document.documentElement.lang = language;
+  document.title = language === "ar" ? "شركة رمز الأمارات لفحص التربة والخرسانة" : "Ramz Alemarat for Soil and Concrete Testing Company";
   document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
 }
 

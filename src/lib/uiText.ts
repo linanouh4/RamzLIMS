@@ -374,6 +374,7 @@ const arabic: Record<string, string> = {
 };
 
 const english: Record<string, string> = {
+  "شركة رمز الأمارات لفحص التربة والخرسانة": "Ramz Alemarat for Soil and Concrete Testing Company",
   "الرجاء إدخال اسم المستخدم وكلمة المرور": "Enter your username and password.",
   "خطأ Supabase في قراءة المستخدم:\n\n": "Could not read the user account in Supabase:\n\n",
   "اسم المستخدم غير صحيح": "Incorrect username.",
@@ -710,7 +711,7 @@ const english: Record<string, string> = {
   "توقيع رامز": "Ramz signature",
   "ختم رامز": "Ramz stamp",
   "تاريخ الختم:": "Stamp date:",
-  "هذا المستند إلكتروني وتم إعداده من خلال نظام RamzLIMS.": "Electronic document prepared using RamzLIMS.",
+  "أُعدّ هذا المستند إلكترونيًا من خلال نظام شركة رمز الأمارات لفحص التربة والخرسانة.": "This document was prepared electronically through the system of Ramz Alemarat for Soil and Concrete Testing Company.",
   "طباعة / حفظ PDF": "Print / Save PDF",
   "رقم العقد غير موجود في الرابط.": "The link is missing the contract number.",
   "هذه الصفحة مخصصة لمدير المختبر فقط.": "Only the laboratory manager can access this page.",

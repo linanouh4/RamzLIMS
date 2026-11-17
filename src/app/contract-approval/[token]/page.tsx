@@ -819,7 +819,7 @@ background: white !important;
 
           {/* Footer */}
           <div className="mt-10 pt-5 border-t text-center text-xs text-slate-400">
-            {ui("هذا المستند إلكتروني وتم إعداده من خلال نظام RamzLIMS.")}
+            {ui("أُعدّ هذا المستند إلكترونيًا من خلال نظام شركة رمز الأمارات لفحص التربة والخرسانة.")}
           </div>
 
         </div>

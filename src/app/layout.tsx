@@ -9,7 +9,7 @@ const fonts = {
 } as CSSProperties;
 
 export const metadata: Metadata = {
-  title: "RamzLIMS",
+  title: "شركة رمز الأمارات لفحص التربة والخرسانة",
   description: "Laboratory Information Management System",
 };
 

@@ -45,7 +45,7 @@ const linkClass = (href: string) => "block rounded-lg p-3 transition " + (pathna
 
 return (
 <aside className="w-64 bg-blue-800 text-white p-6 min-h-screen">
-<h1 className="text-3xl font-bold mb-10">RamzLIMS</h1>
+<h1 className="mb-8 text-xl font-bold leading-snug">{ui("شركة رمز الأمارات لفحص التربة والخرسانة")}</h1>
 
   {user && (
     <div className="mb-6 p-4 rounded-xl bg-blue-700">
