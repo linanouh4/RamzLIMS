@@ -1,6 +1,7 @@
 ﻿
 "use client";
 
+import ReportIssuePanel from "@/components/ReportIssuePanel";
 import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
@@ -500,6 +501,8 @@ export default function ReportPage() {
           </button>
 
         </div>
+
+        {(isAdmin() || isBranchManager()) && <ReportIssuePanel key={id} sampleId={Number(id)} approved={approval?.status === "Approved" && Boolean(approval?.approved_by)} />}
 
         <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-xl p-10">
 
