@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -98,9 +99,7 @@ function QuotationList() {
               {ui("إنشاء عرض سعر")}
             </Link>
           )}
-          <Link href="/dashboard" className="rounded-lg border bg-white px-4 py-2">
-            {ui("لوحة التحكم")}
-          </Link>
+          <BackButton href="/dashboard" />
         </header>
 
         <section className="overflow-x-auto rounded-xl bg-white p-5 shadow">

@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -91,12 +92,7 @@ const { data: testData, error: testError } = await supabase
         {/* أزرار التحكم */}
         <div className="max-w-6xl mx-auto mb-4 flex justify-between print:hidden">
 
-          <button
-            onClick={() => router.back()}
-            className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg"
-          >
-            {ui("← رجوع")}
-          </button>
+          <BackButton onClick={() => router.back()} />
 
           <button
             onClick={() => window.print()}

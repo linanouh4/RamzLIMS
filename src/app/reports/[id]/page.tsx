@@ -1,6 +1,7 @@
 ﻿
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -489,12 +490,7 @@ export default function ReportPage() {
 
         <div className="flex justify-between items-center max-w-5xl mx-auto mb-4">
 
-          <button
-            onClick={() => router.back()}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {ui("← Back")}
-          </button>
+          <BackButton onClick={() => router.back()} />
 
           <button
             onClick={() => window.print()}

@@ -3,7 +3,7 @@
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import { supabase } from "@/lib/supabase";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AddTestToSampleModal from "@/components/AddTestToSampleModal";
@@ -300,13 +300,7 @@ export default function SampleDetailsPage() {
     <ProtectedRoute>
       <div className="p-8">
         <div className="flex items-center gap-3 mb-8">
-          <Link
-            href="/samples"
-            replace
-            className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {ui("← Back to Samples")}
-          </Link>
+          <BackButton href="/samples" replace />
           <h1 className="text-3xl font-bold">
             {ui("Sample Details")}
           </h1>

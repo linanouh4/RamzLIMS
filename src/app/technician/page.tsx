@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -285,12 +286,7 @@ return (
 
       <section className="flex-1 p-6">
 
-      <button
-        onClick={() => router.back()}
-        className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
-      >
-        {ui("← رجوع")}
-      </button>
+      <BackButton onClick={() => router.back()} />
 
       <h1 className="text-3xl font-bold">
         {ui("👷 Technician Dashboard")}

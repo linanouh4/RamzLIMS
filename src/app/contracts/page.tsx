@@ -1,6 +1,7 @@
 
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { contractPrintFooter } from "@/components/contractPrintFooter";
 import { contractLetterhead } from "@/components/contractLetterhead";
@@ -1363,21 +1364,13 @@ ${contractPrintFooter}
         <div className="mx-auto max-w-7xl">
           <div className="mb-6 flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
   <div className="flex items-start gap-3">
-    <button
-      type="button"
-      onClick={() => {
+    <BackButton onClick={() => {
         if (window.history.length > 1) {
           router.back();
         } else {
           router.push("/dashboard");
         }
-      }}
-      className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-xl font-bold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-      title={ui("رجوع")}
-      aria-label={ui("رجوع")}
-    >
-      ←
-    </button>
+      }} />
 
     <div>
       <h1 className="text-2xl font-bold text-gray-900">

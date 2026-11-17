@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -40,18 +41,13 @@ export default function ReportsPage() {
     <ProtectedRoute>
       <div className="p-8 min-h-screen bg-gray-100">
         <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => {
+          <BackButton onClick={() => {
               if (window.history.length > 1) {
                 router.back();
               } else {
                 router.push("/dashboard");
               }
-            }}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {ui("← Back")}
-          </button>
+            }} />
           <div>
             <h1 className="text-3xl font-bold text-blue-900">{ui("Reports")}</h1>
             <p className="text-gray-600 mt-2">{ui("Completed samples ready for reporting")}</p>

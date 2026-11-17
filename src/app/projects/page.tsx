@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -562,14 +563,9 @@ export default function ProjectsPage() {
 
         <div className="flex items-center gap-3 mb-8">
 
-          <button
-            onClick={() =>
+          <BackButton onClick={() =>
               router.push("/dashboard")
-            }
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {ui("← Back")}
-          </button>
+            } />
 
           <div>
 

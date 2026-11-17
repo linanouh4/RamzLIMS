@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -501,19 +502,9 @@ export default function FieldDensityPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-100 p-4 md:p-6">
-<button
-  onClick={() => router.back()}
-  className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
->
-  {ui("← رجوع")}
-</button>
+
         <div className="flex flex-wrap gap-3 mb-4 print:hidden">
-          <button
-            onClick={() => router.back()}
-            className="bg-gray-600 text-white px-5 py-2 rounded-lg"
-          >
-            {ui("← رجوع")}
-          </button>
+          <BackButton onClick={() => router.back()} />
 
           <button
             onClick={saveTest}

@@ -1,4 +1,5 @@
 "use client";
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import QuotationPaper from "../QuotationPaper";
 
@@ -223,7 +224,7 @@ function Details() {
     <main className="mx-auto max-w-5xl p-5 text-slate-900">
       <style>{'@media print { @page { size:A4; margin:14mm } thead {display:table-header-group} tr {break-inside:avoid} }'}</style>
       <nav className="mb-5 flex flex-wrap gap-5 text-blue-800 print:hidden">
-        <Link href="/quotations">{ui("قائمة العروض")}</Link>
+        <BackButton href="/quotations" />
         <button type="button" onClick={() => void printQuotation()}>{ui("طباعة")}</button>
         {draft && <Link href={"/quotations/" + id + "?action=edit"}>{ui("تعديل")}</Link>}
         

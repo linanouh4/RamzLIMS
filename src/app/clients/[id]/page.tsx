@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -223,18 +224,13 @@ export default function ClientDetailsPage() {
 
         <div className="flex items-center gap-3 mb-6">
 
-          <button
-            onClick={() => {
+          <BackButton onClick={() => {
               if (window.history.length > 1) {
                 router.back();
               } else {
                 router.push("/clients");
               }
-            }}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {tr("→ رجوع", "← Back")}
-          </button>
+            }} />
 
           <h1 className="text-3xl font-bold text-blue-900">
             {tr("تفاصيل العميل", "Client Details")}

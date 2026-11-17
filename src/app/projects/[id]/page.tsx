@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -1313,13 +1314,7 @@ async function loadProject() {
 
         <div className="flex items-center gap-3 mb-6">
 
-          <button
-  type="button"
-  onClick={() => router.push("/dashboard")}
-  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
->
-  {ui("← العودة للوحة التحكم")}
-</button>
+          <BackButton onClick={() => router.push("/dashboard")} />
 
           <h1 className="text-3xl font-bold text-blue-900">
             {ui("Project Details")}

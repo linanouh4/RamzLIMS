@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { contractPrintFooter } from "@/components/contractPrintFooter";
 import { useEffect, useState } from "react";
@@ -534,13 +535,7 @@ export default function ContractApprovalAdminPage() {
           <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
             <div className="mb-2 text-lg font-bold">{ui("تعذر تحميل العقد")}</div>
             <div>{ui(error)}</div>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="mt-5 rounded-xl bg-gray-900 px-5 py-3 text-sm font-bold text-white"
-            >
-              {ui("← رجوع")}
-            </button>
+            <BackButton onClick={() => router.back()} />
           </div>
         </div>
       </ProtectedRoute>
@@ -583,13 +578,7 @@ export default function ContractApprovalAdminPage() {
         <div className="mx-auto max-w-6xl">
           <div className="no-print mb-6 flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-xl font-bold text-gray-700 hover:bg-gray-100"
-              >
-                ←
-              </button>
+              <BackButton onClick={() => router.back()} />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{ui("اعتماد عقد العميل")}</h1>
                 <p className="mt-1 text-sm text-gray-500">{ui("مراجعة توقيع العميل واعتماد العقد من رامز الإمارات")}</p>

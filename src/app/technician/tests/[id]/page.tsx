@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -1166,14 +1167,9 @@ export default function ConcreteTestPage() {
     return (
       <ProtectedRoute>
         <div className="p-6">
-          <button
-            onClick={() =>
+          <BackButton onClick={() =>
               router.back()
-            }
-            className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
-          >
-            {ui("← رجوع")}
-          </button>
+            } />
 
           <div>
             {ui("جاري تحميل نموذج الفحص...")}
@@ -1201,14 +1197,9 @@ export default function ConcreteTestPage() {
         ================================================= */}
 
         <div className="flex flex-wrap gap-3 mb-4 print:hidden">
-          <button
-            onClick={() =>
+          <BackButton onClick={() =>
               router.back()
-            }
-            className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg"
-          >
-            {ui("← رجوع")}
-          </button>
+            } />
 
           <button
             onClick={saveTest}

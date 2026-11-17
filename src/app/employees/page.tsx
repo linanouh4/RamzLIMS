@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -192,12 +193,7 @@ async function deleteUser(id: number) {
       <main className="min-h-screen bg-gray-100 p-8">
         <div className="flex flex-col gap-6 mb-8 md:flex-row md:justify-between md:items-end">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => window.history.back()}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {ui("← Back")}
-            </button>
+            <BackButton onClick={() => window.history.back()} />
             <div>
               <h1 className="text-3xl font-bold">{ui("Users")}</h1>
               <p className="text-gray-500 mt-2">

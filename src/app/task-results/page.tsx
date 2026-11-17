@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -1082,14 +1083,9 @@ return (
 
     {/* BACK */}
 
-    <button
-      onClick={() =>
+    <BackButton onClick={() =>
         router.back()
-      }
-      className="flex items-center gap-2 text-gray-600 hover:text-blue-700 mb-5 font-medium print:hidden"
-    >
-      {ui("← رجوع")}
-    </button>
+      } />
 
     {/* HEADER */}
 

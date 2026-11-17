@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -67,23 +68,13 @@ function printTask(taskId: number) {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-100 p-6">
-<button
-  onClick={() => router.back()}
-  className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
->
-  {ui("← رجوع")}
-</button>
+
         <div className="max-w-7xl mx-auto">
 
           {/* العنوان */}
           <div className="mb-6 print:hidden">
 
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-gray-600 hover:text-blue-700 font-semibold mb-4"
-            >
-              {ui("← رجوع")}
-            </button>
+            <BackButton onClick={() => router.back()} />
 
             <h1 className="text-3xl font-bold text-gray-800">
               {ui("🧪 نماذج الفحص")}

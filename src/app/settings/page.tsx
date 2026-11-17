@@ -1,5 +1,6 @@
 "use client";
 
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -64,18 +65,13 @@ export default function Settings() {
         <div className="max-w-6xl mx-auto">
           <div className="bg-white rounded-xl shadow p-6 mb-6">
             <div className="flex items-center gap-3 mb-3">
-              <button
-                onClick={() => {
+              <BackButton onClick={() => {
                   if (window.history.length > 1) {
                     router.back();
                   } else {
                     router.push("/dashboard");
                   }
-                }}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                {ui("← Back")}
-              </button>
+                }} />
               <h1 className="text-3xl font-bold text-blue-800">{ui("Settings")}</h1>
             </div>
             <p className="text-gray-500 mt-3">{ui("System settings and branding for reports.")}</p>

@@ -1,8 +1,8 @@
 "use client";
+import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { QuotationHeader } from "./QuotationPaper";
 
-import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
@@ -162,9 +162,7 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
             <h1 className="text-2xl font-bold text-blue-900">{quote ? ui("تعديل عرض السعر") : ui("إنشاء عرض سعر")}</h1>
             <p className="mt-1 text-sm text-slate-600">QF 701/03</p>
           </div>
-          <Link href="/quotations" className="rounded-lg border bg-white px-4 py-2">
-            {ui("عروض الأسعار")}
-          </Link>
+          <BackButton href="/quotations" />
         </header>
 
         <div className="mb-4 bg-white"><QuotationHeader /></div>
