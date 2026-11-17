@@ -1,10 +1,12 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearSavedUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type Props = {
 user?: {
@@ -15,11 +17,13 @@ full_name?: string;
 };
 
 export default function Sidebar({ user }: Props) {
+  const ui = useUiText();
 const pathname = usePathname();
 const router = useRouter();
 const [loggingOut, setLoggingOut] = useState(false);
 const [logoutError, setLogoutError] = useState("");
 
+const { language, setLanguage } = useLanguage();
 const role = user?.role?.toLowerCase();
 
 const logout = async () => {
@@ -45,12 +49,12 @@ return (
 
   {user && (
     <div className="mb-6 p-4 rounded-xl bg-blue-700">
-      <div className="text-sm text-slate-100">Logged in as</div>
+      <div className="text-sm text-slate-100">{ui("Logged in as")}</div>
       <div className="font-semibold text-lg">
-        {user.full_name || "User"}
+        {user.full_name || ui("User")}
       </div>
       <div className="text-sm text-slate-200 capitalize">
-        {role || "-"}
+        {ui(role || "-")}
       </div>
     </div>
   )}
@@ -59,31 +63,31 @@ return (
     {role === "admin" && (
       <>
         <Link href="/dashboard" className={linkClass("/dashboard")}>
-          🏠 Dashboard
+          🏠 {language === "ar" ? "لوحة التحكم" : "Dashboard"}
         </Link>
         <Link href="/employees" className={linkClass("/employees")}>
-          👤 Users / Employees
+          👤 {language === "ar" ? "المستخدمون والموظفون" : "Users / Employees"}
         </Link>
         <Link href="/clients" className={linkClass("/clients")}>
-          👥 All Clients
+          👥 {language === "ar" ? "كل العملاء" : "All Clients"}
         </Link>
         <Link href="/projects" className={linkClass("/projects")}>
-          🏗 All Projects
+          🏗 {language === "ar" ? "كل المشاريع" : "All Projects"}
         </Link>
         <Link href="/task-results" className={linkClass("/task-results")}>
-          📊 Task Results
+          📊 {language === "ar" ? "نتائج المهام" : "Task Results"}
         </Link>
         <Link href="/samples" className={linkClass("/samples")}>
-          🧪 Samples
+          🧪 {language === "ar" ? "العينات" : "Samples"}
         </Link>
         <Link href="/tests" className={linkClass("/tests")}>
-          🔬 Tests
+          🔬 {language === "ar" ? "الفحوصات" : "Tests"}
         </Link>
         <Link href="/reports" className={linkClass("/reports")}>
-          📑 Reports
+          📑 {language === "ar" ? "التقارير" : "Reports"}
         </Link>
         <Link href="/contracts" className={linkClass("/contracts")}>
-          📝 Contracts
+          📝 {language === "ar" ? "العقود" : "Contracts"}
         </Link>
       </>
     )}
@@ -91,19 +95,19 @@ return (
     {role === "accountant" && (
       <>
         <Link href="/dashboard" className={linkClass("/dashboard")}>
-          🏠 Dashboard
+          🏠 {language === "ar" ? "لوحة التحكم" : "Dashboard"}
         </Link>
         <Link href="/clients" className={linkClass("/clients")}>
-          👥 All Clients
+          👥 {language === "ar" ? "كل العملاء" : "All Clients"}
         </Link>
         <Link href="/projects" className={linkClass("/projects")}>
-          🏗 All Projects
+          🏗 {language === "ar" ? "كل المشاريع" : "All Projects"}
         </Link>
         <Link href="/contracts" className={linkClass("/contracts")}>
-          📝 Contracts
+          📝 {language === "ar" ? "العقود" : "Contracts"}
         </Link>
         <Link href="/reports" className={linkClass("/reports")}>
-          📑 Reports
+          📑 {language === "ar" ? "التقارير" : "Reports"}
         </Link>
       </>
     )}
@@ -111,57 +115,57 @@ return (
     {role === "branch_manager" && (
       <>
         <Link href="/dashboard" className={linkClass("/dashboard")}>
-          🏠 Dashboard
+          🏠 {language === "ar" ? "لوحة التحكم" : "Dashboard"}
         </Link>
         <Link href="/clients" className={linkClass("/clients")}>
-          👥 عملاء الفرع
+          👥 {language === "ar" ? "عملاء الفرع" : "Branch Clients"}
         </Link>
         <Link href="/projects" className={linkClass("/projects")}>
-          🏗 مشاريع الفرع
+          🏗 {language === "ar" ? "مشاريع الفرع" : "Branch Projects"}
         </Link>
         <Link href="/samples" className={linkClass("/samples")}>
-          🧪 Samples
+          🧪 {language === "ar" ? "العينات" : "Samples"}
         </Link>
         <Link href="/tests" className={linkClass("/tests")}>
-          🔬 Tests
+          🔬 {language === "ar" ? "الفحوصات" : "Tests"}
         </Link>
         <Link href="/contracts" className={linkClass("/contracts")}>
-          📝 عقود العملاء
+          📝 {language === "ar" ? "عقود العملاء" : "Customer Contracts"}
         </Link>
         <Link href="/task-results" className={linkClass("/task-results")}>
-          📊 نتائج المهام
+          📊 {language === "ar" ? "نتائج المهام" : "Task Results"}
         </Link>
         <Link href="/reports" className={linkClass("/reports")}>
-          📑 تقارير الفرع
+          📑 {language === "ar" ? "تقارير الفرع" : "Branch Reports"}
         </Link>
       </>
     )}
 
     {(role === "technical_manager" || role === "quality_manager" || role === "lab_manager") && (
           <Link href="/contracts" className={linkClass("/contracts")}>
-            📝 العقود
+            {ui("📝 العقود")}
           </Link>
         )}
 
         {role === "technical_manager" && (
       <>
         <Link href="/dashboard" className={linkClass("/dashboard")}>
-          🏠 لوحة التحكم
+          {ui("🏠 لوحة التحكم")}
         </Link>
         <Link href="/samples" className={linkClass("/samples")}>
-          🧪 إدارة العينات
+          🧪 {language === "ar" ? "إدارة العينات" : "Manage Samples"}
         </Link>
         <Link href="/clients" className={linkClass("/clients")}>
-          👥 إدارة العملاء
+          👥 {language === "ar" ? "إدارة العملاء" : "Manage Clients"}
         </Link>
         <Link href="/projects" className={linkClass("/projects")}>
-          📁 المشاريع وطلبات الفحص
+          📁 {language === "ar" ? "المشاريع وطلبات الفحص" : "Projects & Test Requests"}
         </Link>
         <Link href="/tests" className={linkClass("/tests")}>
-          🔬 إدارة الفحوصات
+          🔬 {language === "ar" ? "إدارة الفحوصات" : "Manage Tests"}
         </Link>
         <Link href="/task-results" className={linkClass("/task-results")}>
-          📊 نتائج المهام
+          📊 {language === "ar" ? "نتائج المهام" : "Task Results"}
         </Link>
       </>
     )}
@@ -169,22 +173,22 @@ return (
     {role === "lab_manager" && (
       <>
         <Link href="/dashboard" className={linkClass("/dashboard")}>
-          🏠 Dashboard
+          🏠 {language === "ar" ? "لوحة التحكم" : "Dashboard"}
         </Link>
         <Link href="/projects" className={linkClass("/projects")}>
-          🏗 Projects
+          {ui("🏗 Projects")}
         </Link>
         <Link href="/task-results" className={linkClass("/task-results")}>
-          📊 Task Results
+          📊 {language === "ar" ? "نتائج المهام" : "Task Results"}
         </Link>
         <Link href="/samples" className={linkClass("/samples")}>
-          🧪 Samples
+          🧪 {language === "ar" ? "العينات" : "Samples"}
         </Link>
         <Link href="/tests" className={linkClass("/tests")}>
-          🔬 Tests
+          🔬 {language === "ar" ? "الفحوصات" : "Tests"}
         </Link>
         <Link href="/reports" className={linkClass("/reports")}>
-          📑 Reports
+          📑 {language === "ar" ? "التقارير" : "Reports"}
         </Link>
       </>
     )}
@@ -192,16 +196,16 @@ return (
     {role === "reception" && (
       <>
         <Link href="/dashboard" className={linkClass("/dashboard")}>
-          🏠 Dashboard
+          🏠 {language === "ar" ? "لوحة التحكم" : "Dashboard"}
         </Link>
         <Link href="/clients" className={linkClass("/clients")}>
-          👥 Clients
+          {ui("👥 Clients")}
         </Link>
         <Link href="/projects" className={linkClass("/projects")}>
-          🏗 Projects
+          {ui("🏗 Projects")}
         </Link>
         <Link href="/contracts" className={linkClass("/contracts")}>
-          📝 Contracts
+          📝 {language === "ar" ? "العقود" : "Contracts"}
         </Link>
       </>
     )}
@@ -209,16 +213,16 @@ return (
     {role === "technician" && (
       <>
         <Link href="/technician" className={linkClass("/technician")}>
-          🏠 Dashboard
+          🏠 {language === "ar" ? "لوحة التحكم" : "Dashboard"}
         </Link>
         <Link href="/technician/tasks" className={linkClass("/technician/tasks")}>
-          🛠️ My Tasks
+          🛠️ {language === "ar" ? "مهامي" : "My Tasks"}
         </Link>
         <Link href="/technician/tests" className={linkClass("/technician/tests")}>
-          🔬 My Tests
+          🔬 {language === "ar" ? "فحوصاتي" : "My Tests"}
         </Link>
         <Link href="/task-results" className={linkClass("/task-results")}>
-          📋 My Results
+          📋 {language === "ar" ? "نتائجي" : "My Results"}
         </Link>
       </>
     )}
@@ -227,22 +231,29 @@ return (
       role === "technical_manager" ||
       (role === "admin" && Number(user?.id) === 1)) && (
       <Link href="/quotations" className={linkClass("/quotations")}>
-        عروض الأسعار
+        {language === "ar" ? "عروض الأسعار" : "Quotations"}
       </Link>
     )}
 
+    <button
+      type="button"
+      onClick={() => void setLanguage(language === "ar" ? "en" : "ar")}
+      className="w-full rounded-lg border border-blue-300 px-3 py-2 text-sm hover:bg-blue-700"
+    >
+      {language === "ar" ? "English" : "العربية"}
+    </button>
     {logoutError && (
-      <p role="alert" dir="rtl" className="rounded-lg bg-red-100 p-3 text-sm text-red-800">
-        {logoutError}
+      <p role="alert" className="rounded-lg bg-red-100 p-3 text-sm text-red-800">
+        {ui(logoutError)}
       </p>
     )}
     <button
       type="button"
       onClick={logout}
       disabled={loggingOut}
-      className="w-full text-right rounded-lg p-3 mt-8 bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+      className="w-full text-end rounded-lg p-3 mt-8 bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
     >
-      {loggingOut ? "جارٍ تسجيل الخروج..." : "🚪 Logout"}
+      {loggingOut ? (language === "ar" ? "جارٍ تسجيل الخروج..." : "Signing out...") : (language === "ar" ? "🚪 تسجيل الخروج" : "🚪 Logout")}
     </button>
   </nav>
 </aside>

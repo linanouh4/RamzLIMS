@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/components/LanguageProvider";
 import { supabase } from "@/lib/supabase";
 
 type Client = {
@@ -32,6 +33,8 @@ export default function AddClientModal({
   client,
   branchId,
 }: Props) {
+  const { language } = useLanguage();
+  const tr = (ar: string, en: string) => language === "ar" ? ar : en;
   const [clientName, setClientName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
@@ -69,7 +72,7 @@ export default function AddClientModal({
 
   async function saveClient() {
     if (!clientName.trim()) {
-      alert("Please enter the client name.");
+      alert(tr("يرجى إدخال اسم العميل.", "Please enter the client name."));
       return;
     }
 
@@ -85,7 +88,7 @@ export default function AddClientModal({
      */
     if (!client && !branchId) {
       alert(
-        "لا يمكن إضافة العميل لأن المستخدم الحالي غير مرتبط بفرع."
+        tr("لا يمكن إضافة العميل لأن المستخدم الحالي غير مرتبط بفرع.", "Cannot add a client because your account is not assigned to a branch.")
       );
       return;
     }
@@ -151,7 +154,7 @@ export default function AddClientModal({
         console.error("SAVE CLIENT ERROR:", error);
 
         alert(
-          "حدث خطأ أثناء حفظ العميل:\n" +
+          tr("حدث خطأ أثناء حفظ العميل:\n", "Could not save the client:\n") +
             error.message
         );
 
@@ -169,8 +172,8 @@ export default function AddClientModal({
       );
 
       alert(
-        "حدث خطأ أثناء حفظ العميل:\n" +
-          (error?.message || "Unknown error")
+        tr("حدث خطأ أثناء حفظ العميل:\n", "Could not save the client:\n") +
+          (error?.message || tr("خطأ غير معروف", "Unknown error"))
       );
     } finally {
       setSaving(false);
@@ -178,20 +181,20 @@ export default function AddClientModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+    <div dir={language === "ar" ? "rtl" : "ltr"} className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-[600px] max-w-[95vw]">
 
         <h2 className="text-2xl font-bold mb-6">
           {client
-            ? "Edit Client"
-            : "Add New Client"}
+            ? tr("تعديل بيانات العميل", "Edit Client")
+            : tr("إضافة عميل جديد", "Add New Client")}
         </h2>
 
         <div className="grid grid-cols-2 gap-4">
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
-            placeholder="Client Name"
+            placeholder={tr("اسم العميل", "Client Name")}
             value={clientName}
             onChange={(e) =>
               setClientName(e.target.value)
@@ -200,7 +203,7 @@ export default function AddClientModal({
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
-            placeholder="Phone"
+            placeholder={tr("الهاتف", "Phone")}
             value={phone}
             onChange={(e) =>
               setPhone(e.target.value)
@@ -209,7 +212,7 @@ export default function AddClientModal({
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
-            placeholder="City"
+            placeholder={tr("المدينة", "City")}
             value={city}
             onChange={(e) =>
               setCity(e.target.value)
@@ -218,7 +221,7 @@ export default function AddClientModal({
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
-            placeholder="Email"
+            placeholder={tr("البريد الإلكتروني", "Email")}
             value={email}
             onChange={(e) =>
               setEmail(e.target.value)
@@ -227,7 +230,7 @@ export default function AddClientModal({
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
-            placeholder="Contact Person"
+            placeholder={tr("مسؤول التواصل", "Contact Person")}
             value={contactPerson}
             onChange={(e) =>
               setContactPerson(e.target.value)
@@ -236,7 +239,7 @@ export default function AddClientModal({
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black"
-            placeholder="Company Type"
+            placeholder={tr("نوع الشركة", "Company Type")}
             value={companyType}
             onChange={(e) =>
               setCompanyType(e.target.value)
@@ -245,7 +248,7 @@ export default function AddClientModal({
 
           <input
             className="border border-gray-300 rounded-lg p-3 text-black col-span-2"
-            placeholder="Address"
+            placeholder={tr("العنوان", "Address")}
             value={address}
             onChange={(e) =>
               setAddress(e.target.value)
@@ -261,7 +264,7 @@ export default function AddClientModal({
             disabled={saving}
             className="px-6 py-3 rounded-lg bg-gray-300 hover:bg-gray-400 disabled:opacity-50"
           >
-            Cancel
+            {tr("إلغاء", "Cancel")}
           </button>
 
           <button
@@ -270,10 +273,10 @@ export default function AddClientModal({
             className="px-6 py-3 rounded-lg bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-50"
           >
             {saving
-              ? "Saving..."
+              ? tr("جارٍ الحفظ...", "Saving...")
               : client
-              ? "Update Client"
-              : "Save Client"}
+              ? tr("حفظ التعديلات", "Update Client")
+              : tr("حفظ العميل", "Save Client")}
           </button>
 
         </div>

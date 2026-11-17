@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getSavedUser } from "@/lib/auth";
@@ -22,6 +23,7 @@ export default function AddTestModal({
   onSaved,
   test,
 }: Props) {
+  const ui = useUiText();
   const [testName, setTestName] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +39,7 @@ export default function AddTestModal({
     const name = testName.trim();
 
     if (!name) {
-      alert("Please enter a test name");
+      alert(ui("Please enter a test name"));
       return;
     }
 
@@ -45,7 +47,7 @@ export default function AddTestModal({
 
     if (!currentUser) {
       alert(
-        "لم يتم التعرف على المستخدم الحالي."
+        ui("لم يتم التعرف على المستخدم الحالي.")
       );
       return;
     }
@@ -78,7 +80,7 @@ export default function AddTestModal({
         ) {
           if (!currentUser.branch_id) {
             alert(
-              "مدير الفرع غير مرتبط بأي فرع."
+              ui("مدير الفرع غير مرتبط بأي فرع.")
             );
             return;
           }
@@ -130,7 +132,7 @@ export default function AddTestModal({
       ) {
         if (!currentUser.branch_id) {
           alert(
-            "مدير الفرع غير مرتبط بأي فرع."
+            ui("مدير الفرع غير مرتبط بأي فرع.")
           );
           return;
         }
@@ -163,7 +165,7 @@ export default function AddTestModal({
 
       alert(
         error?.message ||
-          "حدث خطأ أثناء حفظ الاختبار."
+          ui("حدث خطأ أثناء حفظ الاختبار.")
       );
     } finally {
       setLoading(false);
@@ -177,13 +179,13 @@ export default function AddTestModal({
 
         <h2 className="text-2xl font-bold mb-6">
           {test
-            ? "Edit Test"
-            : "Add New Test"}
+            ? ui("Edit Test")
+            : ui("Add New Test")}
         </h2>
 
         <input
           className="w-full border border-gray-300 rounded-lg p-3 text-black"
-          placeholder="Test name"
+          placeholder={ui("Test name")}
           value={testName}
           onChange={(e) =>
             setTestName(e.target.value)
@@ -197,7 +199,7 @@ export default function AddTestModal({
             disabled={loading}
             className="px-6 py-3 rounded-lg bg-gray-300 hover:bg-gray-400"
           >
-            Cancel
+            {ui("Cancel")}
           </button>
 
           <button
@@ -206,10 +208,10 @@ export default function AddTestModal({
             className="px-6 py-3 rounded-lg bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-50"
           >
             {loading
-              ? "Saving..."
+              ? ui("Saving...")
               : test
-              ? "Update Test"
-              : "Save Test"}
+              ? ui("Update Test")
+              : ui("Save Test")}
           </button>
 
         </div>

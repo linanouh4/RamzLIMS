@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useLanguage } from "@/components/LanguageProvider";
 import { supabase } from "@/lib/supabase";
 import { getSavedUser } from "@/lib/auth";
 
@@ -15,6 +16,25 @@ type CurrentUser = {
 export default function ClientDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { language } = useLanguage();
+  const dir = language === "ar" ? "rtl" : "ltr";
+  const tr = (ar: string, en: string) => language === "ar" ? ar : en;
+
+  function clientStatusLabel(value?: string | null) {
+    const status = value || "Active";
+    switch (status.trim().toLowerCase()) {
+      case "active": return tr("نشط", "Active");
+      case "inactive": return tr("غير نشط", "Inactive");
+      default: return status;
+    }
+  }
+
+  function sampleStatusLabel(value?: string | null) {
+    const status = value || "Pending";
+    return status.trim().toLowerCase() === "pending"
+      ? tr("قيد الانتظار", "Pending")
+      : status;
+  }
   const id = params.id as string;
 
   const [client, setClient] = useState<any>(null);
@@ -41,7 +61,7 @@ export default function ClientDetailsPage() {
       const userId = Number(savedUser.id);
 
       if (!userId) {
-        alert("بيانات المستخدم الحالي غير صحيحة");
+        alert(tr("بيانات المستخدم الحالي غير صحيحة", "The current user details are invalid."));
         return;
       }
 
@@ -65,8 +85,8 @@ export default function ClientDetailsPage() {
         );
 
         alert(
-          "تعذر تحميل بيانات المستخدم:\n" +
-            (userError?.message || "المستخدم غير موجود")
+          tr("تعذر تحميل بيانات المستخدم:\n", "Could not load the user details:\n") +
+            (userError?.message || tr("المستخدم غير موجود", "User not found."))
         );
 
         return;
@@ -101,7 +121,7 @@ export default function ClientDetailsPage() {
       if (current.role === "branch_manager") {
         if (!current.branch_id) {
           alert(
-            "مدير الفرع غير مرتبط بأي فرع."
+            tr("مدير الفرع غير مرتبط بأي فرع.", "The branch manager is not assigned to a branch.")
           );
 
           setClient(null);
@@ -128,7 +148,7 @@ export default function ClientDetailsPage() {
         setClient(null);
 
         alert(
-          "لا يمكنك الوصول إلى هذا العميل أو أن العميل غير موجود."
+          tr("لا يمكنك الوصول إلى هذا العميل أو أن العميل غير موجود.", "You cannot access this client, or the client does not exist.")
         );
 
         return;
@@ -157,7 +177,7 @@ export default function ClientDetailsPage() {
           samplesError
         );
 
-        alert(samplesError.message);
+        alert(tr("تعذر تحميل عينات العميل.", "Could not load the client samples.") + "\n" + samplesError.message);
       }
 
       setClient(clientData);
@@ -169,8 +189,8 @@ export default function ClientDetailsPage() {
       );
 
       alert(
-        "حدث خطأ أثناء تحميل بيانات العميل:\n" +
-          (error?.message || "خطأ غير معروف")
+        tr("حدث خطأ أثناء تحميل بيانات العميل:\n", "Could not load the client details:\n") +
+          (error?.message || tr("خطأ غير معروف", "Unknown error"))
       );
     } finally {
       setLoading(false);
@@ -180,8 +200,8 @@ export default function ClientDetailsPage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="p-8 text-center">
-          Loading client...
+        <div dir={dir} className="p-8 text-center">
+          {tr("جارٍ تحميل بيانات العميل...", "Loading client...")}
         </div>
       </ProtectedRoute>
     );
@@ -190,8 +210,8 @@ export default function ClientDetailsPage() {
   if (!client) {
     return (
       <ProtectedRoute>
-        <div className="p-8 text-center">
-          Client not found or access denied
+        <div dir={dir} className="p-8 text-center">
+          {tr("العميل غير موجود أو ليس لديك صلاحية لعرضه.", "Client not found or access denied")}
         </div>
       </ProtectedRoute>
     );
@@ -199,7 +219,7 @@ export default function ClientDetailsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="p-8 min-h-screen bg-gray-100">
+      <div dir={dir} className="p-8 min-h-screen bg-gray-100">
 
         <div className="flex items-center gap-3 mb-6">
 
@@ -213,11 +233,11 @@ export default function ClientDetailsPage() {
             }}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            ← Back
+            {tr("→ رجوع", "← Back")}
           </button>
 
           <h1 className="text-3xl font-bold text-blue-900">
-            Client Details
+            {tr("تفاصيل العميل", "Client Details")}
           </h1>
 
         </div>
@@ -234,13 +254,13 @@ export default function ClientDetailsPage() {
 
               <p className="text-gray-500 mt-2">
                 {client.address ||
-                  "No address provided"}
+                  tr("العنوان غير مسجّل", "No address provided")}
               </p>
 
             </div>
 
             <span className="px-3 py-1 rounded-full text-sm text-white bg-green-600">
-              {client.status || "Active"}
+              {clientStatusLabel(client.status)}
             </span>
 
           </div>
@@ -249,7 +269,7 @@ export default function ClientDetailsPage() {
 
             <div className="border rounded-lg p-4">
               <p className="text-sm text-gray-500">
-                Phone
+                {tr("الهاتف", "Phone")}
               </p>
 
               <p className="font-semibold">
@@ -259,7 +279,7 @@ export default function ClientDetailsPage() {
 
             <div className="border rounded-lg p-4">
               <p className="text-sm text-gray-500">
-                Email
+                {tr("البريد الإلكتروني", "Email")}
               </p>
 
               <p className="font-semibold">
@@ -269,7 +289,7 @@ export default function ClientDetailsPage() {
 
             <div className="border rounded-lg p-4">
               <p className="text-sm text-gray-500">
-                City
+                {tr("المدينة", "City")}
               </p>
 
               <p className="font-semibold">
@@ -286,11 +306,11 @@ export default function ClientDetailsPage() {
           <div className="flex items-center justify-between mb-4">
 
             <h3 className="text-xl font-bold">
-              Client Samples
+              {tr("عينات العميل", "Client Samples")}
             </h3>
 
             <span className="text-sm text-gray-500">
-              {samples.length} total
+              {tr("إجمالي العينات", "Total samples")}: {samples.length}
             </span>
 
           </div>
@@ -298,7 +318,7 @@ export default function ClientDetailsPage() {
           {samples.length === 0 ? (
 
             <p className="text-gray-500">
-              No samples linked to this client yet.
+              {tr("لا توجد عينات مرتبطة بهذا العميل حتى الآن.", "No samples linked to this client yet.")}
             </p>
 
           ) : (
@@ -316,21 +336,20 @@ export default function ClientDetailsPage() {
 
                     <p className="font-semibold">
                       {sample.sample_number ||
-                        `Sample #${sample.id}`}
+                        `${tr("عينة رقم", "Sample #")} ${sample.id}`}
                     </p>
 
                     <p className="text-sm text-gray-500">
                       {sample.sample_type ||
-                        "Unknown type"}
+                        tr("نوع العينة غير محدد", "Unknown type")}
                     </p>
 
                   </div>
 
-                  <div className="text-left md:text-right">
+                  <div className="text-start md:text-end">
 
                     <p className="text-sm font-medium">
-                      {sample.status ||
-                        "Pending"}
+                      {sampleStatusLabel(sample.status)}
                     </p>
 
                     <p className="text-xs text-gray-400">

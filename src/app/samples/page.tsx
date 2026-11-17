@@ -1,6 +1,7 @@
 ﻿
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import { getSavedUser } from "@/lib/auth";
 import AddSampleModal from "@/components/AddSampleModal";
 
 export default function SamplesPage() {
+  const ui = useUiText();
   const router = useRouter();
 
   const [currentRole, setCurrentRole] = useState<string | null>(null);
@@ -94,7 +96,7 @@ export default function SamplesPage() {
 
         alert(
           samplesError.message ||
-            "تعذر تحميل العينات"
+            ui("تعذر تحميل العينات")
         );
 
         setSamples([]);
@@ -153,7 +155,7 @@ export default function SamplesPage() {
 
           alert(
             projectsError.message ||
-              "تعذر تحميل مشاريع الفرع"
+              ui("تعذر تحميل مشاريع الفرع")
           );
 
           setSamples([]);
@@ -238,7 +240,7 @@ export default function SamplesPage() {
 
       alert(
         error?.message ||
-          "حدث خطأ أثناء تحميل العينات"
+          ui("حدث خطأ أثناء تحميل العينات")
       );
 
       setSamples([]);
@@ -257,12 +259,12 @@ export default function SamplesPage() {
     const currentUser = getSavedUser();
 
     if (!currentUser || !currentUser.role?.trim()) {
-      alert("لم يتم التعرف على المستخدم الحالي.");
+      alert(ui("لم يتم التعرف على المستخدم الحالي."));
       return;
     }
 
     if (currentUser.role.trim().toLowerCase() === "technical_manager") {
-      alert("المدير الفني غير مخوّل بتعديل العينات.");
+      alert(ui("المدير الفني غير مخوّل بتعديل العينات."));
       return;
     }
 
@@ -275,13 +277,13 @@ export default function SamplesPage() {
 
     if (!currentUser) {
       alert(
-        "لم يتم التعرف على المستخدم الحالي."
+        ui("لم يتم التعرف على المستخدم الحالي.")
       );
       return;
     }
 
     if (currentUser.role?.trim().toLowerCase() === "technical_manager") {
-      alert("المدير الفني غير مخوّل بحذف العينات.");
+      alert(ui("المدير الفني غير مخوّل بحذف العينات."));
       return;
     }
 
@@ -299,7 +301,7 @@ export default function SamplesPage() {
       );
 
       if (!sample) {
-        alert("العينة غير موجودة.");
+        alert(ui("العينة غير موجودة."));
         return;
       }
 
@@ -315,7 +317,7 @@ export default function SamplesPage() {
       if (projectError) {
         alert(
           projectError.message ||
-            "تعذر التحقق من المشروع."
+            ui("تعذر التحقق من المشروع.")
         );
         return;
       }
@@ -325,14 +327,14 @@ export default function SamplesPage() {
         Number(currentUser.branch_id)
       ) {
         alert(
-          "لا يمكنك حذف عينة تابعة لفرع آخر."
+          ui("لا يمكنك حذف عينة تابعة لفرع آخر.")
         );
         return;
       }
     }
 
     const confirmDelete = confirm(
-      "Are you sure you want to delete this sample?"
+      ui("Are you sure you want to delete this sample?")
     );
 
     if (!confirmDelete) return;
@@ -366,11 +368,11 @@ export default function SamplesPage() {
               }}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              ← Back
+              {ui("← Back")}
             </button>
 
             <h1 className="text-3xl font-bold">
-              Samples
+              {ui("Samples")}
             </h1>
 
           </div>
@@ -379,7 +381,7 @@ export default function SamplesPage() {
             onClick={openAddModal}
             className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-3 rounded-lg"
           >
-            + Add Sample
+            {ui("+ Add Sample")}
           </button>
 
         </div>
@@ -388,7 +390,7 @@ export default function SamplesPage() {
 
           <input
             type="text"
-            placeholder="Search samples..."
+            placeholder={ui("Search samples...")}
             value={search}
             onChange={(e) =>
               setSearch(e.target.value)
@@ -403,10 +405,10 @@ export default function SamplesPage() {
             }
             className="border rounded-lg px-4 py-3"
           >
-            <option>All</option>
-            <option>Pending</option>
-            <option>In Progress</option>
-            <option>Completed</option>
+            <option value="All">{ui("All")}</option>
+            <option value="Pending">{ui("Pending")}</option>
+            <option value="In Progress">{ui("In Progress")}</option>
+            <option value="Completed">{ui("Completed")}</option>
           </select>
 
         </div>
@@ -415,11 +417,11 @@ export default function SamplesPage() {
 
           {loading ? (
             <div className="p-6 text-center">
-              Loading samples...
+              {ui("Loading samples...")}
             </div>
           ) : filteredSamples.length === 0 ? (
             <div className="p-6 text-center">
-              No samples found
+              {ui("No samples found")}
             </div>
           ) : (
             <table className="w-full">
@@ -428,32 +430,32 @@ export default function SamplesPage() {
 
                 <tr>
 
-                  <th className="p-3 text-left">
-                    Project
+                  <th className="p-3 text-start">
+                    {ui("Project")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Client
+                  <th className="p-3 text-start">
+                    {ui("Client")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Type
+                  <th className="p-3 text-start">
+                    {ui("Type")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Received Date
+                  <th className="p-3 text-start">
+                    {ui("Received Date")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Received By
+                  <th className="p-3 text-start">
+                    {ui("Received By")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Status
+                  <th className="p-3 text-start">
+                    {ui("Status")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Actions
+                  <th className="p-3 text-start">
+                    {ui("Actions")}
                   </th>
 
                 </tr>
@@ -491,7 +493,7 @@ export default function SamplesPage() {
                       </td>
 
                       <td className="p-3">
-                        {sample.status}
+                        {ui(sample.status)}
                       </td>
 
                       <td className="p-3">
@@ -502,7 +504,7 @@ export default function SamplesPage() {
                             href={`/samples/${sample.id}`}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
                           >
-                            View
+                            {ui("View")}
                           </Link>
 
                           {canEdit && (
@@ -512,7 +514,7 @@ export default function SamplesPage() {
                             }
                             className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
                           >
-                            Edit
+                            {ui("Edit")}
                           </button>
                           )}
 
@@ -525,7 +527,7 @@ export default function SamplesPage() {
                             }
                             className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                           >
-                            Delete
+                            {ui("Delete")}
                           </button>
                           )}
 

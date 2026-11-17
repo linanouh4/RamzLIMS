@@ -1,10 +1,12 @@
-﻿"use client";
+"use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getSavedUser, clearSavedUser } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
+import { useLanguage } from "@/components/LanguageProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const BRANCHES = [
@@ -15,8 +17,21 @@ const BRANCHES = [
   { id: 6, name: "فرع الرياض" },
 ];
 
+function getBranchLabel(id: number, language: "ar" | "en") {
+  const names: Record<number, { ar: string; en: string }> = {
+    1: { ar: "فرع القريات", en: "Al Qurayyat Branch" },
+    2: { ar: "فرع جدة", en: "Jeddah Branch" },
+    3: { ar: "فرع الخبر", en: "Al Khobar Branch" },
+    4: { ar: "فرع سكاكا", en: "Sakaka Branch" },
+    6: { ar: "فرع الرياض", en: "Riyadh Branch" },
+  };
+  return names[id]?.[language] ?? (language === "ar" ? "الفرع" : "Branch");
+}
+
 export default function Dashboard() {
+  const ui = useUiText();
   const router = useRouter();
+  const { language } = useLanguage();
 
   const [user, setUser] = useState<any>(null);
 
@@ -426,16 +441,13 @@ export default function Dashboard() {
       .trim()
       .toLowerCase() === "branch_manager";
 
-  const selectedBranchName =
-    selectedBranchId === null
-      ? "كل الفروع"
-      : BRANCHES.find(
-          (branch) => branch.id === selectedBranchId
-        )?.name || "الفرع";
+  const selectedBranchName = selectedBranchId === null
+    ? (language === "ar" ? "كل الفروع" : "All Branches")
+    : getBranchLabel(selectedBranchId, language);
 
   return (
     <ProtectedRoute>
-      <main className="flex min-h-screen bg-gray-100">
+      <main dir={language === "ar" ? "rtl" : "ltr"} className="flex min-h-screen bg-gray-100">
 
         <Sidebar user={user} />
 
@@ -448,13 +460,13 @@ export default function Dashboard() {
             <div>
 
               <h2 className="text-3xl font-bold">
-                Dashboard
+                {language === "ar" ? "لوحة التحكم" : "Dashboard"}
               </h2>
 
               {user && (
                 <p className="text-gray-500 mt-2">
-                  Welcome {user.full_name} | Role:{" "}
-                  {user.role}
+                  {language === "ar" ? "مرحبًا" : "Welcome"} {user.full_name} | {language === "ar" ? "الدور" : "Role"}:{" "}
+                  {ui(user.role)}
                 </p>
               )}
 
@@ -464,7 +476,7 @@ export default function Dashboard() {
               onClick={logout}
               className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg"
             >
-              Logout
+              {language === "ar" ? "تسجيل الخروج" : "Logout"}
             </button>
 
           </div>
@@ -480,11 +492,11 @@ export default function Dashboard() {
 
                 <div>
                   <h3 className="font-bold text-lg">
-                    Branch View
+                    {language === "ar" ? "عرض الفروع" : "Branch View"}
                   </h3>
 
                   <p className="text-sm text-gray-500 mt-1">
-                    اختر الفرع الذي تريد عرض بياناته
+                    {language === "ar" ? "اختاري الفرع لعرض بياناته" : "Select a branch to view its data"}
                   </p>
                 </div>
 
@@ -511,7 +523,7 @@ export default function Dashboard() {
                   >
 
                     <option value="all">
-                      🌍 كل الفروع
+                      🌍 {language === "ar" ? "كل الفروع" : "All Branches"}
                     </option>
 
                     {BRANCHES.map((branch) => (
@@ -519,7 +531,7 @@ export default function Dashboard() {
                         key={branch.id}
                         value={branch.id}
                       >
-                        {branch.name}
+                        {getBranchLabel(branch.id, language)}
                       </option>
                     ))}
 
@@ -530,7 +542,7 @@ export default function Dashboard() {
               </div>
 
               <div className="mt-4 inline-flex items-center bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold">
-                📍 العرض الحالي: {selectedBranchName}
+                📍 {language === "ar" ? "العرض الحالي" : "Current view"}: {selectedBranchName}
               </div>
 
             </div>
@@ -551,7 +563,7 @@ export default function Dashboard() {
 
                 <div>
                   <p className="text-sm text-gray-500">
-                    Branch
+                    {ui("Branch")}
                   </p>
 
                   <p className="font-bold text-lg">
@@ -571,7 +583,7 @@ export default function Dashboard() {
           {loading ? (
 
             <div className="bg-white p-8 rounded-xl shadow">
-              Loading...
+              {ui("Loading...")}
             </div>
 
           ) : (
@@ -587,7 +599,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-xl shadow p-6">
 
                   <h3 className="text-gray-500 text-sm">
-                    👥 Clients
+                    {ui("👥 Clients")}
                   </h3>
 
                   <p className="text-4xl font-bold mt-3">
@@ -599,7 +611,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-xl shadow p-6">
 
                   <h3 className="text-gray-500 text-sm">
-                    📁 Projects
+                    {ui("📁 Projects")}
                   </h3>
 
                   <p className="text-4xl font-bold mt-3">
@@ -611,7 +623,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-xl shadow p-6">
 
                   <h3 className="text-gray-500 text-sm">
-                    🧪 Samples
+                    {ui("🧪 Samples")}
                   </h3>
 
                   <p className="text-4xl font-bold mt-3">
@@ -623,7 +635,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-xl shadow p-6">
 
                   <h3 className="text-gray-500 text-sm">
-                    🔬 Tests
+                    {ui("🔬 Tests")}
                   </h3>
 
                   <p className="text-4xl font-bold mt-3">
@@ -635,7 +647,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-xl shadow p-6">
 
                   <h3 className="text-gray-500 text-sm">
-                    ⏳ Pending
+                    {ui("⏳ Pending")}
                   </h3>
 
                   <p className="text-4xl font-bold mt-3">
@@ -659,7 +671,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-4">
 
                     <h3 className="text-xl font-bold">
-                      Recent Samples
+                      {ui("Recent Samples")}
                     </h3>
 
                     <button
@@ -668,7 +680,7 @@ export default function Dashboard() {
                       }
                       className="text-sm text-blue-700 font-semibold"
                     >
-                      View all
+                      {ui("View all")}
                     </button>
 
                   </div>
@@ -678,7 +690,7 @@ export default function Dashboard() {
                     {recentSamples.length === 0 ? (
 
                       <p className="text-gray-500">
-                        No samples yet.
+                        {ui("No samples yet.")}
                       </p>
 
                     ) : (
@@ -700,16 +712,15 @@ export default function Dashboard() {
 
                               <p className="text-sm text-gray-500">
                                 {sample.sample_type ||
-                                  "Unknown type"}
+                                  ui("Unknown type")}
                               </p>
 
                             </div>
 
-                            <div className="text-right">
+                            <div className="text-end">
 
                               <p className="text-sm font-medium">
-                                {sample.status ||
-                                  "Pending"}
+                                {ui(sample.status || "Pending")}
                               </p>
 
                               <p className="text-xs text-gray-400">
@@ -735,7 +746,7 @@ export default function Dashboard() {
                 <div className="bg-white rounded-xl shadow p-6">
 
                   <h3 className="text-xl font-bold mb-4">
-                    Quick Actions
+                    {ui("Quick Actions")}
                   </h3>
 
                   <div className="space-y-3">
@@ -744,36 +755,36 @@ export default function Dashboard() {
                       onClick={() =>
                         router.push("/samples")
                       }
-                      className="w-full text-left rounded-lg border p-3 hover:bg-blue-50"
+                      className="w-full text-start rounded-lg border p-3 hover:bg-blue-50"
                     >
-                      🧪 Manage Samples
+                      {ui("🧪 Manage Samples")}
                     </button>
 
                     <button
                       onClick={() =>
                         router.push("/clients")
                       }
-                      className="w-full text-left rounded-lg border p-3 hover:bg-blue-50"
+                      className="w-full text-start rounded-lg border p-3 hover:bg-blue-50"
                     >
-                      👥 Manage Clients
+                      {ui("👥 Manage Clients")}
                     </button>
 
                     <button
                       onClick={() =>
                         router.push("/projects")
                       }
-                      className="w-full text-left rounded-lg border p-3 hover:bg-blue-50"
+                      className="w-full text-start rounded-lg border p-3 hover:bg-blue-50"
                     >
-                      📁 Manage Projects
+                      {ui("📁 Manage Projects")}
                     </button>
 
                     <button
                       onClick={() =>
                         router.push("/tests")
                       }
-                      className="w-full text-left rounded-lg border p-3 hover:bg-blue-50"
+                      className="w-full text-start rounded-lg border p-3 hover:bg-blue-50"
                     >
-                      🔬 Manage Tests
+                      {ui("🔬 Manage Tests")}
                     </button>
 
                   </div>

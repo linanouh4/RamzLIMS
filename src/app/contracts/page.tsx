@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { contractPrintFooter } from "@/components/contractPrintFooter";
 import { contractLetterhead } from "@/components/contractLetterhead";
 import { useEffect, useMemo, useState } from "react";
@@ -102,6 +103,7 @@ const emptyForm: ContractForm = {
 };
 
 export default function ContractsPage() {
+  const ui = useUiText();
   const router = useRouter();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -203,7 +205,7 @@ export default function ContractsPage() {
       ]);
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "حدث خطأ أثناء تحميل العقود");
+      setError(err?.message || ui("حدث خطأ أثناء تحميل العقود"));
     } finally {
       setLoading(false);
     }
@@ -508,7 +510,7 @@ export default function ContractsPage() {
     const signing = signings[contract.id];
 
     if (signing?.status === "Finalized") {
-      setError("لا يمكن تعديل عقد تم إنهاؤه واعتماده نهائيًا.");
+      setError(ui("لا يمكن تعديل عقد تم إنهاؤه واعتماده نهائيًا."));
       return;
     }
 
@@ -547,33 +549,33 @@ export default function ContractsPage() {
 
   async function saveContract() {
     if (!canManage) {
-      setError("ليس لديك صلاحية لإدارة العقود.");
+      setError(ui("ليس لديك صلاحية لإدارة العقود."));
       return;
     }
 
     if (!form.contract_number.trim()) {
-      setError("رقم العقد مطلوب.");
+      setError(ui("رقم العقد مطلوب."));
       return;
     }
 
     if (!form.contract_name.trim()) {
-      setError("اسم العقد مطلوب.");
+      setError(ui("اسم العقد مطلوب."));
       return;
     }
 
     if (!form.client_id) {
-      setError("يجب اختيار العميل.");
+      setError(ui("يجب اختيار العميل."));
       return;
     }
 
     if (!form.branch_id) {
-      setError("يجب اختيار الفرع.");
+      setError(ui("يجب اختيار الفرع."));
       return;
     }
 
     if (isBranchManager && currentUser?.branch_id) {
       if (Number(form.branch_id) !== Number(currentUser.branch_id)) {
-        setError("لا يمكنك إنشاء أو تعديل عقد خارج فرعك.");
+        setError(ui("لا يمكنك إنشاء أو تعديل عقد خارج فرعك."));
         return;
       }
     }
@@ -583,7 +585,7 @@ export default function ContractsPage() {
       form.end_date &&
       form.end_date < form.start_date
     ) {
-      setError("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ البداية.");
+      setError(ui("تاريخ نهاية العقد لا يمكن أن يكون قبل تاريخ البداية."));
       return;
     }
 
@@ -616,7 +618,7 @@ export default function ContractsPage() {
           throw updateError;
         }
 
-        setSuccess("تم تحديث العقد بنجاح.");
+        setSuccess(ui("تم تحديث العقد بنجاح."));
       } else {
         const { error: insertError } = await supabase
           .from("contracts")
@@ -626,7 +628,7 @@ export default function ContractsPage() {
           throw insertError;
         }
 
-        setSuccess("تم إنشاء العقد بنجاح.");
+        setSuccess(ui("تم إنشاء العقد بنجاح."));
       }
 
       setOpenModal(false);
@@ -639,7 +641,7 @@ export default function ContractsPage() {
       }
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "حدث خطأ أثناء حفظ العقد.");
+      setError(err?.message || ui("حدث خطأ أثناء حفظ العقد."));
     } finally {
       setSaving(false);
     }
@@ -647,19 +649,19 @@ export default function ContractsPage() {
 
   async function deleteContract(contract: Contract) {
     if (!canDelete) {
-      setError("حذف العقود متاح للمدير فقط.");
+      setError(ui("حذف العقود متاح للمدير فقط."));
       return;
     }
 
     const signing = signings[contract.id];
 
     if (signing?.status === "Finalized") {
-      setError("لا يمكن حذف عقد تم إنهاؤه نهائيًا.");
+      setError(ui("لا يمكن حذف عقد تم إنهاؤه نهائيًا."));
       return;
     }
 
     const confirmed = window.confirm(
-      `هل أنت متأكد من حذف العقد "${contract.contract_number || ""}"؟`
+      ui("هل تريد حذف العقد") + " " + (contract.contract_number || "") + ui("؟")
     );
 
     if (!confirmed) {
@@ -679,14 +681,14 @@ export default function ContractsPage() {
         throw deleteError;
       }
 
-      setSuccess("تم حذف العقد بنجاح.");
+      setSuccess(ui("تم حذف العقد بنجاح."));
 
       if (currentUser) {
         await loadContracts(currentUser);
       }
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "حدث خطأ أثناء حذف العقد.");
+      setError(err?.message || ui("حدث خطأ أثناء حذف العقد."));
     }
   }
 
@@ -702,24 +704,24 @@ export default function ContractsPage() {
 
     try {
       await navigator.clipboard.writeText(signingLink);
-      setSuccess("تم نسخ رابط التوقيع.");
+      setSuccess(ui("تم نسخ رابط التوقيع."));
       setError("");
     } catch (err) {
       console.error(err);
-      setError("تعذر نسخ الرابط تلقائيًا. انسخه يدويًا.");
+      setError(ui("تعذر نسخ الرابط تلقائيًا. انسخه يدويًا."));
     }
   }
 
   async function sendSigningLink(contract: Contract) {
     if (!canManage) {
-      setError("ليس لديك صلاحية لإرسال رابط التوقيع.");
+      setError(ui("ليس لديك صلاحية لإرسال رابط التوقيع."));
       return;
     }
 
     const existingSigning = signings[contract.id];
 
     if (!canSendSigning(existingSigning)) {
-      setError("لا يمكن إرسال رابط لهذا العقد في حالته الحالية.");
+      setError(ui("لا يمكن إرسال رابط لهذا العقد في حالته الحالية."));
       return;
     }
 
@@ -788,9 +790,7 @@ export default function ContractsPage() {
       }
 
       if (!signingData?.signing_token) {
-        throw new Error(
-          "لم يتم إنشاء رمز التوقيع. تحققي من إعدادات جدول contract_signing في Supabase."
-        );
+        throw new Error(ui("لم يتم إنشاء رمز التوقيع. تحققي من إعدادات جدول contract_signing في Supabase."));
       }
 
       const link =
@@ -804,10 +804,10 @@ export default function ContractsPage() {
 
       setSigningContract(contract);
       setSigningLink(link);
-      setSuccess("تم تجهيز رابط التوقيع بنجاح.");
+      setSuccess(ui("تم تجهيز رابط التوقيع بنجاح."));
     } catch (err: any) {
       console.error(err);
-      setError(err?.message || "حدث خطأ أثناء تجهيز رابط التوقيع.");
+      setError(err?.message || ui("حدث خطأ أثناء تجهيز رابط التوقيع."));
     } finally {
       setSendingContractId(null);
     }
@@ -818,7 +818,7 @@ async function printContract(contract: Contract) {
 
   if (!printWindow) {
     setError(
-      "تعذر فتح نافذة الطباعة. تأكدي من السماح بالنوافذ المنبثقة."
+      ui("تعذر فتح نافذة الطباعة. تأكدي من السماح بالنوافذ المنبثقة.")
     );
     return;
   }
@@ -1303,7 +1303,7 @@ ${contractPrintFooter}
 
         <div class="signature-column">
           <div class="party-title">
-            شركة رمز الإمارات لفحص التربة والخرسانة
+            {ui("شركة رمز الإمارات لفحص التربة والخرسانة")}
           </div>
 
 
@@ -1353,13 +1353,13 @@ ${contractPrintFooter}
   } catch (err) {
     console.error(err);
     printWindow.close();
-    setError("حدث خطأ أثناء تجهيز العقد ورمز التحقق للطباعة.");
+    setError(ui("حدث خطأ أثناء تجهيز العقد ورمز التحقق للطباعة."));
   }
 }
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 p-4 md:p-6" dir="rtl">
+      <div className="min-h-screen bg-gray-50 p-4 md:p-6">
         <div className="mx-auto max-w-7xl">
           <div className="mb-6 flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
   <div className="flex items-start gap-3">
@@ -1373,19 +1373,19 @@ ${contractPrintFooter}
         }
       }}
       className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-xl font-bold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-      title="رجوع"
-      aria-label="رجوع"
+      title={ui("رجوع")}
+      aria-label={ui("رجوع")}
     >
       ←
     </button>
 
     <div>
       <h1 className="text-2xl font-bold text-gray-900">
-        العقود
+        {ui("العقود")}
       </h1>
 
       <p className="mt-1 text-sm text-gray-500">
-        إدارة عقود العملاء ومتابعة حالة التوقيع الإلكتروني
+        {ui("إدارة عقود العملاء ومتابعة حالة التوقيع الإلكتروني")}
       </p>
     </div>
   </div>
@@ -1396,20 +1396,20 @@ ${contractPrintFooter}
       onClick={openCreateModal}
       className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
     >
-      + إنشاء عقد جديد
+      {ui("+ إنشاء عقد جديد")}
     </button>
   )}
 </div>
 
           {error && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
+              {ui(error)}
             </div>
           )}
 
           {success && (
             <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-              {success}
+              {ui(success)}
             </div>
           )}
 
@@ -1417,21 +1417,21 @@ ${contractPrintFooter}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="md:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  بحث
+                  {ui("بحث")}
                 </label>
 
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="رقم العقد أو اسم العقد أو العميل..."
+                  placeholder={ui("رقم العقد أو اسم العقد أو العميل...")}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  حالة العقد
+                  {ui("حالة العقد")}
                 </label>
 
                 <select
@@ -1439,11 +1439,11 @@ ${contractPrintFooter}
                   onChange={(event) => setStatusFilter(event.target.value)}
                   className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 >
-                  <option value="All">الكل</option>
-                  <option value="Active">نشط</option>
-                  <option value="Expired">منتهي</option>
-                  <option value="Suspended">موقوف</option>
-                  <option value="Completed">مكتمل</option>
+                  <option value="All">{ui("الكل")}</option>
+                  <option value="Active">{ui("نشط")}</option>
+                  <option value="Expired">{ui("منتهي")}</option>
+                  <option value="Suspended">{ui("موقوف")}</option>
+                  <option value="Completed">{ui("مكتمل")}</option>
                 </select>
               </div>
             </div>
@@ -1452,47 +1452,47 @@ ${contractPrintFooter}
           {loading ? (
             <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
               <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-              <p className="text-sm text-gray-500">جاري تحميل العقود...</p>
+              <p className="text-sm text-gray-500">{ui("جاري تحميل العقود...")}</p>
             </div>
           ) : filteredContracts.length === 0 ? (
             <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
               <div className="mb-3 text-4xl">📄</div>
               <h2 className="text-lg font-bold text-gray-800">
-                لا توجد عقود
+                {ui("لا توجد عقود")}
               </h2>
               <p className="mt-1 text-sm text-gray-500">
-                لم يتم العثور على عقود مطابقة للبحث الحالي.
+                {ui("لم يتم العثور على عقود مطابقة للبحث الحالي.")}
               </p>
             </div>
           ) : (
             <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
               <div className="overflow-x-auto">
-                <table className="min-w-full text-right">
+                <table className="min-w-full text-end">
                   <thead className="bg-gray-50">
                     <tr className="border-b border-gray-200">
                       <th className="px-4 py-4 text-xs font-bold text-gray-600">
-                        رقم العقد
+                        {ui("رقم العقد")}
                       </th>
                       <th className="px-4 py-4 text-xs font-bold text-gray-600">
-                        العقد
+                        {ui("العقد")}
                       </th>
                       <th className="px-4 py-4 text-xs font-bold text-gray-600">
-                        العميل
+                        {ui("العميل")}
                       </th>
                       <th className="px-4 py-4 text-xs font-bold text-gray-600">
-                        الفرع
+                        {ui("الفرع")}
                       </th>
                       <th className="px-4 py-4 text-xs font-bold text-gray-600">
-                        المدة
+                        {ui("المدة")}
                       </th>
                       <th className="px-4 py-4 text-xs font-bold text-gray-600">
-                        الحالة
+                        {ui("الحالة")}
                       </th>
                       <th className="px-4 py-4 text-xs font-bold text-gray-600">
-                        التوقيع
+                        {ui("التوقيع")}
                       </th>
                       <th className="px-4 py-4 text-xs font-bold text-gray-600">
-                        الإجراءات
+                        {ui("الإجراءات")}
                       </th>
                     </tr>
                   </thead>
@@ -1521,7 +1521,7 @@ ${contractPrintFooter}
                             {contract.contract_value !== null &&
                               contract.contract_value !== undefined && (
                                 <div className="mt-1 text-xs text-gray-500">
-                                  القيمة:{" "}
+                                  {ui("القيمة:")}{" "}
                                   {Number(
                                     contract.contract_value
                                   ).toLocaleString("en-US")}
@@ -1547,7 +1547,7 @@ ${contractPrintFooter}
 
                           <td className="px-4 py-4 align-top text-xs text-gray-600">
                             <div>{formatDate(contract.start_date)}</div>
-                            <div className="my-1 text-gray-400">إلى</div>
+                            <div className="my-1 text-gray-400">{ui("إلى")}</div>
                             <div>{formatDate(contract.end_date)}</div>
                           </td>
 
@@ -1567,13 +1567,13 @@ ${contractPrintFooter}
                               }`}
                             >
                               {contract.status === "Active"
-                                ? "نشط"
+                                ? ui("نشط")
                                 : contract.status === "Completed"
-                                ? "مكتمل"
+                                ? ui("مكتمل")
                                 : contract.status === "Expired"
-                                ? "منتهي"
+                                ? ui("منتهي")
                                 : contract.status === "Suspended"
-                                ? "موقوف"
+                                ? ui("موقوف")
                                 : contract.status || "-"}
                             </span>
                           </td>
@@ -1586,7 +1586,7 @@ ${contractPrintFooter}
                                 signing
                               )}`}
                             >
-                              {getSigningStatusLabel(signing)}
+                              {ui(getSigningStatusLabel(signing))}
                             </span>
 
                             {signing?.customer_signed_by && (
@@ -1603,7 +1603,7 @@ ${contractPrintFooter}
                                 onClick={() => printContract(contract)}
                                 className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 transition hover:bg-gray-100"
                               >
-                                🖨️ طباعة
+                                {ui("🖨️ طباعة")}
                               </button>
 
                               {canManage && canSendSigning(signing) && (
@@ -1615,10 +1615,10 @@ ${contractPrintFooter}
                                   className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   {sendingContractId === contract.id
-                                    ? "جاري تجهيز الرابط..."
+                                    ? ui("جاري تجهيز الرابط...")
                                     : signing
-                                    ? "🔗 إعادة إرسال الرابط"
-                                    : "🔗 إرسال رابط التوقيع"}
+                                    ? ui("🔗 إعادة إرسال الرابط")
+                                    : ui("🔗 إرسال رابط التوقيع")}
                                 </button>
                               )}
 {Number(currentUser?.id) === 1 && currentUser?.role?.trim().toLowerCase() === "admin" &&
@@ -1630,7 +1630,7 @@ ${contractPrintFooter}
       }
       className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-orange-600"
     >
-      🔐 اعتماد العقد
+      {ui("🔐 اعتماد العقد")}
     </button>
   )}
                               {canManage && (
@@ -1640,7 +1640,7 @@ ${contractPrintFooter}
                                   disabled={signing?.status === "Finalized"}
                                   className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                  ✏️ تعديل
+                                  {ui("✏️ تعديل")}
                                 </button>
                               )}
 
@@ -1651,7 +1651,7 @@ ${contractPrintFooter}
                                   disabled={signing?.status === "Finalized"}
                                   className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                  🗑️ حذف
+                                  {ui("🗑️ حذف")}
                                 </button>
                               )}
                             </div>
@@ -1672,11 +1672,11 @@ ${contractPrintFooter}
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">
-                    {editingContract ? "تعديل العقد" : "إنشاء عقد جديد"}
+                    {editingContract ? ui("تعديل العقد") : ui("إنشاء عقد جديد")}
                   </h2>
 
                   <p className="mt-1 text-xs text-gray-500">
-                    أدخل بيانات العقد الأساسية
+                    {ui("أدخل بيانات العقد الأساسية")}
                   </p>
                 </div>
 
@@ -1692,7 +1692,7 @@ ${contractPrintFooter}
               <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    رقم العقد *
+                    {ui("رقم العقد *")}
                   </label>
 
                   <input
@@ -1705,13 +1705,13 @@ ${contractPrintFooter}
                       }))
                     }
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="مثال: CTR-2026-0001"
+                    placeholder={ui("مثال: CTR-2026-0001")}
                   />
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    اسم العقد *
+                    {ui("اسم العقد *")}
                   </label>
 
                   <input
@@ -1724,13 +1724,13 @@ ${contractPrintFooter}
                       }))
                     }
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="اسم المشروع أو العقد"
+                    placeholder={ui("اسم المشروع أو العقد")}
                   />
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    العميل *
+                    {ui("العميل *")}
                   </label>
 
                   <select
@@ -1743,7 +1743,7 @@ ${contractPrintFooter}
                     }
                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
-                    <option value="">اختر العميل</option>
+                    <option value="">{ui("اختر العميل")}</option>
 
                     {clients.map((client) => (
                       <option key={client.id} value={client.id}>
@@ -1755,7 +1755,7 @@ ${contractPrintFooter}
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    الفرع *
+                    {ui("الفرع *")}
                   </label>
 
                   <select
@@ -1769,7 +1769,7 @@ ${contractPrintFooter}
                     disabled={isBranchManager}
                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
                   >
-                    <option value="">اختر الفرع</option>
+                    <option value="">{ui("اختر الفرع")}</option>
 
                     {branches.map((branch) => (
                       <option key={branch.id} value={branch.id}>
@@ -1781,7 +1781,7 @@ ${contractPrintFooter}
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    تاريخ البداية
+                    {ui("تاريخ البداية")}
                   </label>
 
                   <input
@@ -1799,7 +1799,7 @@ ${contractPrintFooter}
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    تاريخ النهاية
+                    {ui("تاريخ النهاية")}
                   </label>
 
                   <input
@@ -1817,7 +1817,7 @@ ${contractPrintFooter}
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    قيمة العقد
+                    {ui("قيمة العقد")}
                   </label>
 
                   <input
@@ -1837,7 +1837,7 @@ ${contractPrintFooter}
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    حالة العقد
+                    {ui("حالة العقد")}
                   </label>
 
                   <select
@@ -1850,16 +1850,16 @@ ${contractPrintFooter}
                     }
                     className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
-                    <option value="Active">نشط</option>
-                    <option value="Expired">منتهي</option>
-                    <option value="Suspended">موقوف</option>
-                    <option value="Completed">مكتمل</option>
+                    <option value="Active">{ui("نشط")}</option>
+                    <option value="Expired">{ui("منتهي")}</option>
+                    <option value="Suspended">{ui("موقوف")}</option>
+                    <option value="Completed">{ui("مكتمل")}</option>
                   </select>
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    وصف العقد
+                    {ui("وصف العقد")}
                   </label>
 
                   <textarea
@@ -1872,7 +1872,7 @@ ${contractPrintFooter}
                     }
                     rows={5}
                     className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    placeholder="أدخل وصف العقد أو الملاحظات..."
+                    placeholder={ui("أدخل وصف العقد أو الملاحظات...")}
                   />
                 </div>
               </div>
@@ -1884,7 +1884,7 @@ ${contractPrintFooter}
                   disabled={saving}
                   className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                 >
-                  إلغاء
+                  {ui("إلغاء")}
                 </button>
 
                 <button
@@ -1894,10 +1894,10 @@ ${contractPrintFooter}
                   className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving
-                    ? "جاري الحفظ..."
+                    ? ui("جاري الحفظ...")
                     : editingContract
-                    ? "حفظ التعديلات"
-                    : "إنشاء العقد"}
+                    ? ui("حفظ التعديلات")
+                    : ui("إنشاء العقد")}
                 </button>
               </div>
             </div>
@@ -1911,7 +1911,7 @@ ${contractPrintFooter}
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">
-                      رابط توقيع العميل
+                      {ui("رابط توقيع العميل")}
                     </h2>
 
                     <p className="mt-1 text-xs text-gray-500">
@@ -1933,18 +1933,17 @@ ${contractPrintFooter}
               <div className="space-y-4 p-5">
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                   <p className="mb-2 text-sm font-bold text-blue-900">
-                    تم إنشاء رابط التوقيع
+                    {ui("تم إنشاء رابط التوقيع")}
                   </p>
 
                   <p className="text-xs leading-6 text-blue-800">
-                    أرسل هذا الرابط للعميل. العميل سيتمكن من فتح العقد ومراجعته
-                    وتوقيعه وإضافة ختم شركته بدون تسجيل دخول.
+                    {ui("أرسل هذا الرابط للعميل. العميل سيتمكن من فتح العقد ومراجعته وتوقيعه وإضافة ختم شركته بدون تسجيل دخول.")}
                   </p>
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-gray-700">
-                    رابط التوقيع
+                    {ui("رابط التوقيع")}
                   </label>
 
                   <textarea
@@ -1961,7 +1960,7 @@ ${contractPrintFooter}
                     onClick={copySigningLink}
                     className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700"
                   >
-                    📋 نسخ الرابط
+                    {ui("📋 نسخ الرابط")}
                   </button>
 
                   <button
@@ -1969,7 +1968,7 @@ ${contractPrintFooter}
                     onClick={() => window.open(signingLink, "_blank")}
                     className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-100"
                   >
-                    🔗 فتح الرابط
+                    {ui("🔗 فتح الرابط")}
                   </button>
                 </div>
 
@@ -1978,7 +1977,7 @@ ${contractPrintFooter}
                   onClick={closeSigningModal}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-gray-100"
                 >
-                  إغلاق
+                  {ui("إغلاق")}
                 </button>
               </div>
             </div>

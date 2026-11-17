@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -7,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 
 export default function ReportsPage() {
+  const ui = useUiText();
   const router = useRouter();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,28 +50,28 @@ export default function ReportsPage() {
             }}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            ← Back
+            {ui("← Back")}
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-blue-900">Reports</h1>
-            <p className="text-gray-600 mt-2">Completed samples ready for reporting</p>
+            <h1 className="text-3xl font-bold text-blue-900">{ui("Reports")}</h1>
+            <p className="text-gray-600 mt-2">{ui("Completed samples ready for reporting")}</p>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow overflow-hidden">
           {loading ? (
-            <div className="p-6 text-center">Loading reports...</div>
+            <div className="p-6 text-center">{ui("Loading reports...")}</div>
           ) : reports.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">No completed reports available yet.</div>
+            <div className="p-6 text-center text-gray-500">{ui("No completed reports available yet.")}</div>
           ) : (
             <table className="w-full">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="p-3 text-left">Sample</th>
-                  <th className="p-3 text-left">Type</th>
-                  <th className="p-3 text-left">Status</th>
-                  <th className="p-3 text-left">Received Date</th>
-                  <th className="p-3 text-left">Action</th>
+                  <th className="p-3 text-start">{ui("Sample")}</th>
+                  <th className="p-3 text-start">{ui("Type")}</th>
+                  <th className="p-3 text-start">{ui("Status")}</th>
+                  <th className="p-3 text-start">{ui("Received Date")}</th>
+                  <th className="p-3 text-start">{ui("Action")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -84,7 +86,7 @@ export default function ReportsPage() {
                         href={`/reports/${report.id}`}
                         className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded-lg"
                       >
-                        Open Report
+                        {ui("Open Report")}
                       </Link>
                     </td>
                   </tr>

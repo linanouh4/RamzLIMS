@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import SignatureCanvas from "react-signature-canvas";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
@@ -7,6 +8,7 @@ import ExternalTestRequestForm, { printExternalForm } from "@/components/Externa
 import { supabase } from "@/lib/supabase";
 
 export default function CustomerApprovalPage() {
+  const ui = useUiText();
   const params = useParams();
   const token = params.token as string;
 
@@ -51,19 +53,19 @@ export default function CustomerApprovalPage() {
 
   async function approveRequest() {
     if (approving) return;
-    if (!acceptedTerms) { alert("يرجى تأكيد الموافقة على الاختبارات والمواصفات والمدة والشروط والفروق الموثقة."); return; }
+    if (!acceptedTerms) { alert(ui("يرجى تأكيد الموافقة على الاختبارات والمواصفات والمدة والشروط والفروق الموثقة.")); return; }
     if (!customerName.trim()) {
-      alert("الرجاء إدخال اسم العميل أو ممثل العميل");
+      alert(ui("الرجاء إدخال اسم العميل أو ممثل العميل"));
       return;
     }
 
     if (!signatureRef.current) {
-      alert("الرجاء توقيع الطلب");
+      alert(ui("الرجاء توقيع الطلب"));
       return;
     }
 
     if (signatureRef.current.isEmpty()) {
-      alert("الرجاء توقيع الطلب قبل الاعتماد");
+      alert(ui("الرجاء توقيع الطلب قبل الاعتماد"));
       return;
     }
 
@@ -72,7 +74,7 @@ export default function CustomerApprovalPage() {
       .toDataURL("image/png");
 
     if (request.customer_approval_status === "Approved") {
-      alert("هذا الطلب معتمد مسبقًا.");
+      alert(ui("هذا الطلب معتمد مسبقًا."));
       return;
     }
 
@@ -91,7 +93,7 @@ export default function CustomerApprovalPage() {
         console.error("APPROVE REQUEST ERROR:", error);
 
         alert(
-          "حدث خطأ أثناء اعتماد الطلب:\n" +
+          ui("حدث خطأ أثناء اعتماد الطلب:\n") +
             error.message
         );
 
@@ -104,13 +106,13 @@ export default function CustomerApprovalPage() {
 
       setSignature(signatureData);
 
-      alert("تم اعتماد طلب الفحص بنجاح");
+      alert(ui("تم اعتماد طلب الفحص بنجاح"));
     } catch (error: any) {
       console.error("UNEXPECTED APPROVAL ERROR:", error);
 
       alert(
-        "حدث خطأ غير متوقع:\n" +
-          (error?.message || "خطأ غير معروف")
+        ui("حدث خطأ غير متوقع:\n") +
+          (error?.message || ui("خطأ غير معروف"))
       );
     } finally {
       setApproving(false);
@@ -118,13 +120,13 @@ export default function CustomerApprovalPage() {
   }
 
   function printRequest() {
-    if (request) printExternalForm(request.id);
+    if (request) printExternalForm(request.id, ui);
   }
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <p>جاري تحميل الطلب...</p>
+        <p>{ui("جاري تحميل الطلب...")}</p>
       </div>
     );
   }
@@ -132,16 +134,16 @@ export default function CustomerApprovalPage() {
   if (!request) {
     return (
       <div
-        dir="rtl"
+       
         className="min-h-screen flex items-center justify-center bg-gray-100 p-6"
       >
         <div className="bg-white rounded-xl shadow p-8 max-w-lg w-full text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-3">
-            الطلب غير موجود
+            {ui("الطلب غير موجود")}
           </h1>
 
           <p className="text-gray-600">
-            رابط الموافقة غير صحيح أو أن الطلب لم يعد متاحًا.
+            {ui("رابط الموافقة غير صحيح أو أن الطلب لم يعد متاحًا.")}
           </p>
         </div>
       </div>
@@ -268,7 +270,7 @@ export default function CustomerApprovalPage() {
       ====================================================== */}
 
       <div
-        dir="rtl"
+       
         className="min-h-screen bg-gray-100 p-4 md:p-8"
       >
         <div className="print-container max-w-4xl mx-auto">
@@ -305,7 +307,7 @@ export default function CustomerApprovalPage() {
                   "0 4px 12px rgba(0,0,0,0.15)",
               }}
             >
-              🖨️ طباعة طلب الفحص
+              {ui("🖨️ طباعة طلب الفحص")}
             </button>
           </div>
 
@@ -319,22 +321,22 @@ export default function CustomerApprovalPage() {
 
               <div>
                 <h1 className="text-3xl font-bold print-title">
-                  شركة رمز الإمارات
+                  {ui("شركة رمز الإمارات")}
                 </h1>
 
                 <h2 className="text-xl font-bold mt-2">
-                  طلب فحص خارجي
+                  {ui("طلب فحص خارجي")}
                 </h2>
 
                 <p className="text-gray-500 mt-1">
-                  External Test Request - QF 701/02
+                  {ui("External Test Request - QF 701/02")}
                 </p>
               </div>
 
               <div className="border-2 border-blue-700 p-4 text-center print-field">
 
                 <p className="text-sm text-gray-500">
-                  رقم الطلب
+                  {ui("رقم الطلب")}
                 </p>
 
                 <p className="text-xl font-bold">
@@ -356,7 +358,7 @@ export default function CustomerApprovalPage() {
             <div className="flex items-center justify-between gap-4">
 
               <span className="font-bold">
-                حالة الطلب
+                {ui("حالة الطلب")}
               </span>
 
               <span
@@ -367,8 +369,8 @@ export default function CustomerApprovalPage() {
                 }`}
               >
                 {isApproved
-                  ? "تم اعتماد الطلب"
-                  : "بانتظار موافقة العميل"}
+                  ? ui("تم اعتماد الطلب")
+                  : ui("بانتظار موافقة العميل")}
               </span>
 
             </div>
@@ -389,7 +391,7 @@ export default function CustomerApprovalPage() {
 
             <div className="border-b p-5">
               <h2 className="text-xl font-bold">
-                إقرار وموافقة العميل
+                {ui("إقرار وموافقة العميل")}
               </h2>
             </div>
 
@@ -397,7 +399,7 @@ export default function CustomerApprovalPage() {
 
               <div className="border p-5 leading-8">
 
-                <p>أوافق على الاختبارات والمواصفات والمدة والشروط المدونة أعلاه وأي فروق موثقة.</p>
+                <p>{ui("أوافق على الاختبارات والمواصفات والمدة والشروط المدونة أعلاه وأي فروق موثقة.")}</p>
 
               </div>
 
@@ -413,7 +415,7 @@ export default function CustomerApprovalPage() {
             <div className="bg-white p-6 mb-6 no-print">
 
               <h2 className="text-xl font-bold mb-5">
-                موافقة العميل
+                {ui("موافقة العميل")}
               </h2>
 
               {/* CUSTOMER NAME */}
@@ -421,7 +423,7 @@ export default function CustomerApprovalPage() {
               <div className="mb-5">
 
                 <label className="block font-bold mb-2">
-                  اسم العميل / ممثل العميل
+                  {ui("اسم العميل / ممثل العميل")}
                 </label>
 
                 <input
@@ -431,7 +433,7 @@ export default function CustomerApprovalPage() {
                     setCustomerName(e.target.value)
                   }
                   className="w-full border rounded-lg p-3"
-                  placeholder="اكتب الاسم الكامل"
+                  placeholder={ui("اكتب الاسم الكامل")}
                 />
 
               </div>
@@ -441,7 +443,7 @@ export default function CustomerApprovalPage() {
               <div className="mb-5">
 
                 <label className="block font-bold mb-2">
-                  التوقيع الإلكتروني
+                  {ui("التوقيع الإلكتروني")}
                 </label>
 
                 <div className="border-2 border-gray-300 rounded-lg bg-white overflow-hidden">
@@ -465,14 +467,14 @@ export default function CustomerApprovalPage() {
                   }}
                   className="mt-2 text-sm text-red-600"
                 >
-                  🗑️ مسح التوقيع
+                  {ui("🗑️ مسح التوقيع")}
                 </button>
 
               </div>
 
               <label className="mb-5 flex items-start gap-3">
                 <input type="checkbox" checked={acceptedTerms} disabled={approving} onChange={e => setAcceptedTerms(e.target.checked)} className="mt-1" />
-                <span>أوافق على الاختبارات والمواصفات والمدة والشروط المدونة أعلاه وأي فروق موثقة، وأؤكد أنني العميل أو ممثله المخول.</span>
+                <span>{ui("أوافق على الاختبارات والمواصفات والمدة والشروط المدونة أعلاه وأي فروق موثقة، وأؤكد أنني العميل أو ممثله المخول.")}</span>
               </label>
               {/* APPROVE */}
 
@@ -483,8 +485,8 @@ export default function CustomerApprovalPage() {
                 className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-lg"
               >
                 {approving
-                  ? "جاري اعتماد الطلب..."
-                  : "✓ أوافق وأعتمد طلب الفحص"}
+                  ? ui("جاري اعتماد الطلب...")
+                  : ui("✓ أوافق وأعتمد طلب الفحص")}
               </button>
 
             </div>
@@ -499,7 +501,7 @@ export default function CustomerApprovalPage() {
 
               <div className="border-b p-5">
                 <h2 className="text-xl font-bold">
-                  اعتماد العميل
+                  {ui("اعتماد العميل")}
                 </h2>
               </div>
 
@@ -512,7 +514,7 @@ export default function CustomerApprovalPage() {
                   <div className="border p-5 print-field">
 
                     <p className="text-sm text-gray-500 mb-2">
-                      اسم العميل / ممثل العميل
+                      {ui("اسم العميل / ممثل العميل")}
                     </p>
 
                     <p className="font-bold text-lg">
@@ -528,7 +530,7 @@ export default function CustomerApprovalPage() {
                   <div className="border p-5 print-field">
 
                     <p className="text-sm text-gray-500 mb-2">
-                      تاريخ الاعتماد
+                      {ui("تاريخ الاعتماد")}
                     </p>
 
                     <p className="font-bold">
@@ -548,7 +550,7 @@ export default function CustomerApprovalPage() {
                 <div className="border p-5 mt-6 print-field print-signature-box">
 
                   <p className="text-sm text-gray-500 mb-3">
-                    توقيع العميل / ممثل العميل
+                    {ui("توقيع العميل / ممثل العميل")}
                   </p>
 
                   {savedSignature ? (
@@ -556,14 +558,14 @@ export default function CustomerApprovalPage() {
 
                       <img
                         src={savedSignature}
-                        alt="توقيع العميل"
+                        alt={ui("توقيع العميل")}
                         className="print-signature max-h-32 max-w-full object-contain"
                       />
 
                     </div>
                   ) : (
                     <div className="h-36 flex items-center justify-center text-gray-400">
-                      لا يوجد توقيع محفوظ
+                      {ui("لا يوجد توقيع محفوظ")}
                     </div>
                   )}
 
@@ -586,11 +588,11 @@ export default function CustomerApprovalPage() {
               </div>
 
               <h2 className="text-2xl font-bold text-green-700">
-                تم اعتماد طلب الفحص
+                {ui("تم اعتماد طلب الفحص")}
               </h2>
 
               <p className="text-gray-600 mt-2">
-                تم تسجيل الموافقة والتوقيع بنجاح.
+                {ui("تم تسجيل الموافقة والتوقيع بنجاح.")}
               </p>
 
             </div>
@@ -627,7 +629,7 @@ export default function CustomerApprovalPage() {
                   textAlign: "center",
                 }}
               >
-                🖨️ طباعة العقد مع توقيع العميل
+                {ui("🖨️ طباعة العقد مع توقيع العميل")}
               </button>
             </div>
           )}
@@ -640,15 +642,15 @@ export default function CustomerApprovalPage() {
             <div className="print-footer text-center border-t border-black pt-3 mt-5 text-sm">
 
               <p className="font-bold">
-               شركة رمز الإمارات لفحص التربة والخرسانة
+               {ui("شركة رمز الإمارات لفحص التربة والخرسانة")}
               </p>
 
               <p>
-                External Test Request - QF 701/02
+                {ui("External Test Request - QF 701/02")}
               </p>
 
               <p>
-                رقم الطلب: {request.request_no || "-"}
+                {ui("رقم الطلب:")} {request.request_no || "-"}
               </p>
 
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -14,6 +15,7 @@ type CompanyProfile = {
 };
 
 export default function Settings() {
+  const ui = useUiText();
   const router = useRouter();
   const [companyName, setCompanyName] = useState("شركة رمز الإمارات لفحص التربة والخرسانة");
   const [companyAddress, setCompanyAddress] = useState("RAMZ Emirates Laboratory for Soil & Concrete Testing");
@@ -72,23 +74,23 @@ export default function Settings() {
                 }}
                 className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                ← Back
+                {ui("← Back")}
               </button>
-              <h1 className="text-3xl font-bold text-blue-800">Settings</h1>
+              <h1 className="text-3xl font-bold text-blue-800">{ui("Settings")}</h1>
             </div>
-            <p className="text-gray-500 mt-3">System settings and branding for reports.</p>
+            <p className="text-gray-500 mt-3">{ui("System settings and branding for reports.")}</p>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Company Branding</h2>
+              <h2 className="text-xl font-semibold mb-4">{ui("Company Branding")}</h2>
               <p className="text-gray-600 text-sm mb-6">
-                Add your company name, address, logo, and signature. These details will appear on reports.
+                {ui("Add your company name, address, logo, and signature. These details will appear on reports.")}
               </p>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="block text-sm font-medium mb-2">Company Name</span>
+                  <span className="block text-sm font-medium mb-2">{ui("Company Name")}</span>
                   <input
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
@@ -97,7 +99,7 @@ export default function Settings() {
                 </label>
 
                 <label className="block">
-                  <span className="block text-sm font-medium mb-2">Company Address</span>
+                  <span className="block text-sm font-medium mb-2">{ui("Company Address")}</span>
                   <input
                     value={companyAddress}
                     onChange={(e) => setCompanyAddress(e.target.value)}
@@ -108,7 +110,7 @@ export default function Settings() {
 
               <div className="grid gap-4 md:grid-cols-2 mt-4">
                 <label className="block">
-                  <span className="block text-sm font-medium mb-2">Logo Image</span>
+                  <span className="block text-sm font-medium mb-2">{ui("Logo Image")}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -118,7 +120,7 @@ export default function Settings() {
                 </label>
 
                 <label className="block">
-                  <span className="block text-sm font-medium mb-2">Signature Image</span>
+                  <span className="block text-sm font-medium mb-2">{ui("Signature Image")}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -133,26 +135,26 @@ export default function Settings() {
                   onClick={saveProfile}
                   className="rounded-lg bg-blue-700 px-5 py-3 text-white hover:bg-blue-800"
                 >
-                  Save Branding
+                  {ui("Save Branding")}
                 </button>
-                {saved && <span className="text-sm font-medium text-green-600">Saved successfully</span>}
+                {saved && <span className="text-sm font-medium text-green-600">{ui("Saved successfully")}</span>}
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Preview</h2>
+              <h2 className="text-xl font-semibold mb-4">{ui("Preview")}</h2>
               <div className="rounded-xl border border-gray-200 p-4">
                 {logoData ? (
-                  <img src={logoData} alt="Company logo preview" className="mx-auto mb-3 h-16 w-auto object-contain" />
+                  <img src={logoData} alt={ui("Company logo preview")} className="mx-auto mb-3 h-16 w-auto object-contain" />
                 ) : (
                   <div className="mb-3 flex h-16 items-center justify-center rounded-lg bg-gray-100 text-sm text-gray-500">
-                    Logo preview
+                    {ui("Logo preview")}
                   </div>
                 )}
                 <p className="text-center text-lg font-bold">{companyName}</p>
                 <p className="text-center text-sm text-gray-600">{companyAddress}</p>
                 {signatureData ? (
-                  <img src={signatureData} alt="Signature preview" className="mx-auto mt-4 h-12 w-auto object-contain" />
+                  <img src={signatureData} alt={ui("Signature preview")} className="mx-auto mt-4 h-12 w-auto object-contain" />
                 ) : (
                   <div className="mx-auto mt-4 h-12 w-32 border-b border-gray-400" />
                 )}

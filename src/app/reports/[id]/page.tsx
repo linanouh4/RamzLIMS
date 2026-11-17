@@ -1,6 +1,7 @@
 ﻿
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -8,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { getSavedUser } from "@/lib/auth";
 
 export default function ReportPage() {
+  const ui = useUiText();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -200,7 +202,7 @@ export default function ReportPage() {
 
   async function saveApproval() {
     if (!currentUser) {
-      alert("تعذر تحديد المستخدم الحالي.");
+      alert(ui("تعذر تحديد المستخدم الحالي."));
       return;
     }
 
@@ -278,13 +280,13 @@ export default function ReportPage() {
 
         alert(
           response.error.message ||
-            "تعذر حفظ اعتماد التقرير."
+            ui("تعذر حفظ اعتماد التقرير.")
         );
 
         return;
       }
 
-      alert("تم حفظ اعتماد التقرير بنجاح.");
+      alert(ui("تم حفظ اعتماد التقرير بنجاح."));
 
       await loadApproval();
     } catch (error: any) {
@@ -295,7 +297,7 @@ export default function ReportPage() {
 
       alert(
         error?.message ||
-          "حدث خطأ أثناء حفظ اعتماد التقرير."
+          ui("حدث خطأ أثناء حفظ اعتماد التقرير.")
       );
     } finally {
       setSavingApproval(false);
@@ -454,7 +456,7 @@ export default function ReportPage() {
   if (loading) {
     return (
       <div className="p-8 text-center">
-        Loading Report...
+        {ui("Loading Report...")}
       </div>
     );
   }
@@ -468,7 +470,7 @@ export default function ReportPage() {
   if (!sample) {
     return (
       <div className="p-8 text-center">
-        Report not found
+        {ui("Report not found")}
       </div>
     );
   }
@@ -491,14 +493,14 @@ export default function ReportPage() {
             onClick={() => router.back()}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            ← Back
+            {ui("← Back")}
           </button>
 
           <button
             onClick={() => window.print()}
             className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-2 rounded-lg print:hidden"
           >
-            🖨️ Print Report
+            {ui("🖨️ Print Report")}
           </button>
 
         </div>
@@ -518,7 +520,7 @@ export default function ReportPage() {
                   src={
                     companyProfile.logoData
                   }
-                  alt="Company logo"
+                  alt={ui("Company logo")}
                   className="mb-3 h-20 w-auto object-contain"
                 />
               ) : null}
@@ -530,11 +532,11 @@ export default function ReportPage() {
 
               <p className="text-gray-600 mt-2">
                 {companyProfile?.companyAddress ||
-                  "RAMZ Emirates Laboratory for Soil & Concrete Testing"}
+                  ui("RAMZ Emirates Laboratory for Soil & Concrete Testing")}
               </p>
 
               <h2 className="text-2xl font-bold mt-6">
-                TEST REPORT
+                {ui("TEST REPORT")}
               </h2>
 
             </div>
@@ -549,7 +551,7 @@ export default function ReportPage() {
             <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-4">
 
               <h3 className="mb-3 text-lg font-semibold">
-                Uploaded Report File
+                {ui("Uploaded Report File")}
               </h3>
 
               <p className="mb-3 text-sm text-gray-600">
@@ -563,7 +565,7 @@ export default function ReportPage() {
                   src={
                     uploadedReport.data
                   }
-                  title="Uploaded report"
+                  title={ui("Uploaded report")}
                   className="h-[500px] w-full rounded-lg border"
                 />
               ) : (
@@ -571,7 +573,7 @@ export default function ReportPage() {
                   src={
                     uploadedReport.data
                   }
-                  alt="Uploaded report"
+                  alt={ui("Uploaded report")}
                   className="max-h-[500px] w-full rounded-lg border object-contain"
                 />
               )}
@@ -587,7 +589,7 @@ export default function ReportPage() {
 
             <div>
               <strong>
-                Report Number
+                {ui("Report Number")}
               </strong>
               <br />
               RPT-{sample.id}
@@ -595,7 +597,7 @@ export default function ReportPage() {
 
             <div>
               <strong>
-                Sample Number
+                {ui("Sample Number")}
               </strong>
               <br />
               {sample.sample_number}
@@ -603,7 +605,7 @@ export default function ReportPage() {
 
             <div>
               <strong>
-                Sample Type
+                {ui("Sample Type")}
               </strong>
               <br />
               {sample.sample_type}
@@ -611,7 +613,7 @@ export default function ReportPage() {
 
             <div>
               <strong>
-                Received Date
+                {ui("Received Date")}
               </strong>
               <br />
               {sample.received_date}
@@ -619,10 +621,10 @@ export default function ReportPage() {
 
             <div>
               <strong>
-                Status
+                {ui("Status")}
               </strong>
               <br />
-              {sample.status}
+              {ui(sample.status)}
             </div>
 
           </div>
@@ -638,27 +640,27 @@ export default function ReportPage() {
               <tr>
 
                 <th className="border p-3">
-                  Test
+                  {ui("Test")}
                 </th>
 
                 <th className="border p-3">
-                  Standard
+                  {ui("Standard")}
                 </th>
 
                 <th className="border p-3">
-                  Status
+                  {ui("Status")}
                 </th>
 
                 <th className="border p-3">
-                  Result
+                  {ui("Result")}
                 </th>
 
                 <th className="border p-3">
-                  Unit
+                  {ui("Unit")}
                 </th>
 
                 <th className="border p-3">
-                  Notes
+                  {ui("Notes")}
                 </th>
 
               </tr>
@@ -688,8 +690,7 @@ export default function ReportPage() {
                       </td>
 
                       <td className="border p-3">
-                        {test.status ||
-                          "-"}
+                        {ui(test.status || "-")}
                       </td>
 
                       <td className="border p-3">
@@ -723,7 +724,7 @@ export default function ReportPage() {
           <div className="mb-10 border rounded-xl p-6 bg-gray-50">
 
             <h3 className="text-xl font-bold mb-5">
-              Quality Approval
+              {ui("Quality Approval")}
             </h3>
 
             <div className="grid md:grid-cols-3 gap-4">
@@ -735,7 +736,7 @@ export default function ReportPage() {
               <div>
 
                 <label className="block text-sm font-semibold mb-2">
-                  Prepared By
+                  {ui("Prepared By")}
                 </label>
 
                 <select
@@ -749,7 +750,7 @@ export default function ReportPage() {
                 >
 
                   <option value="">
-                    Select User
+                    {ui("Select User")}
                   </option>
 
                   {users.map(
@@ -774,7 +775,7 @@ export default function ReportPage() {
               <div>
 
                 <label className="block text-sm font-semibold mb-2">
-                  Reviewed By
+                  {ui("Reviewed By")}
                 </label>
 
                 <select
@@ -788,7 +789,7 @@ export default function ReportPage() {
                 >
 
                   <option value="">
-                    Select User
+                    {ui("Select User")}
                   </option>
 
                   {users.map(
@@ -813,7 +814,7 @@ export default function ReportPage() {
               <div>
 
                 <label className="block text-sm font-semibold mb-2">
-                  Approved By
+                  {ui("Approved By")}
                 </label>
 
                 {isBranchManager() ? (
@@ -830,7 +831,7 @@ export default function ReportPage() {
                   <div className="w-full border rounded-lg p-3 bg-gray-100 text-gray-700">
 
                     {currentUser?.full_name ||
-                      "Current User"}
+                      ui("Current User")}
 
                   </div>
 
@@ -856,7 +857,7 @@ export default function ReportPage() {
                   >
 
                     <option value="">
-                      Select User
+                      {ui("Select User")}
                     </option>
 
                     {users.map(
@@ -883,7 +884,7 @@ export default function ReportPage() {
             {isBranchManager() && (
               <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
 
-                سيتم اعتماد التقرير باسم:
+                {ui("سيتم اعتماد التقرير باسم:")}
                 <strong className="mr-1">
                   {currentUser?.full_name}
                 </strong>
@@ -899,8 +900,8 @@ export default function ReportPage() {
               className="mt-5 bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg"
             >
               {savingApproval
-                ? "Saving..."
-                : "Save Approval"}
+                ? ui("Saving...")
+                : ui("Save Approval")}
             </button>
 
             {/* EXISTING APPROVAL */}
@@ -910,14 +911,14 @@ export default function ReportPage() {
 
                 <p>
                   <strong>
-                    Status:
+                    {ui("Status:")}
                   </strong>{" "}
-                  {approval.status}
+                  {ui(approval.status)}
                 </p>
 
                 <p>
                   <strong>
-                    Prepared By:
+                    {ui("Prepared By:")}
                   </strong>{" "}
                   {approval.prepared_user
                     ?.full_name ||
@@ -926,7 +927,7 @@ export default function ReportPage() {
 
                 <p>
                   <strong>
-                    Reviewed By:
+                    {ui("Reviewed By:")}
                   </strong>{" "}
                   {approval.reviewed_user
                     ?.full_name ||
@@ -935,7 +936,7 @@ export default function ReportPage() {
 
                 <p>
                   <strong>
-                    Approved By:
+                    {ui("Approved By:")}
                   </strong>{" "}
                   {approval.approved_user
                     ?.full_name ||
@@ -966,7 +967,7 @@ export default function ReportPage() {
                       .prepared_user
                       .signature
                   }
-                  alt="Prepared Signature"
+                  alt={ui("Prepared Signature")}
                   className="mx-auto mb-2 h-12 w-auto object-contain"
                 />
 
@@ -980,7 +981,7 @@ export default function ReportPage() {
                 {approval
                   ?.prepared_user
                   ?.full_name ||
-                  "Tested By"}
+                  ui("Tested By")}
               </p>
 
             </div>
@@ -998,7 +999,7 @@ export default function ReportPage() {
                       .reviewed_user
                       .signature
                   }
-                  alt="Reviewed Signature"
+                  alt={ui("Reviewed Signature")}
                   className="mx-auto mb-2 h-12 w-auto object-contain"
                 />
 
@@ -1012,7 +1013,7 @@ export default function ReportPage() {
                 {approval
                   ?.reviewed_user
                   ?.full_name ||
-                  "Reviewed By"}
+                  ui("Reviewed By")}
               </p>
 
             </div>
@@ -1030,7 +1031,7 @@ export default function ReportPage() {
                       .approved_user
                       .signature
                   }
-                  alt="Approved Signature"
+                  alt={ui("Approved Signature")}
                   className="mx-auto mb-2 h-12 w-auto object-contain"
                 />
 
@@ -1044,7 +1045,7 @@ export default function ReportPage() {
                 {approval
                   ?.approved_user
                   ?.full_name ||
-                  "Approved By"}
+                  ui("Approved By")}
               </p>
 
             </div>

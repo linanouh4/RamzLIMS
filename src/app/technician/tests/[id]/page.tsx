@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useMemo, useState } from "react";
 import {
   useParams,
@@ -56,6 +57,7 @@ const emptySample = (sample_no: number): Sample => ({
 });
 
 export default function ConcreteTestPage() {
+  const ui = useUiText();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -367,7 +369,7 @@ export default function ConcreteTestPage() {
         );
 
         alert(
-          "خطأ في تحميل نموذج الفحص:\n" +
+          ui("خطأ في تحميل نموذج الفحص:\n") +
             error.message
         );
 
@@ -580,7 +582,7 @@ export default function ConcreteTestPage() {
         );
 
         alert(
-          "خطأ في تحميل نتائج العينات:\n" +
+          ui("خطأ في تحميل نتائج العينات:\n") +
             resultsError.message
         );
 
@@ -706,7 +708,7 @@ export default function ConcreteTestPage() {
   async function saveTest(): Promise<boolean> {
     if (!taskId || Number.isNaN(taskId)) {
       alert(
-        "رقم المهمة غير صحيح"
+        ui("رقم المهمة غير صحيح")
       );
 
       return false;
@@ -729,7 +731,7 @@ export default function ConcreteTestPage() {
         )
       ) {
         alert(
-          "خطأ: رقم الفني غير صحيح."
+          ui("خطأ: رقم الفني غير صحيح.")
         );
 
         return false;
@@ -890,7 +892,7 @@ export default function ConcreteTestPage() {
         );
 
         alert(
-          "خطأ في حفظ الفحص:\n" +
+          ui("خطأ في حفظ الفحص:\n") +
             testError.message
         );
 
@@ -899,7 +901,7 @@ export default function ConcreteTestPage() {
 
       if (!testData) {
         alert(
-          "لم يتم إنشاء نموذج الفحص"
+          ui("لم يتم إنشاء نموذج الفحص")
         );
 
         return false;
@@ -929,7 +931,7 @@ export default function ConcreteTestPage() {
         );
 
         alert(
-          "خطأ في حذف النتائج القديمة:\n" +
+          ui("خطأ في حذف النتائج القديمة:\n") +
             deleteResultsError.message
         );
 
@@ -1116,7 +1118,7 @@ export default function ConcreteTestPage() {
         );
 
         alert(
-          "خطأ في حفظ نتائج العينات:\n" +
+          ui("خطأ في حفظ نتائج العينات:\n") +
             insertResultsError.message
         );
 
@@ -1124,7 +1126,7 @@ export default function ConcreteTestPage() {
       }
 
       alert(
-        "تم حفظ المسودة بنجاح ✅"
+        ui("تم حفظ المسودة بنجاح ✅")
       );
 
       return true;
@@ -1135,10 +1137,10 @@ export default function ConcreteTestPage() {
       );
 
       alert(
-        "حدث خطأ غير متوقع:\n" +
+        ui("حدث خطأ غير متوقع:\n") +
           (
             error?.message ||
-            "خطأ غير معروف"
+            ui("خطأ غير معروف")
           )
       );
 
@@ -1170,11 +1172,11 @@ export default function ConcreteTestPage() {
             }
             className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
           >
-            ← رجوع
+            {ui("← رجوع")}
           </button>
 
           <div>
-            جاري تحميل نموذج الفحص...
+            {ui("جاري تحميل نموذج الفحص...")}
           </div>
         </div>
       </ProtectedRoute>
@@ -1205,7 +1207,7 @@ export default function ConcreteTestPage() {
             }
             className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg"
           >
-            ← رجوع
+            {ui("← رجوع")}
           </button>
 
           <button
@@ -1214,8 +1216,8 @@ export default function ConcreteTestPage() {
             className="bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white px-5 py-2 rounded-lg"
           >
             {saving
-              ? "جاري الحفظ..."
-              : "💾 حفظ المسودة"}
+              ? ui("جاري الحفظ...")
+              : ui("💾 حفظ المسودة")}
           </button>
 
           <button
@@ -1230,7 +1232,7 @@ export default function ConcreteTestPage() {
             disabled={saving}
             className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-5 py-2 rounded-lg"
           >
-            💾 حفظ المسودة والخروج
+            {ui("💾 حفظ المسودة والخروج")}
           </button>
 
           <button
@@ -1239,7 +1241,7 @@ export default function ConcreteTestPage() {
             }
             className="bg-green-700 hover:bg-green-800 text-white px-5 py-2 rounded-lg"
           >
-            🖨️ طباعة التقرير
+            {ui("🖨️ طباعة التقرير")}
           </button>
         </div>
 

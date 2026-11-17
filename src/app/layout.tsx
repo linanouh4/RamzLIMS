@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import "./globals.css";
+import { LanguageProvider } from "@/components/LanguageProvider";
 
 const fonts = {
   "--font-geist-sans": "Tahoma, Arial, sans-serif",
@@ -16,8 +17,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="ar" className="h-full antialiased" style={fonts}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="ar" dir="rtl" className="h-full antialiased" style={fonts}>
+      <body className="min-h-full flex flex-col"><LanguageProvider>{children}</LanguageProvider></body>
     </html>
   );
 }

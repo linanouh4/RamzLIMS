@@ -1,4 +1,5 @@
 "use client";
+import { useUiText } from "@/lib/uiText";
 import { QuotationHeader } from "./QuotationPaper";
 
 import Link from "next/link";
@@ -84,6 +85,7 @@ export type SavedQuote = {
 };
 
 export default function DraftForm({ quote }: { quote?: SavedQuote }) {
+  const ui = useUiText();
   const router = useRouter();
   const user = getSavedUser();
   const role = user?.role?.trim().toLowerCase();
@@ -139,29 +141,29 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
         ...(quote ? { p_quotation_id: quote.id, p_expected_version: quote.draft_version } : {}),
       });
       if (saveError) throw new Error(saveError.message);
-      if (data == null) throw new Error("تعذر تأكيد رقم المسودة. تحققي من قائمة عروض الأسعار.");
+      if (data == null) throw new Error(ui("تعذر تأكيد رقم المسودة. تحققي من قائمة عروض الأسعار."));
       router.replace("/quotations");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر حفظ المسودة.");
+      setError(cause instanceof Error ? cause.message : ui("تعذر حفظ المسودة."));
       savingNow.current = false;
       setSaving(false);
     }
   }
 
   if (!canCreate) {
-    return <p dir="rtl" role="alert" className="p-8">ليس لديك صلاحية إنشاء عرض سعر.</p>;
+    return <p role="alert" className="p-8">{ui("ليس لديك صلاحية إنشاء عرض سعر.")}</p>;
   }
 
   return (
-    <main dir="rtl" className="min-h-screen bg-slate-100 p-4 md:p-8">
+    <main className="min-h-screen bg-slate-100 p-4 md:p-8">
       <div className="mx-auto max-w-5xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-blue-900">{quote ? "تعديل عرض السعر" : "إنشاء عرض سعر"}</h1>
+            <h1 className="text-2xl font-bold text-blue-900">{quote ? ui("تعديل عرض السعر") : ui("إنشاء عرض سعر")}</h1>
             <p className="mt-1 text-sm text-slate-600">QF 701/03</p>
           </div>
           <Link href="/quotations" className="rounded-lg border bg-white px-4 py-2">
-            عروض الأسعار
+            {ui("عروض الأسعار")}
           </Link>
         </header>
 
@@ -169,11 +171,11 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
         <form onSubmit={save}>
           <fieldset disabled={saving} className="space-y-5">
             <section className="rounded-xl bg-white p-5 shadow">
-              <h2 className="mb-4 text-lg font-bold">بيانات العرض والعميل</h2>
+              <h2 className="mb-4 text-lg font-bold">{ui("بيانات العرض والعميل")}</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {headerFields.map(field => (
                   <label key={field.name}>
-                    {field.label}{field.required ? " *" : ""}
+                    {ui(field.label)}{field.required ? " *" : ""}
                     <input
                       name={field.name}
                       type={field.type || "text"}
@@ -187,47 +189,47 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
             </section>
 
             <section className="rounded-xl bg-white p-5 shadow">
-              <h2 className="mb-4 text-lg font-bold">بنود عرض السعر</h2>
+              <h2 className="mb-4 text-lg font-bold">{ui("بنود عرض السعر")}</h2>
               {lines.map((line, index) => (
                 <fieldset key={line.key} className="mb-5 rounded-lg border p-4">
-                  <legend className="px-2 font-semibold">البند {index + 1}</legend>
+                  <legend className="px-2 font-semibold">{ui("البند")} {index + 1}</legend>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <label>اسم الفحص *
+                    <label>{ui("اسم الفحص *")}
                       <input required className={inputClass} value={line.test_name}
                         onChange={e => changeLine(line.key, "test_name", e.target.value)} />
                     </label>
-                    <label>الوحدة *
+                    <label>{ui("الوحدة *")}
                       <input required className={inputClass} value={line.unit}
                         onChange={e => changeLine(line.key, "unit", e.target.value)} />
                     </label>
-                    <label>الكمية *
+                    <label>{ui("الكمية *")}
                       <input required type="number" min="0" step="any" className={inputClass}
                         value={line.quantity}
                         onChange={e => changeLine(line.key, "quantity", e.target.value)} />
                     </label>
-                    <label>سعر الوحدة بالريال *
+                    <label>{ui("سعر الوحدة بالريال *")}
                       <input required type="number" min="0" step="0.01" className={inputClass}
                         value={line.unit_price}
                         onChange={e => changeLine(line.key, "unit_price", e.target.value)} />
                     </label>
-                    <label>طريقة الفحص أو الملاحظات
+                    <label>{ui("طريقة الفحص أو الملاحظات")}
                       <input className={inputClass} value={line.method_or_notes}
                         onChange={e => changeLine(line.key, "method_or_notes", e.target.value)} />
                     </label>
-                    <label>حالة الفحص ضمن نطاق اعتماد ساك
+                    <label>{ui("حالة الفحص ضمن نطاق اعتماد ساك")}
                       <select className={inputClass} value={line.saac_scope_status}
                         onChange={e => changeLine(line.key, "saac_scope_status", e.target.value)}>
-                        <option value="">لم تُحدّد بعد</option>
-                        <option value="ضمن نطاق الاعتماد">ضمن نطاق الاعتماد</option>
-                        <option value="خارج نطاق الاعتماد">خارج نطاق الاعتماد</option>
+                        <option value="">{ui("لم تُحدّد بعد")}</option>
+                        <option value="ضمن نطاق الاعتماد">{ui("ضمن نطاق الاعتماد")}</option>
+                        <option value="خارج نطاق الاعتماد">{ui("خارج نطاق الاعتماد")}</option>
                       </select>
                     </label>
                   </div>
                   <div className="mt-4 flex items-center justify-between gap-3">
-                    <span>إجمالي البند {money.format(lineAmount(line))}</span>
+                    <span>{ui("إجمالي البند")} {money.format(lineAmount(line))}</span>
                     <button type="button" className="text-sm text-red-700"
                       onClick={() => setLines(current => current.filter(row => row.key !== line.key))}>
-                      إزالة البند
+                      {ui("إزالة البند")}
                     </button>
                   </div>
                 </fieldset>
@@ -237,17 +239,17 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
                   const row = newLine(nextKey.current++);
                   setLines(current => [...current, row]);
                 }}>
-                إضافة بند
+                {ui("إضافة بند")}
               </button>
               <p className="mt-5 text-lg font-bold">
-                إجمالي العرض {money.format(lines.reduce((sum, line) => sum + lineAmount(line), 0))}
+                {ui("إجمالي العرض")} {money.format(lines.reduce((sum, line) => sum + lineAmount(line), 0))}
               </p>
             </section>
 
-            {error && <p dir="auto" role="alert" className="rounded-lg bg-red-50 p-3 text-red-800">{error}</p>}
+            {error && <p dir="auto" role="alert" className="rounded-lg bg-red-50 p-3 text-red-800">{ui(error)}</p>}
             <button type="submit" disabled={saving}
               className="rounded-lg bg-blue-700 px-6 py-3 text-white disabled:opacity-60">
-              {saving ? "جارٍ الحفظ…" : quote ? "حفظ التعديلات" : "حفظ كمسودة"}
+              {saving ? ui("جارٍ الحفظ…") : quote ? ui("حفظ التعديلات") : ui("حفظ كمسودة")}
             </button>
           </fieldset>
         </form>

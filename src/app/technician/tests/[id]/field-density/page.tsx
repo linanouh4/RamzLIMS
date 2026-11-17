@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -43,6 +44,7 @@ const emptyResult = (sample_no: number): Result => ({
 });
 
 export default function FieldDensityPage() {
+  const ui = useUiText();
   const params = useParams();
   const router = useRouter();
 
@@ -306,7 +308,7 @@ export default function FieldDensityPage() {
 
   async function saveTest() {
     if (!taskId) {
-      alert("رقم المهمة غير صحيح");
+      alert(ui("رقم المهمة غير صحيح"));
       return;
     }
 
@@ -480,7 +482,7 @@ export default function FieldDensityPage() {
         return;
       }
 
-      alert("تم حفظ المسودة بنجاح");
+      alert(ui("تم حفظ المسودة بنجاح"));
     } finally {
       setSaving(false);
     }
@@ -490,7 +492,7 @@ export default function FieldDensityPage() {
     return (
       <ProtectedRoute>
         <div className="p-6">
-          جاري تحميل نموذج الفحص...
+          {ui("جاري تحميل نموذج الفحص...")}
         </div>
       </ProtectedRoute>
     );
@@ -503,14 +505,14 @@ export default function FieldDensityPage() {
   onClick={() => router.back()}
   className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
 >
-  ← رجوع
+  {ui("← رجوع")}
 </button>
         <div className="flex flex-wrap gap-3 mb-4 print:hidden">
           <button
             onClick={() => router.back()}
             className="bg-gray-600 text-white px-5 py-2 rounded-lg"
           >
-            ← رجوع
+            {ui("← رجوع")}
           </button>
 
           <button
@@ -518,7 +520,7 @@ export default function FieldDensityPage() {
             disabled={saving}
             className="bg-blue-700 disabled:bg-gray-400 text-white px-5 py-2 rounded-lg"
           >
-            {saving ? "جاري الحفظ..." : "💾 حفظ المسودة"}
+            {saving ? ui("جاري الحفظ...") : ui("💾 حفظ المسودة")}
           </button>
 
           <button
@@ -529,14 +531,14 @@ export default function FieldDensityPage() {
             disabled={saving}
             className="bg-orange-600 disabled:bg-gray-400 text-white px-5 py-2 rounded-lg"
           >
-            💾 حفظ المسودة والخروج
+            {ui("💾 حفظ المسودة والخروج")}
           </button>
 
           <button
             onClick={() => window.print()}
             className="bg-green-700 text-white px-5 py-2 rounded-lg"
           >
-            🖨️ طباعة التقرير
+            {ui("🖨️ طباعة التقرير")}
           </button>
         </div>
 
@@ -547,11 +549,11 @@ export default function FieldDensityPage() {
           <div className="border border-black mt-4">
 
             <div className="text-center font-bold text-lg p-3 border-b border-black">
-              Technical Data Sheet
+              {ui("Technical Data Sheet")}
             </div>
 
             <div className="text-center font-bold p-2">
-              Field Density by Sand Cone Test - ASTM D1556
+              {ui("Field Density by Sand Cone Test - ASTM D1556")}
             </div>
 
           </div>
@@ -559,13 +561,13 @@ export default function FieldDensityPage() {
           <div className="grid grid-cols-2 border-l border-r border-black">
 
             <Field
-              label="Order No#"
+              label={ui("Order No#")}
               value={form.order_no}
               onChange={(v) => updateForm("order_no", v)}
             />
 
             <Field
-              label="Sampling Date"
+              label={ui("Sampling Date")}
               type="date"
               value={form.sampling_date}
               onChange={(v) =>
@@ -574,7 +576,7 @@ export default function FieldDensityPage() {
             />
 
             <Field
-              label="Sample Code#"
+              label={ui("Sample Code#")}
               value={form.sample_code}
               onChange={(v) =>
                 updateForm("sample_code", v)
@@ -582,7 +584,7 @@ export default function FieldDensityPage() {
             />
 
             <Field
-              label="Date Tested"
+              label={ui("Date Tested")}
               type="date"
               value={form.test_date}
               onChange={(v) =>
@@ -591,7 +593,7 @@ export default function FieldDensityPage() {
             />
 
             <Field
-              label="Sampled By"
+              label={ui("Sampled By")}
               value={form.sampled_by}
               onChange={(v) =>
                 updateForm("sampled_by", v)
@@ -599,7 +601,7 @@ export default function FieldDensityPage() {
             />
 
             <Field
-              label="Classification of Materials"
+              label={ui("Classification of Materials")}
               value={form.classification}
               onChange={(v) =>
                 updateForm("classification", v)
@@ -607,7 +609,7 @@ export default function FieldDensityPage() {
             />
 
             <Field
-              label="Checked By"
+              label={ui("Checked By")}
               value={form.checked_by}
               onChange={(v) =>
                 updateForm("checked_by", v)
@@ -615,7 +617,7 @@ export default function FieldDensityPage() {
             />
 
             <Field
-              label="Sample Location"
+              label={ui("Sample Location")}
               value={form.sample_location}
               onChange={(v) =>
                 updateForm("sample_location", v)
@@ -623,7 +625,7 @@ export default function FieldDensityPage() {
             />
 
             <Field
-              label="Method"
+              label={ui("Method")}
               value={form.method}
               onChange={(v) =>
                 updateForm("method", v)
@@ -631,7 +633,7 @@ export default function FieldDensityPage() {
             />
 
             <Field
-              label="Source of Materials"
+              label={ui("Source of Materials")}
               value={form.source_material}
               onChange={(v) =>
                 updateForm("source_material", v)
@@ -654,13 +656,13 @@ export default function FieldDensityPage() {
           <div className="mt-5 border border-black">
 
             <div className="font-bold p-2 border-b border-black">
-              E - Modified Proctor Test: ASTM D-1557
+              {ui("E - Modified Proctor Test: ASTM D-1557")}
             </div>
 
             <div className="grid grid-cols-2">
 
               <Field
-                label="Reference Report No."
+                label={ui("Reference Report No.")}
                 value={form.reference_report}
                 onChange={(v) =>
                   updateForm("reference_report", v)
@@ -668,7 +670,7 @@ export default function FieldDensityPage() {
               />
 
               <Field
-                label="Date"
+                label={ui("Date")}
                 type="date"
                 value={form.reference_date}
                 onChange={(v) =>
@@ -677,7 +679,7 @@ export default function FieldDensityPage() {
               />
 
               <Field
-                label="Maximum Dry Density M.D.D (g/cm³)"
+                label={ui("Maximum Dry Density M.D.D (g/cm³)")}
                 type="number"
                 value={form.mdd}
                 onChange={(v) =>
@@ -686,7 +688,7 @@ export default function FieldDensityPage() {
               />
 
               <Field
-                label="Optimum Moisture Content (%)"
+                label={ui("Optimum Moisture Content (%)")}
                 type="number"
                 value={form.optimum_moisture}
                 onChange={(v) =>
@@ -695,7 +697,7 @@ export default function FieldDensityPage() {
               />
 
               <Field
-                label="Technical Manager"
+                label={ui("Technical Manager")}
                 value={form.technical_manager}
                 onChange={(v) =>
                   updateForm("technical_manager", v)
@@ -703,7 +705,7 @@ export default function FieldDensityPage() {
               />
 
               <Field
-                label="Report Review"
+                label={ui("Report Review")}
                 value={form.report_review}
                 onChange={(v) =>
                   updateForm("report_review", v)
@@ -715,7 +717,7 @@ export default function FieldDensityPage() {
 
           {averageDryDensity !== null && (
             <div className="mt-4 border border-black p-3 font-bold">
-              Average Dry Density:
+              {ui("Average Dry Density:")}
               {" "}
               {averageDryDensity.toFixed(3)}
               {" g/cm³"}
@@ -765,6 +767,7 @@ function DensityTable({
   dryDensity,
   compaction,
 }: any) {
+  const ui = useUiText();
   return (
     <div className="overflow-x-auto mt-5">
 
@@ -772,7 +775,7 @@ function DensityTable({
 
         <thead>
           <tr className="bg-gray-200">
-            <th className="border p-2">Symb.</th>
+            <th className="border p-2">{ui("Symb.")}</th>
 
             {results.map((r: Result) => (
               <th key={r.sample_no} className="border p-2">
@@ -786,7 +789,7 @@ function DensityTable({
 
           <tr>
             <td className="border p-2 font-bold">
-              Field Sample No.
+              {ui("Field Sample No.")}
             </td>
 
             {results.map((r: Result, i: number) => (
@@ -808,7 +811,7 @@ function DensityTable({
 
           <tr>
             <td className="border p-2">
-              Station / Location
+              {ui("Station / Location")}
             </td>
 
             {results.map((r: Result, i: number) => (
@@ -830,7 +833,7 @@ function DensityTable({
 
           <tr>
             <td className="border p-2">
-              Layer Thickness (cm)
+              {ui("Layer Thickness (cm)")}
             </td>
 
             {results.map((r: Result, i: number) => (
@@ -856,7 +859,7 @@ function DensityTable({
               colSpan={9}
               className="border p-2 font-bold"
             >
-              B - Moisture Content - ASTM D2216 Method B
+              {ui("B - Moisture Content - ASTM D2216 Method B")}
             </td>
           </tr>
 
@@ -867,7 +870,7 @@ function DensityTable({
             ["Can + Dry Soil C", "can_dry"],
           ].map(([label, field]) => (
             <tr key={field}>
-              <td className="border p-2">{label}</td>
+              <td className="border p-2">{ui(label)}</td>
 
               {results.map((r: Result, i: number) => (
                 <td key={r.sample_no} className="border p-1">
@@ -889,7 +892,7 @@ function DensityTable({
 
           <tr>
             <td className="border p-2">
-              Moisture Content F %
+              {ui("Moisture Content F %")}
             </td>
 
             {results.map((r: Result) => (
@@ -907,7 +910,7 @@ function DensityTable({
               colSpan={9}
               className="border p-2 font-bold"
             >
-              C - Field Density
+              {ui("C - Field Density")}
             </td>
           </tr>
 
@@ -919,7 +922,7 @@ function DensityTable({
             ["M - Standard Sand Density", "sand_density"],
           ].map(([label, field]) => (
             <tr key={field}>
-              <td className="border p-2">{label}</td>
+              <td className="border p-2">{ui(label)}</td>
 
               {results.map((r: Result, i: number) => (
                 <td key={r.sample_no} className="border p-1">
@@ -961,7 +964,7 @@ function DensityTable({
           ].map(([label, fn]: any) => (
             <tr key={label}>
               <td className="border p-2 font-bold">
-                {label}
+                {ui(label)}
               </td>
 
               {results.map((r: Result) => {

@@ -1,12 +1,14 @@
 
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getSavedUser, saveUser } from "@/lib/auth";
 
 export default function Home() {
+  const ui = useUiText();
   const router = useRouter();
 
   const [username, setUsername] = useState("");
@@ -27,7 +29,7 @@ export default function Home() {
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
-      alert("الرجاء إدخال اسم المستخدم وكلمة المرور");
+      alert(ui("الرجاء إدخال اسم المستخدم وكلمة المرور"));
       return;
     }
 
@@ -87,17 +89,17 @@ export default function Home() {
         );
 
         alert(
-          "خطأ Supabase في قراءة المستخدم:\n\n" +
-            "Message: " +
+          ui("خطأ Supabase في قراءة المستخدم:\n\n") +
+            ui("Message: ") +
             String(userError.message) +
             "\n\n" +
-            "Code: " +
+            ui("Code: ") +
             String(userError.code) +
             "\n\n" +
-            "Details: " +
+            ui("Details: ") +
             String(userError.details) +
             "\n\n" +
-            "Hint: " +
+            ui("Hint: ") +
             String(userError.hint)
         );
 
@@ -114,7 +116,7 @@ export default function Home() {
           username.trim()
         );
 
-        alert("اسم المستخدم غير صحيح");
+        alert(ui("اسم المستخدم غير صحيح"));
         return;
       }
 
@@ -126,8 +128,8 @@ export default function Home() {
 
       if (!userData.email) {
         alert(
-          "هذا المستخدم غير مرتبط ببريد إلكتروني.\n\n" +
-            "يجب ربطه بحساب Supabase Authentication."
+          ui("هذا المستخدم غير مرتبط ببريد إلكتروني.\n\n") +
+            ui("يجب ربطه بحساب Supabase Authentication.")
         );
 
         return;
@@ -164,7 +166,7 @@ export default function Home() {
         );
 
         alert(
-          "فشل تسجيل الدخول:\n\n" +
+          ui("فشل تسجيل الدخول:\n\n") +
             String(authError.message)
         );
 
@@ -180,7 +182,7 @@ export default function Home() {
           "AUTH LOGIN SUCCESS BUT USER IS NULL"
         );
 
-        alert("تعذر تسجيل الدخول.");
+        alert(ui("تعذر تسجيل الدخول."));
         return;
       }
 
@@ -216,7 +218,7 @@ export default function Home() {
         await supabase.auth.signOut();
 
         alert(
-          "حساب المستخدم غير مرتبط بحساب Authentication الصحيح."
+          ui("حساب المستخدم غير مرتبط بحساب Authentication الصحيح.")
         );
 
         return;
@@ -289,7 +291,7 @@ export default function Home() {
 
       alert(
         error?.message ||
-          "حدث خطأ غير متوقع أثناء تسجيل الدخول"
+          ui("حدث خطأ غير متوقع أثناء تسجيل الدخول")
       );
     } finally {
       setLoading(false);
@@ -309,7 +311,7 @@ export default function Home() {
         </h1>
 
         <p className="text-center text-gray-500 mt-2">
-          Laboratory Information Management System
+          {ui("Laboratory Information Management System")}
         </p>
 
         {/* ================================================= */}
@@ -321,12 +323,12 @@ export default function Home() {
           {/* Username */}
 
           <label className="block mb-2 font-semibold">
-            Username
+            {ui("Username")}
           </label>
 
           <input
             type="text"
-            placeholder="Enter Username"
+            placeholder={ui("Enter Username")}
             className="w-full border rounded-lg p-3 mb-4"
             value={username}
             onChange={(e) =>
@@ -344,12 +346,12 @@ export default function Home() {
           {/* Password */}
 
           <label className="block mb-2 font-semibold">
-            Password
+            {ui("Password")}
           </label>
 
           <input
             type="password"
-            placeholder="Enter Password"
+            placeholder={ui("Enter Password")}
             className="w-full border rounded-lg p-3 mb-6"
             value={password}
             onChange={(e) =>
@@ -372,8 +374,8 @@ export default function Home() {
             className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white rounded-lg p-3 transition"
           >
             {loading
-              ? "جاري تسجيل الدخول..."
-              : "Login"}
+              ? ui("جاري تسجيل الدخول...")
+              : ui("Login")}
           </button>
 
         </div>

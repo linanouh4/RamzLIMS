@@ -1,4 +1,7 @@
+"use client";
+import { useUiText } from "@/lib/uiText";
 export default function ReportHeader() {
+  const ui = useUiText();
   return (
     <div className="border-2 border-black w-full mb-6">
 
@@ -11,7 +14,7 @@ export default function ReportHeader() {
 
               <tr>
                 <td className="border-b border-black p-2 font-bold w-1/2">
-                  Document Code
+                  {ui("Document Code")}
                 </td>
                 <td className="border-b border-black p-2 text-center">
                   QF 804/02/04
@@ -20,7 +23,7 @@ export default function ReportHeader() {
 
               <tr>
                 <td className="border-b border-black p-2 font-bold">
-                  Issue Date
+                  {ui("Issue Date")}
                 </td>
                 <td className="border-b border-black p-2 text-center">
                   20/08/2024
@@ -29,7 +32,7 @@ export default function ReportHeader() {
 
               <tr>
                 <td className="p-2 font-bold">
-                  Revision Date
+                  {ui("Revision Date")}
                 </td>
                 <td className="p-2 text-center">
                   31/12/2024
@@ -45,12 +48,12 @@ export default function ReportHeader() {
 
           <img
             src="/RAMZ ALEMARAT.png"
-            alt="RAMZ ALEMARAT"
+            alt={ui("RAMZ ALEMARAT")}
             className="h-16 object-contain mb-2"
           />
 
           <h2 className="font-bold text-lg">
-            Technical Data Sheet
+            {ui("Technical Data Sheet")}
           </h2>
 
         </div>
@@ -62,7 +65,7 @@ export default function ReportHeader() {
 
               <tr>
                 <td className="border-b border-black p-2 font-bold w-1/2">
-                  Issue / Rev #
+                  {ui("Issue / Rev #")}
                 </td>
 
                 <td className="border-b border-black p-2 text-center">
@@ -72,7 +75,7 @@ export default function ReportHeader() {
 
               <tr>
                 <td className="border-b border-black p-2 font-bold">
-                  Copy #
+                  {ui("Copy #")}
                 </td>
 
                 <td className="border-b border-black p-2"></td>
@@ -80,11 +83,11 @@ export default function ReportHeader() {
 
               <tr>
                 <td className="p-2 font-bold">
-                  Page
+                  {ui("Page")}
                 </td>
 
                 <td className="p-2 text-center">
-                  Page 1 of 1
+                  {ui("Page 1 of 1")}
                 </td>
               </tr>
 

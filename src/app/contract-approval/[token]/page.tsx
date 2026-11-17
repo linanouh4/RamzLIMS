@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { contractPrintFooter } from "@/components/contractPrintFooter";
 import { contractLetterhead } from "@/components/contractLetterhead";
 import { useEffect, useRef, useState } from "react";
@@ -42,6 +43,7 @@ finalized_at: string | null;
 };
 
 export default function ContractApprovalPage() {
+  const ui = useUiText();
 const params = useParams();
 const token = params?.token as string;
 
@@ -120,7 +122,7 @@ const loadContract = async () => {
     });
 
     setError(
-      "تعذر تحميل بيانات العقد. قد يكون الرابط غير صحيح أو منتهي الصلاحية."
+      ui("تعذر تحميل بيانات العقد. قد يكون الرابط غير صحيح أو منتهي الصلاحية.")
     );
     setLoading(false);
     return;
@@ -129,7 +131,7 @@ const loadContract = async () => {
   const row = Array.isArray(data) ? data[0] : data;
 
   if (!row) {
-    setError("العقد غير موجود أو أن رابط التوقيع غير صالح.");
+    setError(ui("العقد غير موجود أو أن رابط التوقيع غير صالح."));
     setLoading(false);
     return;
   }
@@ -186,12 +188,12 @@ const file = event.target.files?.[0];
 if (!file) return;
 
 if (!file.type.startsWith("image/")) {
-  setError("يرجى اختيار ملف صورة للختم.");
+  setError(ui("يرجى اختيار ملف صورة للختم."));
   return;
 }
 
 if (file.size > 5 * 1024 * 1024) {
-  setError("حجم صورة الختم يجب ألا يتجاوز 5 MB.");
+  setError(ui("حجم صورة الختم يجب ألا يتجاوز 5 MB."));
   return;
 }
 
@@ -219,17 +221,17 @@ setError("");
 setSuccess("");
 
 if (!customerName.trim()) {
-  setError("يرجى إدخال اسم ممثل العميل.");
+  setError(ui("يرجى إدخال اسم ممثل العميل."));
   return;
 }
 
 if (!signatureRef.current || signatureRef.current.isEmpty()) {
-  setError("يرجى التوقيع قبل إرسال العقد.");
+  setError(ui("يرجى التوقيع قبل إرسال العقد."));
   return;
 }
 
 if (!customerStamp) {
-  setError("يرجى رفع ختم الشركة.");
+  setError(ui("يرجى رفع ختم الشركة."));
   return;
 }
 
@@ -256,7 +258,7 @@ try {
   }
 
   setSuccess(
-    "تم توقيع العقد وإرساله إلى شركة رامز للمراجعة والاعتماد بنجاح."
+    ui("تم توقيع العقد وإرساله إلى شركة رامز للمراجعة والاعتماد بنجاح.")
   );
 
   const result = Array.isArray(data) ? data[0] : data;
@@ -285,7 +287,7 @@ try {
   setError(
     err instanceof Error
       ? err.message
-      : "حدث خطأ أثناء إرسال التوقيع."
+      : ui("حدث خطأ أثناء إرسال التوقيع.")
   );
 } finally {
   setSubmitting(false);
@@ -334,13 +336,13 @@ switch (contract.signing_status) {
 
 if (loading) {
 return ( <main
-     dir="rtl"
+    
      className="min-h-screen bg-slate-100 flex items-center justify-center p-6"
    > <div className="bg-white rounded-2xl shadow-lg p-8 text-center"> <div className="text-lg font-bold text-slate-800">
-جاري تحميل العقد... </div>
+{ui("جاري تحميل العقد...")} </div>
 
       <div className="text-sm text-slate-500 mt-2">
-        يرجى الانتظار
+        {ui("يرجى الانتظار")}
       </div>
     </div>
   </main>
@@ -351,17 +353,17 @@ return ( <main
 
 if (error && !contract) {
 return ( <main
-     dir="rtl"
+    
      className="min-h-screen bg-slate-100 flex items-center justify-center p-6"
    > <div className="max-w-lg w-full bg-white rounded-2xl shadow-lg p-8 text-center"> <div className="text-5xl mb-4">⚠️</div>
 
 
       <h1 className="text-xl font-bold text-red-700 mb-3">
-        تعذر فتح العقد
+        {ui("تعذر فتح العقد")}
       </h1>
 
       <p className="text-slate-600 leading-8">
-        {error}
+        {ui(error)}
       </p>
     </div>
   </main>
@@ -400,7 +402,7 @@ background: white !important;
   `}</style>
 
   <main
-    dir="rtl"
+   
     className="min-h-screen bg-slate-100 py-8 px-4"
   >
     <div className="max-w-5xl mx-auto">
@@ -416,7 +418,7 @@ background: white !important;
 
             <div>
               <div className="text-sm text-slate-500">
-                رقم العقد
+                {ui("رقم العقد")}
               </div>
 
               <div className="text-2xl font-black text-slate-900">
@@ -424,13 +426,13 @@ background: white !important;
               </div>
             </div>
 
-            <div className="text-right md:text-left">
+            <div className="text-end md:text-start">
               <div className="text-sm text-slate-500">
-                حالة التوقيع
+                {ui("حالة التوقيع")}
               </div>
 
               <span className="inline-flex mt-1 px-4 py-2 rounded-full bg-blue-100 text-blue-800 font-bold text-sm">
-                {statusLabel()}
+                {ui(statusLabel())}
               </span>
             </div>
 
@@ -447,14 +449,14 @@ background: white !important;
         <div className="p-6">
 
           <h2 className="text-lg font-bold text-slate-900 border-b pb-3 mb-5">
-            بيانات العقد
+            {ui("بيانات العقد")}
           </h2>
 
           <div className="grid md:grid-cols-2 gap-4">
 
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="text-xs text-slate-500 mb-1">
-                اسم العميل
+                {ui("اسم العميل")}
               </div>
 
               <div className="font-bold text-slate-900">
@@ -464,7 +466,7 @@ background: white !important;
 
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="text-xs text-slate-500 mb-1">
-                ممثل العميل
+                {ui("ممثل العميل")}
               </div>
 
               <div className="font-bold text-slate-900">
@@ -474,7 +476,7 @@ background: white !important;
 
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="text-xs text-slate-500 mb-1">
-                المدينة
+                {ui("المدينة")}
               </div>
 
               <div className="font-bold text-slate-900">
@@ -484,7 +486,7 @@ background: white !important;
 
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="text-xs text-slate-500 mb-1">
-                الهاتف
+                {ui("الهاتف")}
               </div>
 
               <div className="font-bold text-slate-900">
@@ -494,7 +496,7 @@ background: white !important;
 
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="text-xs text-slate-500 mb-1">
-                تاريخ بداية العقد
+                {ui("تاريخ بداية العقد")}
               </div>
 
               <div className="font-bold text-slate-900">
@@ -504,7 +506,7 @@ background: white !important;
 
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="text-xs text-slate-500 mb-1">
-                تاريخ نهاية العقد
+                {ui("تاريخ نهاية العقد")}
               </div>
 
               <div className="font-bold text-slate-900">
@@ -514,7 +516,7 @@ background: white !important;
 
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="text-xs text-slate-500 mb-1">
-                قيمة العقد
+                {ui("قيمة العقد")}
               </div>
 
               <div className="font-bold text-slate-900">
@@ -524,7 +526,7 @@ background: white !important;
 
             <div className="bg-slate-50 rounded-xl p-4">
               <div className="text-xs text-slate-500 mb-1">
-                البريد الإلكتروني
+                {ui("البريد الإلكتروني")}
               </div>
 
               <div className="font-bold text-slate-900 break-all">
@@ -538,7 +540,7 @@ background: white !important;
           {contract.contract_description && (
             <div className="mt-6">
               <h2 className="text-lg font-bold text-slate-900 border-b pb-3 mb-4">
-                تفاصيل العقد
+                {ui("تفاصيل العقد")}
               </h2>
 
               <div className="bg-white border rounded-xl p-5 leading-8 text-slate-700 whitespace-pre-wrap">
@@ -552,14 +554,14 @@ background: white !important;
             <div className="mt-8 border-t pt-8">
 
               <h2 className="text-lg font-bold text-slate-900 mb-5">
-                توقيع العميل
+                {ui("توقيع العميل")}
               </h2>
 
               <div className="grid md:grid-cols-2 gap-6">
 
                 <div className="border rounded-xl p-5">
                   <div className="text-sm text-slate-500 mb-3">
-                    اسم ممثل العميل
+                    {ui("اسم ممثل العميل")}
                   </div>
 
                   <div className="font-bold text-slate-900 mb-5">
@@ -567,38 +569,38 @@ background: white !important;
                   </div>
 
                   <div className="text-sm text-slate-500 mb-2">
-                    التوقيع الإلكتروني
+                    {ui("التوقيع الإلكتروني")}
                   </div>
 
                   <div className="h-40 border rounded-lg flex items-center justify-center bg-white">
                     <img
                       src={contract.customer_signature}
-                      alt="توقيع العميل"
+                      alt={ui("توقيع العميل")}
                       className="max-h-36 max-w-full object-contain"
                     />
                   </div>
 
                   <div className="text-xs text-slate-500 mt-3">
-                    تاريخ التوقيع:{" "}
+                    {ui("تاريخ التوقيع:")}{" "}
                     {formatDateTime(contract.customer_signed_at)}
                   </div>
                 </div>
 
                 <div className="border rounded-xl p-5">
                   <div className="text-sm text-slate-500 mb-3">
-                    ختم الشركة
+                    {ui("ختم الشركة")}
                   </div>
 
                   <div className="h-40 border rounded-lg flex items-center justify-center bg-white">
                     {contract.customer_stamp_url ? (
                       <img
                         src={contract.customer_stamp_url}
-                        alt="ختم العميل"
+                        alt={ui("ختم العميل")}
                         className="max-h-36 max-w-full object-contain"
                       />
                     ) : (
                       <span className="text-slate-400">
-                        لا يوجد ختم
+                        {ui("لا يوجد ختم")}
                       </span>
                     )}
                   </div>
@@ -615,26 +617,23 @@ background: white !important;
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
                 <div className="font-bold text-blue-900 mb-2">
-                  إقرار وتوقيع العميل
+                  {ui("إقرار وتوقيع العميل")}
                 </div>
 
                 <div className="text-sm text-blue-800 leading-7">
-                  أقر بأنني ممثل العميل المخول بالتوقيع على هذا العقد،
-                  وأن البيانات الموضحة أعلاه قد تمت مراجعتها والموافقة
-                  عليها، وأوافق على استخدام التوقيع الإلكتروني المرفق
-                  لإثبات موافقتي على العقد.
+                  {ui("أقر بأنني ممثل العميل المخول بالتوقيع على هذا العقد، وأن البيانات الموضحة أعلاه قد تمت مراجعتها والموافقة عليها، وأوافق على استخدام التوقيع الإلكتروني المرفق لإثبات موافقتي على العقد.")}
                 </div>
               </div>
 
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-5">
-                  {error}
+                  {ui(error)}
                 </div>
               )}
 
               {success && (
                 <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-4 mb-5">
-                  {success}
+                  {ui(success)}
                 </div>
               )}
 
@@ -643,7 +642,7 @@ background: white !important;
                 {/* Name */}
                 <div>
                   <label className="block font-bold text-slate-800 mb-2">
-                    اسم ممثل العميل *
+                    {ui("اسم ممثل العميل *")}
                   </label>
 
                   <input
@@ -652,7 +651,7 @@ background: white !important;
                     onChange={(e) =>
                       setCustomerName(e.target.value)
                     }
-                    placeholder="أدخل الاسم الكامل"
+                    placeholder={ui("أدخل الاسم الكامل")}
                     className="w-full border border-slate-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={submitting}
                   />
@@ -662,7 +661,7 @@ background: white !important;
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block font-bold text-slate-800">
-                      التوقيع الإلكتروني *
+                      {ui("التوقيع الإلكتروني *")}
                     </label>
 
                     <button
@@ -671,7 +670,7 @@ background: white !important;
                       className="text-sm text-red-600 font-bold"
                       disabled={submitting}
                     >
-                      مسح التوقيع
+                      {ui("مسح التوقيع")}
                     </button>
                   </div>
 
@@ -686,14 +685,14 @@ background: white !important;
                   </div>
 
                   <div className="text-xs text-slate-500 mt-2">
-                    استخدم الماوس أو شاشة اللمس للتوقيع داخل المربع.
+                    {ui("استخدم الماوس أو شاشة اللمس للتوقيع داخل المربع.")}
                   </div>
                 </div>
 
                 {/* Stamp */}
                 <div>
                   <label className="block font-bold text-slate-800 mb-2">
-                    ختم الشركة *
+                    {ui("ختم الشركة *")}
                   </label>
 
                   <input
@@ -705,19 +704,19 @@ background: white !important;
                   />
 
                   <div className="text-xs text-slate-500 mt-2">
-                    PNG أو JPG أو WEBP، وبحد أقصى 5 MB.
+                    {ui("PNG أو JPG أو WEBP، وبحد أقصى 5 MB.")}
                   </div>
 
                   {stampPreview && (
                     <div className="mt-4 border rounded-xl bg-white p-5">
                       <div className="text-sm font-bold text-slate-600 mb-3">
-                        معاينة الختم
+                        {ui("معاينة الختم")}
                       </div>
 
                       <div className="h-44 flex items-center justify-center">
                         <img
                           src={stampPreview}
-                          alt="معاينة ختم الشركة"
+                          alt={ui("معاينة ختم الشركة")}
                           className="max-h-40 max-w-full object-contain"
                         />
                       </div>
@@ -733,8 +732,8 @@ background: white !important;
                   className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white font-bold rounded-xl py-4 transition"
                 >
                   {submitting
-                    ? "جاري إرسال التوقيع..."
-                    : "توقيع العقد وإرساله إلى رامز"}
+                    ? ui("جاري إرسال التوقيع...")
+                    : ui("توقيع العقد وإرساله إلى رامز")}
                 </button>
 
               </div>
@@ -745,13 +744,12 @@ background: white !important;
           {isAlreadySigned && (
             <div className="no-print mt-8 bg-green-50 border border-green-200 rounded-xl p-5">
               <div className="font-bold text-green-900 mb-2">
-                تم استلام توقيع العميل
+                {ui("تم استلام توقيع العميل")}
               </div>
 
               <div className="text-sm text-green-800 leading-7">
-                تم استلام التوقيع والختم بنجاح، والعقد حاليًا{" "}
-                <strong>{statusLabel()}</strong>.
-                لا يمكن تعديل التوقيع من خلال هذا الرابط.
+                {ui("تم استلام التوقيع والختم بنجاح، والعقد حاليًا")}{" "}
+                <strong>{ui(statusLabel())}</strong>{ui(". لا يمكن تعديل التوقيع من خلال هذا الرابط.")}
               </div>
             </div>
           )}
@@ -763,7 +761,7 @@ background: white !important;
             <div className="mt-10 border-t pt-8">
 
               <h2 className="text-lg font-bold text-slate-900 mb-5">
-                اعتماد رامز
+                {ui("اعتماد رامز")}
               </h2>
 
               <div className="grid md:grid-cols-2 gap-6">
@@ -771,20 +769,20 @@ background: white !important;
                 {contract.ramz_signature && (
                   <div className="border rounded-xl p-5">
                     <div className="text-sm text-slate-500 mb-3">
-                      توقيع رامز
+                      {ui("توقيع رامز")}
                     </div>
 
                     <div className="h-40 border rounded-lg flex items-center justify-center">
                       <img
                         src={contract.ramz_signature}
-                        alt="توقيع رامز"
+                        alt={ui("توقيع رامز")}
                         className="max-h-36 max-w-full object-contain"
                       />
                     </div>
 
                     {contract.ramz_signed_at && (
                       <div className="text-xs text-slate-500 mt-3">
-                        تاريخ التوقيع:{" "}
+                        {ui("تاريخ التوقيع:")}{" "}
                         {formatDateTime(contract.ramz_signed_at)}
                       </div>
                     )}
@@ -794,20 +792,20 @@ background: white !important;
                 {contract.ramz_stamp_url && (
                   <div className="border rounded-xl p-5">
                     <div className="text-sm text-slate-500 mb-3">
-                      ختم رامز
+                      {ui("ختم رامز")}
                     </div>
 
                     <div className="h-40 border rounded-lg flex items-center justify-center">
                       <img
                         src={contract.ramz_stamp_url}
-                        alt="ختم رامز"
+                        alt={ui("ختم رامز")}
                         className="max-h-36 max-w-full object-contain"
                       />
                     </div>
 
                     {contract.ramz_stamped_at && (
                       <div className="text-xs text-slate-500 mt-3">
-                        تاريخ الختم:{" "}
+                        {ui("تاريخ الختم:")}{" "}
                         {formatDateTime(contract.ramz_stamped_at)}
                       </div>
                     )}
@@ -821,7 +819,7 @@ background: white !important;
 
           {/* Footer */}
           <div className="mt-10 pt-5 border-t text-center text-xs text-slate-400">
-            هذا المستند إلكتروني وتم إعداده من خلال نظام RamzLIMS.
+            {ui("هذا المستند إلكتروني وتم إعداده من خلال نظام RamzLIMS.")}
           </div>
 
         </div>
@@ -834,7 +832,7 @@ background: white !important;
           onClick={() => window.print()}
           className="bg-white border border-slate-300 text-slate-800 px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50"
         >
-          طباعة / حفظ PDF
+          {ui("طباعة / حفظ PDF")}
         </button>
       </div>
 

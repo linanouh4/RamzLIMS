@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -7,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import ReportHeader from "@/components/reports/ReportHeader";
 
 export default function ConcreteReportPage() {
+  const ui = useUiText();
   const params = useParams();
   const router = useRouter();
 
@@ -69,7 +71,7 @@ const { data: testData, error: testError } = await supabase
   if (loading) {
     return (
       <div className="p-10 text-center">
-        Loading Report...
+        {ui("Loading Report...")}
       </div>
     );
   }
@@ -77,7 +79,7 @@ const { data: testData, error: testError } = await supabase
   if (!test) {
     return (
       <div className="p-10 text-center">
-        Report not found
+        {ui("Report not found")}
       </div>
     );
   }
@@ -93,14 +95,14 @@ const { data: testData, error: testError } = await supabase
             onClick={() => router.back()}
             className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg"
           >
-            ← رجوع
+            {ui("← رجوع")}
           </button>
 
           <button
             onClick={() => window.print()}
             className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-2 rounded-lg"
           >
-            🖨️ طباعة التقرير
+            {ui("🖨️ طباعة التقرير")}
           </button>
 
         </div>
@@ -111,7 +113,7 @@ const { data: testData, error: testError } = await supabase
           <ReportHeader />
 
           <h1 className="text-2xl font-bold text-center mb-8">
-            WORKSHEET FOR COMPRESSIVE STRENGTH OF CONCRETE
+            {ui("WORKSHEET FOR COMPRESSIVE STRENGTH OF CONCRETE")}
           </h1>
 
           {/* بيانات الفحص */}
@@ -121,7 +123,7 @@ const { data: testData, error: testError } = await supabase
 
               <tr>
                 <td className="border border-black p-2 font-bold">
-                  Sample Code
+                  {ui("Sample Code")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -129,7 +131,7 @@ const { data: testData, error: testError } = await supabase
                 </td>
 
                 <td className="border border-black p-2 font-bold">
-                  Sample Location
+                  {ui("Sample Location")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -139,7 +141,7 @@ const { data: testData, error: testError } = await supabase
 
               <tr>
                 <td className="border border-black p-2 font-bold">
-                  Sampling Date
+                  {ui("Sampling Date")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -147,7 +149,7 @@ const { data: testData, error: testError } = await supabase
                 </td>
 
                 <td className="border border-black p-2 font-bold">
-                  Test Date
+                  {ui("Test Date")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -157,7 +159,7 @@ const { data: testData, error: testError } = await supabase
 
               <tr>
                 <td className="border border-black p-2 font-bold">
-                  Design Strength
+                  {ui("Design Strength")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -165,7 +167,7 @@ const { data: testData, error: testError } = await supabase
                 </td>
 
                 <td className="border border-black p-2 font-bold">
-                  Cement Content
+                  {ui("Cement Content")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -175,7 +177,7 @@ const { data: testData, error: testError } = await supabase
 
               <tr>
                 <td className="border border-black p-2 font-bold">
-                  Concrete Temperature
+                  {ui("Concrete Temperature")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -183,7 +185,7 @@ const { data: testData, error: testError } = await supabase
                 </td>
 
                 <td className="border border-black p-2 font-bold">
-                  Curing Temperature
+                  {ui("Curing Temperature")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -193,7 +195,7 @@ const { data: testData, error: testError } = await supabase
 
               <tr>
                 <td className="border border-black p-2 font-bold">
-                  Specimen Type
+                  {ui("Specimen Type")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -201,7 +203,7 @@ const { data: testData, error: testError } = await supabase
                 </td>
 
                 <td className="border border-black p-2 font-bold">
-                  Protection / Capping
+                  {ui("Protection / Capping")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -211,7 +213,7 @@ const { data: testData, error: testError } = await supabase
 
               <tr>
                 <td className="border border-black p-2 font-bold">
-                  Sampled By
+                  {ui("Sampled By")}
                 </td>
 
                 <td className="border border-black p-2">
@@ -219,18 +221,18 @@ const { data: testData, error: testError } = await supabase
                 </td>
 
                 <td className="border border-black p-2 font-bold">
-                  Status
+                  {ui("Status")}
                 </td>
 
                 <td className="border border-black p-2">
-                  {test.status || "-"}
+                  {ui(test.status || "-")}
                 </td>
               </tr>
 
             
 <tr>
   <td className="border border-black p-2 font-bold">
-    Order No.
+    {ui("Order No.")}
   </td>
 
   <td className="border border-black p-2">
@@ -238,7 +240,7 @@ const { data: testData, error: testError } = await supabase
   </td>
 
   <td className="border border-black p-2 font-bold">
-    Test Specification
+    {ui("Test Specification")}
   </td>
 
   <td className="border border-black p-2">
@@ -248,7 +250,7 @@ const { data: testData, error: testError } = await supabase
 
 <tr>
   <td className="border border-black p-2 font-bold">
-    Average Strength
+    {ui("Average Strength")}
   </td>
 
   <td className="border border-black p-2">
@@ -256,17 +258,17 @@ const { data: testData, error: testError } = await supabase
   </td>
 
   <td className="border border-black p-2 font-bold">
-    Acceptance Status
+    {ui("Acceptance Status")}
   </td>
 
   <td className="border border-black p-2">
-    {test.acceptance_status || "-"}
+    {ui(test.acceptance_status || "-")}
   </td>
 </tr>
 
 <tr>
   <td className="border border-black p-2 font-bold">
-    Checked By
+    {ui("Checked By")}
   </td>
 
   <td className="border border-black p-2">
@@ -274,7 +276,7 @@ const { data: testData, error: testError } = await supabase
   </td>
 
   <td className="border border-black p-2 font-bold">
-    Tested By
+    {ui("Tested By")}
   </td>
 
   <td className="border border-black p-2">
@@ -290,7 +292,7 @@ const { data: testData, error: testError } = await supabase
 
           {/* نتائج العينات */}
           <h2 className="text-xl font-bold mb-4">
-            TEST RESULTS
+            {ui("TEST RESULTS")}
           </h2>
 
           <div className="overflow-x-auto">
@@ -301,73 +303,73 @@ const { data: testData, error: testError } = await supabase
 <tr className="bg-gray-100">
 
   <th className="border border-black p-2">
-    Sample No.
+    {ui("Sample No.")}
   </th>
 
   <th className="border border-black p-2">
-    Field Sample No.
+    {ui("Field Sample No.")}
   </th>
 
   <th className="border border-black p-2">
-    Structure Part
+    {ui("Structure Part")}
   </th>
 
   <th className="border border-black p-2">
-    Date Sampled
+    {ui("Date Sampled")}
   </th>
 
   <th className="border border-black p-2">
-    Slump
+    {ui("Slump")}
   </th>
 
   <th className="border border-black p-2">
-    Age
+    {ui("Age")}
     <br />
-    Days
+    {ui("Days")}
   </th>
 
   <th className="border border-black p-2">
-    Length
+    {ui("Length")}
   </th>
 
   <th className="border border-black p-2">
-    Width
+    {ui("Width")}
   </th>
 
   <th className="border border-black p-2">
-    Height
+    {ui("Height")}
   </th>
 
   <th className="border border-black p-2">
-    Weight
+    {ui("Weight")}
   </th>
 
   <th className="border border-black p-2">
-    Unit Weight
+    {ui("Unit Weight")}
   </th>
 
   <th className="border border-black p-2">
-    Load
+    {ui("Load")}
     <br />
     kN
   </th>
 
   <th className="border border-black p-2">
-    Load
+    {ui("Load")}
     <br />
     Kg
   </th>
 
   <th className="border border-black p-2">
-    Strength
+    {ui("Strength")}
   </th>
 
   <th className="border border-black p-2">
-    Break Type
+    {ui("Break Type")}
   </th>
 
   <th className="border border-black p-2">
-    Remarks
+    {ui("Remarks")}
   </th>
 
 </tr>
@@ -384,7 +386,7 @@ const { data: testData, error: testError } = await supabase
                       colSpan={8}
                       className="border border-black p-4 text-center"
                     >
-                      No test results
+                      {ui("No test results")}
                     </td>
 
                   </tr>
@@ -475,7 +477,7 @@ const { data: testData, error: testError } = await supabase
           <div className="mt-8">
 
             <h2 className="font-bold mb-2">
-              Notes
+              {ui("Notes")}
             </h2>
 
             <div className="border border-black min-h-[80px] p-3">
@@ -492,7 +494,7 @@ const { data: testData, error: testError } = await supabase
               <div className="h-12 border-b border-black mb-2" />
 
               <p className="font-semibold">
-                Tested By
+                {ui("Tested By")}
               </p>
 
             </div>
@@ -502,13 +504,13 @@ const { data: testData, error: testError } = await supabase
               <div className="h-12 border-b border-black mb-2" />
 
              <p className="font-semibold">
-  Reviewed By
+  {ui("Reviewed By")}
 </p>
 
 <p className="text-sm mt-2">
   {test.reviewed_by_user?.full_name ||
     test.reviewed_by_user?.username ||
-    "Not Reviewed"}
+    ui("Not Reviewed")}
 </p>
 
 {test.reviewed_at && (
@@ -531,7 +533,7 @@ const { data: testData, error: testError } = await supabase
               <div className="h-12 border-b border-black mb-2" />
 
               <p className="font-semibold">
-                Approved By
+                {ui("Approved By")}
               </p>
 
             </div>

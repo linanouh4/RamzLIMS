@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,6 +10,7 @@ import AddTestToSampleModal from "@/components/AddTestToSampleModal";
 import AddResultModal from "@/components/AddResultModal";
 
 export default function SampleDetailsPage() {
+  const ui = useUiText();
 
   const params = useParams();
   const router = useRouter();
@@ -163,7 +165,7 @@ export default function SampleDetailsPage() {
   async function deleteTest(testId:number) {
 
     const confirmDelete = confirm(
-      "Delete this test?"
+      ui("Delete this test?")
     );
 
     if (!confirmDelete) return;
@@ -188,7 +190,7 @@ export default function SampleDetailsPage() {
   async function deleteResult(resultId:number) {
 
     const confirmDelete = confirm(
-      "Delete this result?"
+      ui("Delete this result?")
     );
 
     if (!confirmDelete) return;
@@ -216,7 +218,7 @@ export default function SampleDetailsPage() {
 
     const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      alert("Please upload a PDF or image file.");
+      alert(ui("Please upload a PDF or image file."));
       return;
     }
 
@@ -241,7 +243,7 @@ export default function SampleDetailsPage() {
         setReportFile(uploadedFile);
         setUploadMessage("Report uploaded successfully.");
       } catch {
-        alert("Failed to save report file.");
+        alert(ui("Failed to save report file."));
       } finally {
         setUploading(false);
       }
@@ -249,7 +251,7 @@ export default function SampleDetailsPage() {
 
     reader.onerror = () => {
       setUploading(false);
-      alert("Failed to read the selected file.");
+      alert(ui("Failed to read the selected file."));
     };
 
     reader.readAsDataURL(file);
@@ -266,7 +268,7 @@ export default function SampleDetailsPage() {
       setReportFile(null);
       setUploadMessage("Report removed.");
     } catch {
-      alert("Failed to remove report.");
+      alert(ui("Failed to remove report."));
     }
   }
 
@@ -275,7 +277,7 @@ export default function SampleDetailsPage() {
     return (
 
       <div className="p-8 text-center">
-        Loading...
+        {ui("Loading...")}
       </div>
 
     );
@@ -287,7 +289,7 @@ export default function SampleDetailsPage() {
     return (
 
       <div className="p-8 text-center">
-        Sample not found
+        {ui("Sample not found")}
       </div>
 
     );
@@ -303,10 +305,10 @@ export default function SampleDetailsPage() {
             replace
             className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            ← Back to Samples
+            {ui("← Back to Samples")}
           </Link>
           <h1 className="text-3xl font-bold">
-            Sample Details
+            {ui("Sample Details")}
           </h1>
         </div>
 
@@ -315,43 +317,43 @@ export default function SampleDetailsPage() {
         <div className="grid grid-cols-2 gap-4">
 
           <div>
-            <strong>Sample Number:</strong>
+            <strong>{ui("Sample Number:")}</strong>
             <br />
             {sample.sample_number}
           </div>
 
           <div>
-            <strong>Sample Type:</strong>
+            <strong>{ui("Sample Type:")}</strong>
             <br />
             {sample.sample_type}
           </div>
 
           <div>
-            <strong>Received Date:</strong>
+            <strong>{ui("Received Date:")}</strong>
             <br />
             {sample.received_date}
           </div>
 
           <div>
-            <strong>Received By:</strong>
+            <strong>{ui("Received By:")}</strong>
             <br />
             {sample.received_by}
           </div>
 
           <div>
-            <strong>Status:</strong>
+            <strong>{ui("Status:")}</strong>
             <br />
-            {sample.status}
+            {ui(sample.status)}
           </div>
 
           <div>
-            <strong>Condition:</strong>
+            <strong>{ui("Condition:")}</strong>
             <br />
             {sample.received_condition}
           </div>
 
           <div className="col-span-2">
-            <strong>Notes:</strong>
+            <strong>{ui("Notes:")}</strong>
             <br />
             {sample.notes || "-"}
           </div>
@@ -363,12 +365,12 @@ export default function SampleDetailsPage() {
       <div className="bg-white rounded-xl shadow p-6 mb-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Report File</h2>
-            <p className="text-gray-500 text-sm">Upload the final PDF or image report for this sample.</p>
+            <h2 className="text-2xl font-bold">{ui("Report File")}</h2>
+            <p className="text-gray-500 text-sm">{ui("Upload the final PDF or image report for this sample.")}</p>
           </div>
 
           <label className="cursor-pointer rounded-lg bg-blue-700 px-5 py-2 text-white hover:bg-blue-800">
-            {uploading ? "Uploading..." : "Upload Report"}
+            {uploading ? ui("Uploading...") : ui("Upload Report")}
             <input type="file" accept="application/pdf,image/*" className="hidden" onChange={handleReportUpload} />
           </label>
         </div>
@@ -380,21 +382,21 @@ export default function SampleDetailsPage() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="font-semibold">{reportFile.name}</p>
-                <p className="text-sm text-gray-500">Uploaded: {reportFile.uploadedAt}</p>
+                <p className="text-sm text-gray-500">{ui("Uploaded:")} {reportFile.uploadedAt}</p>
               </div>
               <button onClick={removeReportFile} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                Remove
+                {ui("Remove")}
               </button>
             </div>
 
             {reportFile.type?.includes("pdf") ? (
-              <iframe src={reportFile.data} title="Uploaded report" className="h-[500px] w-full rounded-lg border" />
+              <iframe src={reportFile.data} title={ui("Uploaded report")} className="h-[500px] w-full rounded-lg border" />
             ) : (
-              <img src={reportFile.data} alt="Uploaded report preview" className="max-h-[500px] w-full rounded-lg border object-contain" />
+              <img src={reportFile.data} alt={ui("Uploaded report preview")} className="max-h-[500px] w-full rounded-lg border object-contain" />
             )}
           </div>
         ) : (
-          <p className="mt-4 text-gray-500">No report file uploaded yet.</p>
+          <p className="mt-4 text-gray-500">{ui("No report file uploaded yet.")}</p>
         )}
       </div>
 
@@ -403,7 +405,7 @@ export default function SampleDetailsPage() {
         <div className="flex justify-between items-center mb-5">
 
           <h2 className="text-2xl font-bold">
-            Tests
+            {ui("Tests")}
           </h2>
 
           <div className="flex gap-3">
@@ -412,14 +414,14 @@ export default function SampleDetailsPage() {
     onClick={() => router.push(`/reports/${id}`)}
     className="bg-green-700 hover:bg-green-800 text-white px-5 py-2 rounded-lg"
   >
-    View Report
+    {ui("View Report")}
   </button>
 
   <button
     onClick={() => setOpenAddTest(true)}
     className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
   >
-    + Add Test
+    {ui("+ Add Test")}
   </button>
 
 </div>
@@ -441,7 +443,7 @@ export default function SampleDetailsPage() {
 
                   <div className="font-bold text-lg">
 
-                    {item.tests?.test_name || "Unknown Test"}
+                    {item.tests?.test_name || ui("Unknown Test")}
 
                   </div>
 
@@ -461,15 +463,15 @@ export default function SampleDetailsPage() {
                   >
 
                     <option value="Pending">
-                      Pending
+                      {ui("Pending")}
                     </option>
 
                     <option value="In Progress">
-                      In Progress
+                      {ui("In Progress")}
                     </option>
 
                     <option value="Completed">
-                      Completed
+                      {ui("Completed")}
                     </option>
 
                   </select>
@@ -482,7 +484,7 @@ export default function SampleDetailsPage() {
                   }
                   className="bg-red-600 text-white px-4 py-2 rounded"
                 >
-                  Delete Test
+                  {ui("Delete Test")}
                 </button>
 
               </div>
@@ -490,13 +492,13 @@ export default function SampleDetailsPage() {
               <div className="mt-4">
 
                 <strong>
-                  Results:
+                  {ui("Results:")}
                 </strong>
 
                 {item.results?.length === 0 ? (
 
                   <p className="text-gray-500 mt-2">
-                    No results yet
+                    {ui("No results yet")}
                   </p>
 
                 ) : (
@@ -514,15 +516,15 @@ export default function SampleDetailsPage() {
                       <div>
 
                         <div>
-                          Value: {result.result_value}
+                          {ui("Value:")} {result.result_value}
                         </div>
 
                         <div>
-                          Unit: {result.unit || "-"}
+                          {ui("Unit:")} {result.unit || "-"}
                         </div>
 
                         <div>
-                          Notes: {result.notes || "-"}
+                          {ui("Notes:")} {result.notes || "-"}
                         </div>
 
                       </div>
@@ -545,7 +547,7 @@ export default function SampleDetailsPage() {
 
                         >
 
-                          Edit
+                          {ui("Edit")}
 
                         </button>
 
@@ -559,7 +561,7 @@ export default function SampleDetailsPage() {
 
                         >
 
-                          Delete
+                          {ui("Delete")}
 
                         </button>
 
@@ -589,7 +591,7 @@ export default function SampleDetailsPage() {
 
               >
 
-                + Add Result
+                {ui("+ Add Result")}
 
               </button>
 

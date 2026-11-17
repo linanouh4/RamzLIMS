@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -28,6 +29,7 @@ export default function AddResultModal({
   onClose,
   onSaved,
 }: Props) {
+  const ui = useUiText();
 
 
   const [resultValue, setResultValue] = useState("");
@@ -199,7 +201,7 @@ export default function AddResultModal({
 
         <h2 className="text-2xl font-bold mb-5">
 
-          {resultId ? "Edit Result" : "Add Result"}
+          {resultId ? ui("Edit Result") : ui("Add Result")}
 
         </h2>
 
@@ -211,7 +213,7 @@ export default function AddResultModal({
 
           className="w-full border rounded p-3 mb-3"
 
-          placeholder="Result Value"
+          placeholder={ui("Result Value")}
 
           value={resultValue}
 
@@ -229,7 +231,7 @@ export default function AddResultModal({
 
           className="w-full border rounded p-3 mb-3"
 
-          placeholder="Unit"
+          placeholder={ui("Unit")}
 
           value={unit}
 
@@ -242,19 +244,19 @@ export default function AddResultModal({
         <div className="grid grid-cols-3 gap-3 mb-3">
           <input
             className="w-full border rounded p-3"
-            placeholder="Reference"
+            placeholder={ui("Reference")}
             value={referenceValue}
             onChange={(e) => setReferenceValue(e.target.value)}
           />
           <input
             className="w-full border rounded p-3"
-            placeholder="Min"
+            placeholder={ui("Min")}
             value={minValue}
             onChange={(e) => setMinValue(e.target.value)}
           />
           <input
             className="w-full border rounded p-3"
-            placeholder="Max"
+            placeholder={ui("Max")}
             value={maxValue}
             onChange={(e) => setMaxValue(e.target.value)}
           />
@@ -264,7 +266,7 @@ export default function AddResultModal({
 
           className="w-full border rounded p-3 mb-5"
 
-          placeholder="Notes"
+          placeholder={ui("Notes")}
 
           value={notes}
 
@@ -291,7 +293,7 @@ export default function AddResultModal({
 
           >
 
-            Cancel
+            {ui("Cancel")}
 
           </button>
 
@@ -309,7 +311,7 @@ export default function AddResultModal({
 
           >
 
-            {loading ? "Saving..." : "Save"}
+            {loading ? ui("Saving...") : ui("Save")}
 
           </button>
 

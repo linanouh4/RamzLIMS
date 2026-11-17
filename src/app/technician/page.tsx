@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +28,7 @@ task_id: number;
 image_url: string;
 };
 export default function TechnicianPage() {
+  const ui = useUiText();
 const router = useRouter();
 const [tasks, setTasks] = useState<Task[]>([]);
 const [taskImages, setTaskImages] = useState<TaskImage[]>([]);
@@ -116,7 +118,7 @@ await loadTasks();
 }
 async function confirmArrival(taskId: number) {
   if (!navigator.geolocation) {
-    alert("المتصفح لا يدعم تحديد الموقع");
+    alert(ui("المتصفح لا يدعم تحديد الموقع"));
     return;
   }
 
@@ -146,7 +148,7 @@ async function confirmArrival(taskId: number) {
         return;
       }
 
-      alert("تم تأكيد الوصول وتسجيل الموقع 📍");
+      alert(ui("تم تأكيد الوصول وتسجيل الموقع 📍"));
 
       await loadTasks();
     },
@@ -154,13 +156,13 @@ async function confirmArrival(taskId: number) {
       console.error("LOCATION ERROR:", error);
 
       if (error.code === 1) {
-        alert("يجب السماح بالوصول إلى الموقع لتأكيد الوصول");
+        alert(ui("يجب السماح بالوصول إلى الموقع لتأكيد الوصول"));
       } else if (error.code === 2) {
-        alert("تعذر تحديد موقعك الحالي");
+        alert(ui("تعذر تحديد موقعك الحالي"));
       } else if (error.code === 3) {
-        alert("انتهى وقت الحصول على الموقع، حاول مرة أخرى");
+        alert(ui("انتهى وقت الحصول على الموقع، حاول مرة أخرى"));
       } else {
-        alert("حدث خطأ أثناء تحديد الموقع");
+        alert(ui("حدث خطأ أثناء تحديد الموقع"));
       }
     },
     {
@@ -191,7 +193,7 @@ if (error) {
   return;
 }
 
-alert("تم حفظ نتيجة الفحص");
+alert(ui("تم حفظ نتيجة الفحص"));
 
 await loadTasks();
 
@@ -228,7 +230,7 @@ try {
     .getPublicUrl(fileName);
 
   if (!data?.publicUrl) {
-    alert("تعذر الحصول على رابط الصورة");
+    alert(ui("تعذر الحصول على رابط الصورة"));
     return;
   }
 
@@ -249,14 +251,14 @@ try {
     return;
   }
 
-  alert("تم رفع الصورة بنجاح");
+  alert(ui("تم رفع الصورة بنجاح"));
 
   await loadTaskImages(taskId);
 
   event.target.value = "";
 } catch (error) {
   console.error("UPLOAD IMAGE ERROR:", error);
-  alert("حدث خطأ أثناء رفع الصورة");
+  alert(ui("حدث خطأ أثناء رفع الصورة"));
 } finally {
   setUploading(false);
 }
@@ -287,11 +289,11 @@ return (
         onClick={() => router.back()}
         className="bg-gray-600 hover:bg-gray-700 text-white px-5 py-2 rounded-lg mb-4"
       >
-        ← رجوع
+        {ui("← رجوع")}
       </button>
 
       <h1 className="text-3xl font-bold">
-        👷 Technician Dashboard
+        {ui("👷 Technician Dashboard")}
       </h1>
 
     <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -301,7 +303,7 @@ return (
         {tasks.length === 0 ? (
 
           <p className="text-gray-500">
-            لا توجد مهام حالياً
+            {ui("لا توجد مهام حالياً")}
           </p>
 
         ) : (
@@ -326,19 +328,19 @@ return (
 
                 <p className="text-gray-600 mt-1">
                   {task.task_description ||
-                    "لا يوجد وصف للمهمة"}
+                    ui("لا يوجد وصف للمهمة")}
                 </p>
 
                 <p className="text-sm text-blue-700 mt-2">
-                  الأولوية: {task.priority || "عادي"}
+                  {ui("الأولوية:")} {ui(task.priority || "عادي")}
                 </p>
 
                 <p className="text-sm text-green-700">
-                  الحالة: {task.status || "بانتظار البدء"}
+                  {ui("الحالة:")} {ui(task.status || "بانتظار البدء")}
                 </p>
 
                 <p className="text-sm text-gray-500 mt-1">
-                  🆔 رقم المهمة: {task.id}
+                  {ui("🆔 رقم المهمة:")} {task.id}
                 </p>
 
                 {task.status === "بانتظار البدء" ? (
@@ -347,7 +349,7 @@ return (
                     onClick={() => startTask(task.id)}
                     className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg mt-4"
                   >
-                    ▶️ بدء المهمة
+                    {ui("▶️ بدء المهمة")}
                   </button>
 
                 ) : task.status === "جاري التنفيذ" ? (
@@ -356,7 +358,7 @@ return (
                     onClick={() => confirmArrival(task.id)}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg mt-4"
                   >
-                    📍 تأكيد الوصول
+                    {ui("📍 تأكيد الوصول")}
                   </button>
 
                 ) : task.status === "تم الوصول للموقع" ? (
@@ -364,7 +366,7 @@ return (
                   <div className="space-y-3 mt-4">
 
                     <label className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg cursor-pointer block text-center">
-                      📷 رفع صورة
+                      {ui("📷 رفع صورة")}
 
                       <input
                         type="file"
@@ -385,12 +387,12 @@ return (
   }
   className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg block text-center"
 >
-  🧪 تعبئة نموذج الفحص
+  {ui("🧪 تعبئة نموذج الفحص")}
 </a>
 
                     <input
                       id={`result-${task.id}`}
-                      placeholder="نتيجة الفحص"
+                      placeholder={ui("نتيجة الفحص")}
                       defaultValue={
                         task.field_result || ""
                       }
@@ -399,7 +401,7 @@ return (
 
                     <textarea
                       id={`notes-${task.id}`}
-                      placeholder="الملاحظات"
+                      placeholder={ui("الملاحظات")}
                       defaultValue={
                         task.field_notes || ""
                       }
@@ -424,7 +426,7 @@ return (
                       }}
                       className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg"
                     >
-                      💾 حفظ النتيجة
+                      {ui("💾 حفظ النتيجة")}
                     </button>
 
                     <button
@@ -433,7 +435,7 @@ return (
                       }
                       className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg"
                     >
-                      🖨️ طباعة المهمة
+                      {ui("🖨️ طباعة المهمة")}
                     </button>
 
                   </div>
@@ -441,7 +443,7 @@ return (
                 ) : (
 
                   <span className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg inline-block mt-4">
-                    ✅ {task.status}
+                    ✅ {ui(task.status)}
                   </span>
 
                 )}
@@ -458,7 +460,7 @@ return (
                       <img
                         key={img.id}
                         src={img.image_url}
-                        alt="Task"
+                        alt={ui("Task")}
                         className="w-32 h-32 object-cover rounded-lg"
                       />
 
@@ -478,21 +480,21 @@ return (
 
       <div className="bg-white rounded-xl shadow p-5">
         <h2 className="font-semibold">
-          Site Visits
+          {ui("Site Visits")}
         </h2>
 
         <p className="text-gray-500 mt-2">
-          No visits yet
+          {ui("No visits yet")}
         </p>
       </div>
 
       <div className="bg-white rounded-xl shadow p-5">
         <h2 className="font-semibold">
-          Field Results
+          {ui("Field Results")}
         </h2>
 
         <p className="text-gray-500 mt-2">
-          No results yet
+          {ui("No results yet")}
         </p>
       </div>
 

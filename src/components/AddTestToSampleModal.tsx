@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -27,6 +28,7 @@ export default function AddTestToSampleModal({
   onClose,
   onSaved,
 }: Props) {
+  const ui = useUiText();
   const [tests, setTests] = useState<any[]>([]);
   const [testId, setTestId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,7 @@ export default function AddTestToSampleModal({
 
   async function saveTest() {
     if (!testId) {
-      alert("Please select a test");
+      alert(ui("Please select a test"));
       return;
     }
 
@@ -89,7 +91,7 @@ export default function AddTestToSampleModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-[500px] p-8">
         <h2 className="text-2xl font-bold mb-6">
-          Add Test
+          {ui("Add Test")}
         </h2>
 
         <select
@@ -97,7 +99,7 @@ export default function AddTestToSampleModal({
           value={testId}
           onChange={(e) => setTestId(e.target.value)}
         >
-          <option value="">Select Test</option>
+          <option value="">{ui("Select Test")}</option>
 
           {tests.map((test) => (
             <option
@@ -114,7 +116,7 @@ export default function AddTestToSampleModal({
             onClick={onClose}
             className="px-5 py-2 border rounded-lg"
           >
-            Cancel
+            {ui("Cancel")}
           </button>
 
           <button
@@ -122,7 +124,7 @@ export default function AddTestToSampleModal({
             disabled={loading}
             className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
           >
-            {loading ? "Saving..." : "Save"}
+            {loading ? ui("Saving...") : ui("Save")}
           </button>
         </div>
       </div>

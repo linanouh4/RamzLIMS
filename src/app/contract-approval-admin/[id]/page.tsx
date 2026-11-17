@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { contractPrintFooter } from "@/components/contractPrintFooter";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -215,6 +216,7 @@ async function addVerificationWatermark(
 }
 
 export default function ContractApprovalAdminPage() {
+  const ui = useUiText();
   const params = useParams();
   const router = useRouter();
   const id = Array.isArray(params?.id) ? params.id[0] : String(params?.id || "");
@@ -236,7 +238,7 @@ export default function ContractApprovalAdminPage() {
   async function loadPage() {
     if (!id) {
       setLoading(false);
-      setError("رقم العقد غير موجود في الرابط.");
+      setError(ui("رقم العقد غير موجود في الرابط."));
       return;
     }
 
@@ -267,7 +269,7 @@ export default function ContractApprovalAdminPage() {
       setCurrentUser(user);
 
       if (Number(user.id) !== 1 || user.role.trim().toLowerCase() !== "admin") {
-        setError("هذه الصفحة مخصصة لمدير المختبر فقط.");
+        setError(ui("هذه الصفحة مخصصة لمدير المختبر فقط."));
         return;
       }
 
@@ -342,7 +344,7 @@ export default function ContractApprovalAdminPage() {
       errorObject.message,
       errorObject.details,
       errorObject.hint,
-      errorObject.code ? `رمز الخطأ: ${errorObject.code}` : "",
+      errorObject.code ? ui("رمز الخطأ: ") + errorObject.code : "",
     ]
       .filter(Boolean)
       .join(" | ") || message;
@@ -363,12 +365,12 @@ export default function ContractApprovalAdminPage() {
     setSuccess("");
 
     if (!file.type.startsWith("image/")) {
-      setError("يرجى اختيار صورة لختم الشركة.");
+      setError(ui("يرجى اختيار صورة لختم الشركة."));
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("حجم صورة الختم يجب ألا يتجاوز 5 MB.");
+      setError(ui("حجم صورة الختم يجب ألا يتجاوز 5 MB."));
       return;
     }
 
@@ -376,50 +378,50 @@ export default function ContractApprovalAdminPage() {
     reader.onload = () => {
       const result = String(reader.result || "");
       if (!result) {
-        setError("تعذر قراءة صورة الختم.");
+        setError(ui("تعذر قراءة صورة الختم."));
         return;
       }
       setRamzStamp(result);
     };
-    reader.onerror = () => setError("حدث خطأ أثناء قراءة صورة الختم.");
+    reader.onerror = () => setError(ui("حدث خطأ أثناء قراءة صورة الختم."));
     reader.readAsDataURL(file);
   }
 
   async function approveContract() {
     if (!contract || !signing || !currentUser) {
-      setError("لا يمكن اعتماد العقد لأن بيانات العقد أو المستخدم لم تكتمل.");
+      setError(ui("لا يمكن اعتماد العقد لأن بيانات العقد أو المستخدم لم تكتمل."));
       return;
     }
 
     if (saving) return;
 
     if (Number(currentUser.id) !== 1 || currentUser.role.trim().toLowerCase() !== "admin") {
-      setError("ليس لديك صلاحية اعتماد العقود.");
+      setError(ui("ليس لديك صلاحية اعتماد العقود."));
       return;
     }
 
     if (signing.status !== "Pending Ramz Approval") {
-      setError(`لا يمكن اعتماد العقد لأن حالته الحالية هي: ${signing.status}`);
+      setError(ui("لا يمكن اعتماد العقد لأن حالته الحالية هي: ") + ui(signing.status));
       return;
     }
 
     if (!signing.customer_signature || !signing.customer_signed_at || !signing.customer_stamp_url) {
-      setError("توقيع العميل وختمه وتاريخ توقيعه يجب أن تكون موجودة قبل الاعتماد.");
+      setError(ui("توقيع العميل وختمه وتاريخ توقيعه يجب أن تكون موجودة قبل الاعتماد."));
       return;
     }
 
     if (!currentUser.signature) {
-      setError("لا يوجد توقيع محفوظ لحسابك. أضيفي توقيعك من إدارة المستخدمين أولًا.");
+      setError(ui("لا يوجد توقيع محفوظ لحسابك. أضيفي توقيعك من إدارة المستخدمين أولًا."));
       return;
     }
 
     if (!ramzStamp) {
-      setError("يرجى رفع ختم رامز قبل اعتماد العقد.");
+      setError(ui("يرجى رفع ختم رامز قبل اعتماد العقد."));
       return;
     }
 
     const confirmed = window.confirm(
-      "هل أنتِ متأكدة من اعتماد وتوقيع العقد؟\n\nبعد الاعتماد سيصبح العقد نهائيًا."
+      ui("هل أنتِ متأكدة من اعتماد وتوقيع العقد؟\n\nبعد الاعتماد سيصبح العقد نهائيًا.")
     );
     if (!confirmed) return;
 
@@ -438,7 +440,7 @@ export default function ContractApprovalAdminPage() {
 
       const verificationCode = String(reservedCodeData || "").trim();
       if (!verificationCode || !/^RMZ-\d{4}-[A-Z0-9]{10}$/.test(verificationCode)) {
-        throw new Error("لم تُرجع قاعدة البيانات رقم تحقق صالحًا. لم يتم اعتماد العقد.");
+        throw new Error(ui("لم تُرجع قاعدة البيانات رقم تحقق صالحًا. لم يتم اعتماد العقد."));
       }
 
       // Make a separate copy of the stamp with the exact reserved server code.
@@ -462,11 +464,11 @@ export default function ContractApprovalAdminPage() {
         !finalizedResult.finalized_at ||
         finalizedResult.verification_code !== verificationCode
       ) {
-        throw new Error("لم تُرجع قاعدة البيانات نتيجة اعتماد مطابقة للرمز المحجوز.");
+        throw new Error(ui("لم تُرجع قاعدة البيانات نتيجة اعتماد مطابقة للرمز المحجوز."));
       }
 
       const finalizedAt = finalizedResult.finalized_at;
-      setSuccess("تم اعتماد العقد وتوقيعه وختمه من رامز بنجاح.");
+      setSuccess(ui("تم اعتماد العقد وتوقيعه وختمه من رامز بنجاح."));
 
       setSigning((previous) =>
         previous
@@ -504,7 +506,7 @@ export default function ContractApprovalAdminPage() {
   }
 
   console.error("CONTRACT APPROVAL ERROR:", err);
-  setError(message || "وصل خطأ بلا تفاصيل من النظام.");
+  setError(message || ui("وصل خطأ بلا تفاصيل من النظام."));
 } finally {
   setSaving(false);
 }
@@ -518,8 +520,8 @@ export default function ContractApprovalAdminPage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div dir="rtl" className="flex min-h-screen items-center justify-center bg-gray-50">
-          <div className="rounded-2xl bg-white px-8 py-6 shadow">جاري تحميل العقد...</div>
+        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+          <div className="rounded-2xl bg-white px-8 py-6 shadow">{ui("جاري تحميل العقد...")}</div>
         </div>
       </ProtectedRoute>
     );
@@ -528,16 +530,16 @@ export default function ContractApprovalAdminPage() {
   if (error && !contract) {
     return (
       <ProtectedRoute>
-        <div dir="rtl" className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-gray-50 p-6">
           <div className="mx-auto max-w-3xl rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
-            <div className="mb-2 text-lg font-bold">تعذر تحميل العقد</div>
-            <div>{error}</div>
+            <div className="mb-2 text-lg font-bold">{ui("تعذر تحميل العقد")}</div>
+            <div>{ui(error)}</div>
             <button
               type="button"
               onClick={() => router.back()}
               className="mt-5 rounded-xl bg-gray-900 px-5 py-3 text-sm font-bold text-white"
             >
-              ← رجوع
+              {ui("← رجوع")}
             </button>
           </div>
         </div>
@@ -554,7 +556,7 @@ export default function ContractApprovalAdminPage() {
 
   return (
     <ProtectedRoute>
-      <main dir="rtl" className="min-h-screen bg-gray-100 p-4 md:p-6">
+      <main className="min-h-screen bg-gray-100 p-4 md:p-6">
         <div dangerouslySetInnerHTML={{ __html: contractPrintFooter }} />
         <style>{String.raw`
           /* ramz-admin-page-footer */
@@ -589,8 +591,8 @@ export default function ContractApprovalAdminPage() {
                 ←
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">اعتماد عقد العميل</h1>
-                <p className="mt-1 text-sm text-gray-500">مراجعة توقيع العميل واعتماد العقد من رامز الإمارات</p>
+                <h1 className="text-2xl font-bold text-gray-900">{ui("اعتماد عقد العميل")}</h1>
+                <p className="mt-1 text-sm text-gray-500">{ui("مراجعة توقيع العميل واعتماد العقد من رامز الإمارات")}</p>
               </div>
             </div>
             <button
@@ -598,98 +600,98 @@ export default function ContractApprovalAdminPage() {
               onClick={printContract}
               className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
             >
-              🖨 طباعة
+              {ui("🖨 طباعة")}
             </button>
           </div>
 
           {error && (
             <div className="no-print mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">
-              {error}
+              {ui(error)}
             </div>
           )}
           {success && (
             <div className="no-print mb-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-800">
-              {success}
+              {ui(success)}
             </div>
           )}
 
           <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="text-sm text-gray-500">حالة التوقيع</div>
+                <div className="text-sm text-gray-500">{ui("حالة التوقيع")}</div>
                 <div className="mt-1 text-xl font-bold text-gray-900">{signing.status}</div>
               </div>
               <div className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-bold ${
                 isFinalized ? "bg-green-100 text-green-700" : isPending ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-700"
               }`}>
-                {isFinalized ? "✓ عقد نهائي" : isPending ? "بانتظار اعتماد مدير المختبر" : signing.status}
+                {isFinalized ? ui("✓ عقد نهائي") : isPending ? ui("بانتظار اعتماد مدير المختبر") : signing.status}
               </div>
             </div>
           </section>
 
           <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-gray-900">بيانات العقد</h2>
+            <h2 className="mb-5 text-xl font-bold text-gray-900">{ui("بيانات العقد")}</h2>
             <div className="grid gap-5 md:grid-cols-2">
-              <Info label="رقم العقد" value={contract.contract_number || "-"} />
-              <Info label="اسم العقد" value={contract.contract_name || "-"} />
-              <Info label="العميل" value={client.client_name || "-"} />
-              <Info label="ممثل العميل" value={client.contact_person || "-"} />
-              <Info label="بداية العقد" value={formatDate(contract.start_date)} />
-              <Info label="نهاية العقد" value={formatDate(contract.end_date)} />
-              <Info label="قيمة العقد" value={contract.contract_value != null ? `${Number(contract.contract_value).toLocaleString("en-US")} ريال` : "-"} />
-              <Info label="وصف العقد" value={contract.description || "-"} />
+              <Info label={ui("رقم العقد")} value={contract.contract_number || "-"} />
+              <Info label={ui("اسم العقد")} value={contract.contract_name || "-"} />
+              <Info label={ui("العميل")} value={client.client_name || "-"} />
+              <Info label={ui("ممثل العميل")} value={client.contact_person || "-"} />
+              <Info label={ui("بداية العقد")} value={formatDate(contract.start_date)} />
+              <Info label={ui("نهاية العقد")} value={formatDate(contract.end_date)} />
+              <Info label={ui("قيمة العقد")} value={contract.contract_value != null ? `${Number(contract.contract_value).toLocaleString("en-US")} ${ui("ريال")}` : "-"} />
+              <Info label={ui("وصف العقد")} value={contract.description || "-"} />
             </div>
           </section>
 
           <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-gray-900">توقيع العميل</h2>
+            <h2 className="mb-5 text-xl font-bold text-gray-900">{ui("توقيع العميل")}</h2>
             <div className="mb-5 rounded-xl bg-gray-50 p-4">
-              <div className="text-sm text-gray-500">اسم الموقع</div>
+              <div className="text-sm text-gray-500">{ui("اسم الموقع")}</div>
               <div className="mt-1 text-lg font-bold">{signing.customer_signed_by || "-"}</div>
               {signing.customer_signed_at && (
-                <div className="mt-2 text-xs text-gray-500">تاريخ التوقيع: {formatDateTime(signing.customer_signed_at)}</div>
+                <div className="mt-2 text-xs text-gray-500">{ui("تاريخ التوقيع:")} {formatDateTime(signing.customer_signed_at)}</div>
               )}
             </div>
             <div className="grid gap-6 md:grid-cols-2">
-              <ImagePanel title="توقيع العميل" src={signing.customer_signature} alt="توقيع العميل" />
-              <ImagePanel title="ختم العميل" src={signing.customer_stamp_url} alt="ختم العميل" />
+              <ImagePanel title={ui("توقيع العميل")} src={signing.customer_signature} alt={ui("توقيع العميل")} />
+              <ImagePanel title={ui("ختم العميل")} src={signing.customer_stamp_url} alt={ui("ختم العميل")} />
             </div>
           </section>
 
           <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-gray-900">اعتماد رامز الإمارات</h2>
+            <h2 className="mb-5 text-xl font-bold text-gray-900">{ui("اعتماد رامز الإمارات")}</h2>
             {!isLabManager && (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800">
-                لا تملك صلاحية اعتماد العقود. الاعتماد متاح لمدير المختبر فقط.
+                {ui("لا تملك صلاحية اعتماد العقود. الاعتماد متاح لمدير المختبر فقط.")}
               </div>
             )}
 
             {isLabManager && (
               <>
                 <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
-                  <div className="font-bold text-blue-900">المعتمد الحالي</div>
+                  <div className="font-bold text-blue-900">{ui("المعتمد الحالي")}</div>
                   <div className="mt-1 text-blue-800">{currentUser.full_name}</div>
-                  <div className="mt-1 text-xs text-blue-700">سيتم استخدام التوقيع المحفوظ في حسابك.</div>
+                  <div className="mt-1 text-xs text-blue-700">{ui("سيتم استخدام التوقيع المحفوظ في حسابك.")}</div>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
-                  <ImagePanel title="توقيع رامز" src={currentUser.signature} alt="توقيع رامز" />
+                  <ImagePanel title={ui("توقيع رامز")} src={currentUser.signature} alt={ui("توقيع رامز")} />
                   <div>
-                    <div className="mb-3 text-sm font-bold text-gray-700">ختم رامز</div>
+                    <div className="mb-3 text-sm font-bold text-gray-700">{ui("ختم رامز")}</div>
                     <label className="flex h-48 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100">
                       {ramzStamp ? (
-                        <img src={ramzStamp} alt="ختم رامز" className="max-h-36 max-w-full object-contain" />
+                        <img src={ramzStamp} alt={ui("ختم رامز")} className="max-h-36 max-w-full object-contain" />
                       ) : (
                         <>
                           <div className="text-3xl">🏢</div>
-                          <div className="mt-2 font-bold text-gray-700">اضغطي لاختيار ختم رامز</div>
-                          <div className="mt-1 text-xs text-gray-500">PNG / JPG حتى 5 MB</div>
+                          <div className="mt-2 font-bold text-gray-700">{ui("اضغطي لاختيار ختم رامز")}</div>
+                          <div className="mt-1 text-xs text-gray-500">{ui("PNG / JPG حتى 5 MB")}</div>
                         </>
                       )}
                       <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleStampUpload} className="hidden" />
                     </label>
                     <p className="mt-2 text-xs text-gray-500">
-                      ستُنشأ نسخة خاصة بهذا العقد تتضمن رمز التحقق. صورة الختم الأصلية لا تتغير.
+                      {ui("ستُنشأ نسخة خاصة بهذا العقد تتضمن رمز التحقق. صورة الختم الأصلية لا تتغير.")}
                     </p>
                   </div>
                 </div>
@@ -701,19 +703,19 @@ export default function ContractApprovalAdminPage() {
                     disabled={saving}
                     className="no-print mt-8 w-full rounded-xl bg-green-600 px-6 py-4 text-lg font-bold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                   >
-                    {saving ? "جاري تجهيز الختم واعتماد العقد..." : "✓ اعتماد وتوقيع وختم العقد"}
+                    {saving ? ui("جاري تجهيز الختم واعتماد العقد...") : ui("✓ اعتماد وتوقيع وختم العقد")}
                   </button>
                 )}
 
                 {isFinalized && (
                   <div className="mt-8 rounded-xl border border-green-200 bg-green-50 p-5">
-                    <div className="font-bold text-green-900">✓ العقد معتمد ونهائي</div>
+                    <div className="font-bold text-green-900">{ui("✓ العقد معتمد ونهائي")}</div>
                     <div className="mt-2 text-sm text-green-800">
-                      تم اعتماد العقد بتاريخ {formatDateTime(signing.finalized_at)}
+                      {ui("تم اعتماد العقد بتاريخ")} {formatDateTime(signing.finalized_at)}
                     </div>
                     {signing.verification_code && (
                       <div className="mt-2 text-sm font-bold text-green-900">
-                        رقم التحقق: <span dir="ltr">{signing.verification_code}</span>
+                        {ui("رقم التحقق:")} <span dir="ltr">{signing.verification_code}</span>
                       </div>
                     )}
                   </div>
@@ -724,18 +726,18 @@ export default function ContractApprovalAdminPage() {
 
           {(signing.ramz_signature || signing.ramz_stamp_url) && (
             <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
-              <h2 className="mb-5 text-xl font-bold text-gray-900">اعتماد رامز النهائي</h2>
+              <h2 className="mb-5 text-xl font-bold text-gray-900">{ui("اعتماد رامز النهائي")}</h2>
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="rounded-xl border p-4">
-                  <ImagePanel title="توقيع رامز" src={signing.ramz_signature} alt="توقيع رامز" />
+                  <ImagePanel title={ui("توقيع رامز")} src={signing.ramz_signature} alt={ui("توقيع رامز")} />
                   {signing.ramz_signed_at && (
-                    <div className="mt-3 text-xs text-gray-500">تاريخ التوقيع: {formatDateTime(signing.ramz_signed_at)}</div>
+                    <div className="mt-3 text-xs text-gray-500">{ui("تاريخ التوقيع:")} {formatDateTime(signing.ramz_signed_at)}</div>
                   )}
                 </div>
                 <div className="rounded-xl border p-4">
-                  <ImagePanel title="ختم رامز" src={signing.ramz_stamp_url} alt="ختم رامز" />
+                  <ImagePanel title={ui("ختم رامز")} src={signing.ramz_stamp_url} alt={ui("ختم رامز")} />
                   {signing.ramz_stamped_at && (
-                    <div className="mt-3 text-xs text-gray-500">تاريخ الختم: {formatDateTime(signing.ramz_stamped_at)}</div>
+                    <div className="mt-3 text-xs text-gray-500">{ui("تاريخ الختم:")} {formatDateTime(signing.ramz_stamped_at)}</div>
                   )}
                 </div>
               </div>
@@ -766,6 +768,7 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 function ImagePanel({ title, src, alt }: { title: string; src: string | null | undefined; alt: string }) {
+  const ui = useUiText();
   return (
     <div className="rounded-xl border border-gray-200 p-4">
       <div className="mb-3 text-sm font-bold text-gray-600">{title}</div>
@@ -773,7 +776,7 @@ function ImagePanel({ title, src, alt }: { title: string; src: string | null | u
         {src ? (
           <img src={src} alt={alt} className="max-h-44 max-w-full object-contain" />
         ) : (
-          <span className="text-gray-400">لا يوجد {title}</span>
+          <span className="text-gray-400">{ui("لا يوجد")} {title}</span>
         )}
       </div>
     </div>

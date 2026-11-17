@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -191,6 +192,7 @@ COMPONENT
 ========================================================= */
 
 export default function TaskResultsPage() {
+  const ui = useUiText();
 const router = useRouter();
 
 const [currentUser, setCurrentUser] =
@@ -410,7 +412,7 @@ try {
 
   if (tasksError) {
     alert(
-      "خطأ في تحميل المهام:\n" +
+      ui("خطأ في تحميل المهام:\n") +
         tasksError.message
     );
 
@@ -860,7 +862,7 @@ try {
   );
 
   alert(
-    "حدث خطأ أثناء تحميل النتائج"
+    ui("حدث خطأ أثناء تحميل النتائج")
   );
 
   setTasks([]);
@@ -880,7 +882,7 @@ async function reviewConcreteTest(
 task: Task, testId: number
 ) {
 if (!currentUser || !reviewProjects.has(Number(task.project_id)) || reviewingId !== null) return;
-if (!window.confirm("هل راجعتِ نتيجة فحص الخرسانة وتريدين اعتمادها فنياً؟")) return;
+if (!window.confirm(ui("هل راجعتِ نتيجة فحص الخرسانة وتريدين اعتمادها فنياً؟"))) return;
 setReviewingId(testId);
 try {
 const { error } = await supabase.rpc("approve_concrete_result", { p_test_id: testId });
@@ -889,9 +891,9 @@ alert(error.message);
 return;
 }
 await loadResults(currentUser);
-alert("تم اعتماد نتيجة الفحص فنياً.");
+alert(ui("تم اعتماد نتيجة الفحص فنياً."));
 } catch {
-alert("تعذّر تأكيد الحفظ. حدّثي الصفحة للتحقق من حالة المراجعة.");
+alert(ui("تعذّر تأكيد الحفظ. حدّثي الصفحة للتحقق من حالة المراجعة."));
 } finally {
 setReviewingId(null);
 }
@@ -910,7 +912,7 @@ currentUser as User
 ) !== "admin"
 ) {
 alert(
-"ليس لديك صلاحية حذف المهام"
+ui("ليس لديك صلاحية حذف المهام")
 );
 
   return;
@@ -918,7 +920,7 @@ alert(
 
 const confirmed =
   window.confirm(
-    "هل أنت متأكد من حذف هذه المهمة نهائيًا؟"
+    ui("هل أنت متأكد من حذف هذه المهمة نهائيًا؟")
   );
 
 if (!confirmed) {
@@ -939,7 +941,7 @@ if (error) {
   );
 
   alert(
-    "حدث خطأ أثناء حذف المهمة:\n" +
+    ui("حدث خطأ أثناء حذف المهمة:\n") +
       error.message
   );
 
@@ -965,7 +967,7 @@ setImages(
 );
 
 alert(
-  "تم حذف المهمة بنجاح 🗑️"
+  ui("تم حذف المهمة بنجاح 🗑️")
 );
 
 }
@@ -1086,7 +1088,7 @@ return (
       }
       className="flex items-center gap-2 text-gray-600 hover:text-blue-700 mb-5 font-medium print:hidden"
     >
-      ← رجوع
+      {ui("← رجوع")}
     </button>
 
     {/* HEADER */}
@@ -1096,13 +1098,13 @@ return (
       <div>
 
         <h1 className="text-3xl font-bold">
-          📋 نتائج المهام المنجزة
+          {ui("📋 نتائج المهام المنجزة")}
         </h1>
 
         {currentUser && (
           <p className="text-sm text-gray-500 mt-1">
 
-            المستخدم:
+            {ui("المستخدم:")}
 
             {" "}
 
@@ -1124,7 +1126,7 @@ return (
         }
         className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg print:hidden"
       >
-        🖨️ طباعة
+        {ui("🖨️ طباعة")}
       </button>
 
     </div>
@@ -1134,7 +1136,7 @@ return (
     {loading ? (
 
       <div className="bg-white rounded-xl p-6 shadow">
-        جاري تحميل النتائج...
+        {ui("جاري تحميل النتائج...")}
       </div>
 
     ) : tasks.length === 0 ? (
@@ -1145,8 +1147,8 @@ return (
         isTechnician(
           currentUser
         )
-          ? "لا توجد مهام منجزة مسندة إليك حالياً."
-          : "لا توجد نتائج حالياً"}
+          ? ui("لا توجد مهام منجزة مسندة إليك حالياً.")
+          : ui("لا توجد نتائج حالياً")}
 
       </div>
 
@@ -1193,7 +1195,7 @@ return (
 
                     <p className="mt-2">
 
-                      🆔 رقم المهمة:
+                      {ui("🆔 رقم المهمة:")}
 
                       {" "}
 
@@ -1219,7 +1221,7 @@ return (
                       }
                       className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg print:hidden"
                     >
-                      🗑️ حذف المهمة
+                      {ui("🗑️ حذف المهمة")}
                     </button>
 
                   )}
@@ -1232,7 +1234,7 @@ return (
 
                   <p>
 
-                    📍 وقت الوصول:
+                    {ui("📍 وقت الوصول:")}
 
                     {" "}
 
@@ -1248,7 +1250,7 @@ return (
 
                   <p>
 
-                    👷 الفني:
+                    {ui("👷 الفني:")}
 
                     {" "}
 
@@ -1256,7 +1258,7 @@ return (
 
                       {task.users
                         ?.full_name ||
-                        "غير محدد"}
+                        ui("غير محدد")}
 
                     </span>
 
@@ -1264,14 +1266,14 @@ return (
 
                   <p>
 
-                    النتيجة:
+                    {ui("النتيجة:")}
 
                     {" "}
 
                     <span className="font-semibold">
 
                       {task.field_result ||
-                        "لا توجد"}
+                        ui("لا توجد")}
 
                     </span>
 
@@ -1279,14 +1281,14 @@ return (
 
                   <p>
 
-                    الملاحظات:
+                    {ui("الملاحظات:")}
 
                     {" "}
 
                     <span className="font-semibold">
 
                       {task.field_notes ||
-                        "لا توجد"}
+                        ui("لا توجد")}
 
                     </span>
 
@@ -1294,14 +1296,13 @@ return (
 
                   <p>
 
-                    الحالة:
+                    {ui("الحالة:")}
 
                     {" "}
 
                     <span className="font-semibold">
 
-                      {task.status ||
-                        "غير محدد"}
+                      {ui(task.status || "غير محدد")}
 
                     </span>
 
@@ -1309,7 +1310,7 @@ return (
 
                   <p>
 
-                    تاريخ الإنجاز:
+                    {ui("تاريخ الإنجاز:")}
 
                     {" "}
 
@@ -1340,7 +1341,7 @@ return (
                       }
                       className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg font-semibold"
                     >
-                      🖨️ طباعة نموذج فحص الخرسانة
+                      {ui("🖨️ طباعة نموذج فحص الخرسانة")}
                     </button>
 
                   </div>
@@ -1352,12 +1353,12 @@ return (
                 <div className="mt-4 bg-gray-50 border rounded-lg p-3 text-sm">
 
                   <span className="font-bold">
-                    البيانات المحملة:
+                    {ui("البيانات المحملة:")}
                   </span>
 
                   {" "}
 
-                  Concrete Tests:
+                  {ui("Concrete Tests:")}
 
                   <span className="font-bold text-blue-700">
 
@@ -1369,7 +1370,7 @@ return (
 
                   {" | "}
 
-                  Samples:
+                  {ui("Samples:")}
 
                   <span className="font-bold text-blue-700">
 
@@ -1392,7 +1393,7 @@ return (
 
                   {" | "}
 
-                  Field Density:
+                  {ui("Field Density:")}
 
                   <span className="font-bold text-orange-700">
 
@@ -1419,14 +1420,14 @@ return (
                     >
 
                       <h3 className="font-bold text-lg mb-4">
-                        🧪 نموذج Field Density
+                        {ui("🧪 نموذج Field Density")}
                       </h3>
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
 
                         <p>
                           <strong>
-                            Order No:
+                            {ui("Order No:")}
                           </strong>{" "}
                           {fieldDensity.order_no ||
                             "-"}
@@ -1434,7 +1435,7 @@ return (
 
                         <p>
                           <strong>
-                            Sample Code:
+                            {ui("Sample Code:")}
                           </strong>{" "}
                           {fieldDensity.sample_code ||
                             "-"}
@@ -1442,7 +1443,7 @@ return (
 
                         <p>
                           <strong>
-                            Sampling Date:
+                            {ui("Sampling Date:")}
                           </strong>{" "}
                           {fieldDensity.sampling_date ||
                             "-"}
@@ -1450,7 +1451,7 @@ return (
 
                         <p>
                           <strong>
-                            Test Date:
+                            {ui("Test Date:")}
                           </strong>{" "}
                           {fieldDensity.test_date ||
                             "-"}
@@ -1458,7 +1459,7 @@ return (
 
                         <p>
                           <strong>
-                            Sampled By:
+                            {ui("Sampled By:")}
                           </strong>{" "}
                           {fieldDensity.sampled_by ||
                             "-"}
@@ -1466,7 +1467,7 @@ return (
 
                         <p>
                           <strong>
-                            Classification:
+                            {ui("Classification:")}
                           </strong>{" "}
                           {fieldDensity.classification ||
                             "-"}
@@ -1474,7 +1475,7 @@ return (
 
                         <p>
                           <strong>
-                            Sample Location:
+                            {ui("Sample Location:")}
                           </strong>{" "}
                           {fieldDensity.sample_location ||
                             "-"}
@@ -1482,7 +1483,7 @@ return (
 
                         <p>
                           <strong>
-                            Source Material:
+                            {ui("Source Material:")}
                           </strong>{" "}
                           {fieldDensity.source_material ||
                             "-"}
@@ -1490,7 +1491,7 @@ return (
 
                         <p>
                           <strong>
-                            Method:
+                            {ui("Method:")}
                           </strong>{" "}
                           {fieldDensity.method ||
                             "-"}
@@ -1498,7 +1499,7 @@ return (
 
                         <p>
                           <strong>
-                            MDD:
+                            {ui("MDD:")}
                           </strong>{" "}
                           {fieldDensity.mdd ??
                             "-"}
@@ -1506,7 +1507,7 @@ return (
 
                         <p>
                           <strong>
-                            Optimum Moisture:
+                            {ui("Optimum Moisture:")}
                           </strong>{" "}
                           {fieldDensity.optimum_moisture ??
                             "-"}
@@ -1514,10 +1515,10 @@ return (
 
                         <p>
                           <strong>
-                            Checked By:
+                            {ui("Checked By:")}
                           </strong>{" "}
                           {fieldDensity.checked_by ||
-                            "لم يتم التحقق"}
+                            ui("لم يتم التحقق")}
                         </p>
 
                       </div>
@@ -1538,31 +1539,31 @@ return (
                               <tr className="bg-orange-200">
 
                                 <th className="border border-black p-2">
-                                  العينة
+                                  {ui("العينة")}
                                 </th>
 
                                 <th className="border border-black p-2">
-                                  Field Sample No.
+                                  {ui("Field Sample No.")}
                                 </th>
 
                                 <th className="border border-black p-2">
-                                  Station
+                                  {ui("Station")}
                                 </th>
 
                                 <th className="border border-black p-2">
-                                  Moisture %
+                                  {ui("Moisture %")}
                                 </th>
 
                                 <th className="border border-black p-2">
-                                  Wet Density
+                                  {ui("Wet Density")}
                                 </th>
 
                                 <th className="border border-black p-2">
-                                  Dry Density
+                                  {ui("Dry Density")}
                                 </th>
 
                                 <th className="border border-black p-2">
-                                  Compaction %
+                                  {ui("Compaction %")}
                                 </th>
 
                               </tr>
@@ -1662,12 +1663,12 @@ return (
                         <div className="flex items-center justify-between gap-3 mb-4">
 
                           <h3 className="font-bold text-lg">
-                            🧱 فحص قوة الخرسانة
+                            {ui("🧱 فحص قوة الخرسانة")}
                           </h3>
 
                           <span className="text-xs bg-white border border-blue-300 rounded px-2 py-1">
 
-                            Test ID:
+                            {ui("Test ID:")}
 
                             {" "}
 
@@ -1681,7 +1682,7 @@ return (
 
                           <p>
                             <strong>
-                              Order No:
+                              {ui("Order No:")}
                             </strong>{" "}
                             {concreteTest.order_no ||
                               "-"}
@@ -1689,7 +1690,7 @@ return (
 
                           <p>
                             <strong>
-                              Sample Code:
+                              {ui("Sample Code:")}
                             </strong>{" "}
                             {concreteTest.sample_code ||
                               "-"}
@@ -1697,7 +1698,7 @@ return (
 
                           <p>
                             <strong>
-                              Sample Location:
+                              {ui("Sample Location:")}
                             </strong>{" "}
                             {concreteTest.sample_location ||
                               "-"}
@@ -1705,7 +1706,7 @@ return (
 
                           <p>
                             <strong>
-                              Sampling Date:
+                              {ui("Sampling Date:")}
                             </strong>{" "}
                             {concreteTest.sampling_date ||
                               "-"}
@@ -1713,7 +1714,7 @@ return (
 
                           <p>
                             <strong>
-                              Test Date:
+                              {ui("Test Date:")}
                             </strong>{" "}
                             {concreteTest.test_date ||
                               "-"}
@@ -1721,7 +1722,7 @@ return (
 
                           <p>
                             <strong>
-                              Design Strength:
+                              {ui("Design Strength:")}
                             </strong>{" "}
                             {concreteTest.design_strength ??
                               "-"}
@@ -1729,7 +1730,7 @@ return (
 
                           <p>
                             <strong>
-                              Cement Content:
+                              {ui("Cement Content:")}
                             </strong>{" "}
                             {concreteTest.cement_content ??
                               "-"}
@@ -1737,7 +1738,7 @@ return (
 
                           <p>
                             <strong>
-                              Concrete Temp:
+                              {ui("Concrete Temp:")}
                             </strong>{" "}
                             {concreteTest.concrete_temperature ??
                               "-"}
@@ -1745,7 +1746,7 @@ return (
 
                           <p>
                             <strong>
-                              Curing Temp:
+                              {ui("Curing Temp:")}
                             </strong>{" "}
                             {concreteTest.curing_temperature ??
                               "-"}
@@ -1753,7 +1754,7 @@ return (
 
                           <p>
                             <strong>
-                              Specimen Type:
+                              {ui("Specimen Type:")}
                             </strong>{" "}
                             {concreteTest.specimen_type ||
                               "-"}
@@ -1761,7 +1762,7 @@ return (
 
                           <p>
                             <strong>
-                              Test Specification:
+                              {ui("Test Specification:")}
                             </strong>{" "}
                             {concreteTest.test_specification ||
                               "-"}
@@ -1769,7 +1770,7 @@ return (
 
                           <p>
                             <strong>
-                              Average Strength:
+                              {ui("Average Strength:")}
                             </strong>{" "}
                             {concreteTest.average_strength ??
                               "-"}
@@ -1777,7 +1778,7 @@ return (
 
                           <p>
                             <strong>
-                              Acceptance:
+                              {ui("Acceptance:")}
                             </strong>{" "}
                             {concreteTest.acceptance_status ||
                               "-"}
@@ -1785,7 +1786,7 @@ return (
 
                           <p>
                             <strong>
-                              Sampled By:
+                              {ui("Sampled By:")}
                             </strong>{" "}
                             {concreteTest.sampled_by ||
                               "-"}
@@ -1793,7 +1794,7 @@ return (
 
                           <p>
                             <strong>
-                              Checked By:
+                              {ui("Checked By:")}
                             </strong>{" "}
                             {concreteTest.checked_by ||
                               "-"}
@@ -1801,7 +1802,7 @@ return (
 
                           <p>
                             <strong>
-                              Status:
+                              {ui("Status:")}
                             </strong>{" "}
                             {concreteTest.status ||
                               "-"}
@@ -1818,12 +1819,12 @@ return (
                             <div className="bg-green-100 border border-green-300 rounded-lg p-3">
 
                               <p className="font-bold text-green-800">
-                                ✅ تمت مراجعة نتائج الفحص
+                                {ui("✅ تمت مراجعة نتائج الفحص")}
                               </p>
 
                               <p className="text-sm mt-1">
 
-                                تمت المراجعة بواسطة:
+                                {ui("تمت المراجعة بواسطة:")}
 
                                 {" "}
 
@@ -1834,7 +1835,7 @@ return (
                                       concreteTest.reviewed_by
                                     )
                                   ] ||
-                                    "مستخدم غير معروف"}
+                                    ui("مستخدم غير معروف")}
 
                                 </span>
 
@@ -1842,7 +1843,7 @@ return (
 
                               <p className="text-sm">
 
-                                تاريخ المراجعة:
+                                {ui("تاريخ المراجعة:")}
 
                                 {" "}
 
@@ -1862,12 +1863,12 @@ return (
 
                           ) : (
                             <div>
-                              <p>بانتظار المراجعة الفنية</p>
+                              <p>{ui("بانتظار المراجعة الفنية")}</p>
                               {reviewProjects.has(Number(task.project_id)) && (
                                 <button type="button" disabled={reviewingId !== null}
                                   onClick={() => reviewConcreteTest(task, concreteTest.id)}
                                   className="mt-2 bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white px-5 py-2 rounded-lg font-semibold print:hidden">
-                                  {reviewingId === concreteTest.id ? "جارٍ الاعتماد..." : "اعتماد نتيجة الفحص فنياً"}
+                                  {reviewingId === concreteTest.id ? ui("جارٍ الاعتماد...") : ui("اعتماد نتيجة الفحص فنياً")}
                                 </button>
                               )}
                             </div>
@@ -1882,12 +1883,12 @@ return (
                           <div className="flex items-center justify-between mb-3">
 
                             <h4 className="font-bold text-base">
-                              📊 نتائج العينات
+                              {ui("📊 نتائج العينات")}
                             </h4>
 
                             <span className="text-sm font-semibold">
 
-                              عدد العينات:
+                              {ui("عدد العينات:")}
 
                               {" "}
 
@@ -1909,67 +1910,67 @@ return (
                                   <tr className="bg-blue-200">
 
                                     <th className="border border-black p-2">
-                                      العينة
+                                      {ui("العينة")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      Field Sample No.
+                                      {ui("Field Sample No.")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      الجزء
+                                      {ui("الجزء")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      تاريخ العينة
+                                      {ui("تاريخ العينة")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      Slump
+                                      {ui("Slump")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      العمر
+                                      {ui("العمر")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      L × W × H
+                                      {ui("L × W × H")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      المساحة
+                                      {ui("المساحة")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      الحجم
+                                      {ui("الحجم")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      الوزن
+                                      {ui("الوزن")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      الوزن النوعي
+                                      {ui("الوزن النوعي")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      الحمل KN
+                                      {ui("الحمل KN")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      الحمل Kg
+                                      {ui("الحمل Kg")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      القوة Kg/cm²
+                                      {ui("القوة Kg/cm²")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      نوع الكسر
+                                      {ui("نوع الكسر")}
                                     </th>
 
                                     <th className="border border-black p-2">
-                                      الملاحظات
+                                      {ui("الملاحظات")}
                                     </th>
 
                                   </tr>
@@ -2100,7 +2101,7 @@ return (
 
                             <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 text-yellow-800">
 
-                              ⚠️ تم العثور على نموذج فحص الخرسانة، لكن لا توجد سجلات في جدول:
+                              {ui("⚠️ تم العثور على نموذج فحص الخرسانة، لكن لا توجد سجلات في جدول:")}
 
                               {" "}
 
@@ -2110,7 +2111,7 @@ return (
 
                               <div className="text-xs mt-2">
 
-                                Test ID:
+                                {ui("Test ID:")}
 
                                 {" "}
 
@@ -2129,7 +2130,7 @@ return (
                           <div className="mt-4 bg-white border rounded-lg p-3">
 
                             <strong>
-                              الملاحظات:
+                              {ui("الملاحظات:")}
                             </strong>
 
                             {" "}
@@ -2153,11 +2154,11 @@ return (
 
                   <div className="mt-5 bg-yellow-50 border border-yellow-300 rounded-lg p-4 text-yellow-800">
 
-                    ⚠️ لا يوجد نموذج فحص خرسانة مرتبط بهذه المهمة.
+                    {ui("⚠️ لا يوجد نموذج فحص خرسانة مرتبط بهذه المهمة.")}
 
                     <div className="text-xs mt-2">
 
-                      Task ID:
+                      {ui("Task ID:")}
 
                       {" "}
 
@@ -2179,7 +2180,7 @@ return (
                   }
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg mt-5 print:hidden"
                 >
-                  📷 عرض الصور
+                  {ui("📷 عرض الصور")}
                 </button>
 
                 {taskImages.length >
@@ -2207,7 +2208,7 @@ return (
                             src={
                               img.image_url
                             }
-                            alt="Task"
+                            alt={ui("Task")}
                             className="w-40 h-40 object-cover rounded-xl border cursor-pointer hover:scale-105 transition"
                           />
 

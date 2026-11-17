@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 export type RequestDraft = Record<string, string>;
 type Field = { key: string; label: string; type?: "date" | "boolean" | "textarea"; options?: readonly string[] };
 
@@ -40,36 +41,37 @@ export function toPayload(draft: RequestDraft, fields: Field[]) {
       : draft[field.key]?.trim() || null
   ]));
 }
-export function validateReview(draft: RequestDraft): string | null {
+export function validateReview(draft: RequestDraft, ui = (value: string) => value): string | null {
   const missing = reviewFields.find(field => (field.type === "boolean" || field.options) &&
     (!draft[field.key] || (field.options && !field.options.includes(draft[field.key]))));
-  if (missing) return "يرجى استكمال " + missing.label;
+  if (missing) return ui("يرجى استكمال ") + ui(missing.label);
   if ((draft.sample_status === "مرفوضة" || draft.sample_status === "مقبولة بتحفظ") && !draft.rejection_reason?.trim()) {
-    return "يرجى وصف الخلل أو التحفظ عند استلام العينة.";
+    return ui("يرجى وصف الخلل أو التحفظ عند استلام العينة.");
   }
   if ((draft.technical_review_decision !== "قبول" || draft.customer_method_unsuitable === "true" ||
        draft.customer_requirements_clear === "false" || draft.method_suitable_and_current === "false") && !draft.technical_review_notes?.trim()) {
-    return "يرجى توثيق أسباب القرار أو الشروط والفروق في تفاصيل المراجعة.";
+    return ui("يرجى توثيق أسباب القرار أو الشروط والفروق في تفاصيل المراجعة.");
   }
   if (draft.sample_status === "مرفوضة" && draft.technical_review_decision !== "رفض") {
-    return "العينة المرفوضة تحتاج نتيجة مراجعة فنية بالرفض.";
+    return ui("العينة المرفوضة تحتاج نتيجة مراجعة فنية بالرفض.");
   }
   return null;
 }
 export function RequestFields({ fields, value, onChange, disabled = false }: {
   fields: Field[]; value: RequestDraft; onChange: (value: RequestDraft) => void; disabled?: boolean;
 }) {
-  return <div className="grid gap-4 md:grid-cols-2" dir="rtl">
+  const ui = useUiText();
+  return <div className="grid gap-4 md:grid-cols-2">
     {fields.map(field => {
       const inputClass = "mt-1 w-full rounded-lg border border-gray-300 bg-white p-3 disabled:bg-gray-100";
       const update = (text: string) => onChange({ ...value, [field.key]: text });
       return <label key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
-        <span className="text-sm font-medium">{field.label}</span>
+        <span className="text-sm font-medium">{ui(field.label)}</span>
         {field.options || field.type === "boolean" ?
           <select value={value[field.key] ?? ""} disabled={disabled} onChange={event => update(event.target.value)} className={inputClass}>
-            <option value="">اختاري</option>
-            {field.type === "boolean" ? <><option value="true">نعم</option><option value="false">لا</option></> :
-              field.options?.map(option => <option key={option}>{option}</option>)}
+            <option value="">{ui("اختاري")}</option>
+            {field.type === "boolean" ? <><option value="true">{ui("نعم")}</option><option value="false">{ui("لا")}</option></> :
+              field.options?.map(option => <option key={option} value={option}>{ui(option)}</option>)}
           </select> : field.type === "textarea" ?
           <textarea rows={3} value={value[field.key] ?? ""} disabled={disabled} onChange={event => update(event.target.value)} className={inputClass} /> :
           <input type={field.type || "text"} value={value[field.key] ?? ""} disabled={disabled} onChange={event => update(event.target.value)} className={inputClass} />}
@@ -156,17 +158,17 @@ export default function ExternalTestRequestForm({ request, projectName }: {
     </section>)}</div>
   </article>;
 }
-export function printExternalForm(id: number | string) {
+export function printExternalForm(id: number | string, ui = (value: string) => value) {
   const source = document.getElementById(`external-request-${id}`);
-  if (!source) { alert("تعذر تجهيز النموذج للطباعة. أعيدي فتح الطلب."); return; }
+  if (!source) { alert(ui("تعذر تجهيز النموذج للطباعة. أعيدي فتح الطلب.")); return; }
   const popup = window.open("", "_blank", "width=1000,height=900");
-  if (!popup) { alert("يرجى السماح بالنوافذ المنبثقة للطباعة."); return; }
+  if (!popup) { alert(ui("يرجى السماح بالنوافذ المنبثقة للطباعة.")); return; }
   popup.opener = null;
   popup.document.open();
   popup.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>طلب فحص خارجي QF 701/02</title></head><body>' + source.outerHTML + '</body></html>');
   popup.document.close();
   const button = popup.document.createElement("button");
-  button.textContent = "طباعة النموذج";
+  button.textContent = ui("طباعة النموذج");
   button.style.cssText = "display:block;margin:12px auto;padding:10px 24px";
   button.onclick = () => popup.print();
   const style = popup.document.createElement("style");

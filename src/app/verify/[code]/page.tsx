@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -16,6 +17,7 @@ export default function VerifyContractPage({
 }: {
   params: Promise<{ code: string }>;
 }) {
+  const ui = useUiText();
   const [data, setData] = useState<VerificationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,7 +31,7 @@ export default function VerifyContractPage({
         const cleanCode = (code || "").trim().toUpperCase();
 
         if (!cleanCode) {
-          throw new Error("رمز التحقق غير موجود.");
+          throw new Error(ui("رمز التحقق غير موجود."));
         }
 
         const { data: result, error: rpcError } = await supabase.rpc(
@@ -39,12 +41,12 @@ export default function VerifyContractPage({
 
         if (rpcError) {
           console.error("Contract verification failed:", rpcError);
-          throw new Error("تعذر إكمال التحقق حاليًا.");
+          throw new Error(ui("تعذر إكمال التحقق حاليًا."));
         }
 
         if (!result || result.length === 0) {
           throw new Error(
-            "لم يتم العثور على سجل عقد نهائي مطابق لهذا الرمز. تحقق من صحة الرمز."
+            ui("لم يتم العثور على سجل عقد نهائي مطابق لهذا الرمز. تحقق من صحة الرمز.")
           );
         }
 
@@ -54,7 +56,7 @@ export default function VerifyContractPage({
           verification.status !== "Finalized" ||
           !verification.finalized_at
         ) {
-          throw new Error("لم يتم التأكد من الاعتماد النهائي لهذا العقد.");
+          throw new Error(ui("لم يتم التأكد من الاعتماد النهائي لهذا العقد."));
         }
 
         if (!cancelled) {
@@ -73,7 +75,7 @@ export default function VerifyContractPage({
           setError(
             err instanceof Error
               ? err.message
-              : "حدث خطأ أثناء التحقق من الوثيقة."
+              : ui("حدث خطأ أثناء التحقق من الوثيقة.")
           );
         }
       } finally {
@@ -106,16 +108,16 @@ export default function VerifyContractPage({
   if (loading) {
     return (
       <main
-        dir="rtl"
+       
         className="flex min-h-screen items-center justify-center bg-gray-100 p-6"
       >
         <div className="w-full max-w-lg rounded-2xl bg-white p-8 text-center shadow-lg">
           <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-green-700" />
           <h1 className="text-xl font-bold text-gray-900">
-            جارٍ التحقق من الوثيقة
+            {ui("جارٍ التحقق من الوثيقة")}
           </h1>
           <p className="mt-2 text-sm text-gray-500">
-            يرجى الانتظار حتى تكتمل عملية التحقق.
+            {ui("يرجى الانتظار حتى تكتمل عملية التحقق.")}
           </p>
         </div>
       </main>
@@ -125,7 +127,7 @@ export default function VerifyContractPage({
   if (error || !data) {
     return (
       <main
-        dir="rtl"
+       
         className="flex min-h-screen items-center justify-center bg-gray-100 p-6"
       >
         <div className="w-full max-w-lg rounded-2xl bg-white p-8 text-center shadow-lg">
@@ -134,16 +136,15 @@ export default function VerifyContractPage({
           </div>
 
           <h1 className="text-2xl font-bold text-red-700">
-            تعذر التحقق من الوثيقة
+            {ui("تعذر التحقق من الوثيقة")}
           </h1>
 
           <p className="mt-4 text-sm leading-7 text-gray-600">
-            {error || "لم يتم العثور على بيانات للتحقق."}
+            {error || ui("لم يتم العثور على بيانات للتحقق.")}
           </p>
 
           <div className="mt-6 rounded-xl bg-gray-50 p-4 text-xs leading-6 text-gray-500">
-            إذا وصلت إلى هذه الصفحة من خلال رمز QR الموجود على العقد،
-            فتحقق من أن الرمز والرابط لم يتم تعديلهما.
+            {ui("إذا وصلت إلى هذه الصفحة من خلال رمز QR الموجود على العقد، فتحقق من أن الرمز والرابط لم يتم تعديلهما.")}
           </div>
         </div>
       </main>
@@ -152,7 +153,7 @@ export default function VerifyContractPage({
 
   return (
     <main
-      dir="rtl"
+     
       className="min-h-screen bg-gray-100 px-4 py-10"
     >
       <div className="mx-auto max-w-2xl">
@@ -163,17 +164,17 @@ export default function VerifyContractPage({
             </div>
 
             <h1 className="text-2xl font-bold">
-              تم التحقق من سجل العقد
+              {ui("تم التحقق من سجل العقد")}
             </h1>
 
             <p className="mt-3 text-sm leading-7 text-green-100">
-              عُثر على سجل عقد معتمد ونهائي يطابق رمز التحقق الإلكتروني.
+              {ui("عُثر على سجل عقد معتمد ونهائي يطابق رمز التحقق الإلكتروني.")}
             </p>
           </header>
 
           <section className="border-b border-gray-200 px-6 py-6 text-center">
             <p className="text-xs font-medium text-gray-500">
-              رمز التحقق الإلكتروني
+              {ui("رمز التحقق الإلكتروني")}
             </p>
 
             <div
@@ -186,19 +187,19 @@ export default function VerifyContractPage({
 
           <section className="px-6 py-6">
             <h2 className="mb-4 text-lg font-bold text-gray-900">
-              معلومات العقد
+              {ui("معلومات العقد")}
             </h2>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl bg-gray-50 p-4">
-                <div className="text-xs text-gray-500">رقم العقد</div>
+                <div className="text-xs text-gray-500">{ui("رقم العقد")}</div>
                 <div className="mt-2 break-words font-bold text-gray-900">
                   {data.contract_number}
                 </div>
               </div>
 
               <div className="rounded-xl bg-gray-50 p-4">
-                <div className="text-xs text-gray-500">اسم العقد</div>
+                <div className="text-xs text-gray-500">{ui("اسم العقد")}</div>
                 <div className="mt-2 break-words font-bold text-gray-900">
                   {data.contract_name}
                 </div>
@@ -206,16 +207,16 @@ export default function VerifyContractPage({
 
               <div className="rounded-xl bg-green-50 p-4 sm:col-span-2">
                 <div className="text-xs text-green-700">
-                  حالة سجل العقد
+                  {ui("حالة سجل العقد")}
                 </div>
                 <div className="mt-2 font-bold text-green-800">
-                  معتمد ونهائي
+                  {ui("معتمد ونهائي")}
                 </div>
               </div>
 
               <div className="rounded-xl bg-gray-50 p-4 sm:col-span-2">
                 <div className="text-xs text-gray-500">
-                  تاريخ الاعتماد النهائي
+                  {ui("تاريخ الاعتماد النهائي")}
                 </div>
                 <div className="mt-2 font-bold text-gray-900">
                   {formatDate(data.finalized_at)}
@@ -226,11 +227,11 @@ export default function VerifyContractPage({
 
           <section className="border-t border-amber-200 bg-amber-50 px-6 py-5">
             <h2 className="font-bold text-amber-900">
-              تنبيه بشأن أصالة الملف
+              {ui("تنبيه بشأن أصالة الملف")}
             </h2>
 
             <p className="mt-2 text-sm leading-7 text-amber-900">
-              يؤكد هذا الفحص وجود سجل عقد نهائي مطابق لرمز التحقق.
+              {ui("يؤكد هذا الفحص وجود سجل عقد نهائي مطابق لرمز التحقق.")}
                          
              
             </p>
@@ -238,18 +239,17 @@ export default function VerifyContractPage({
 
           <footer className="border-t border-gray-200 px-6 py-6 text-center">
             <div className="text-sm font-bold text-gray-900">
-              شركة رمز الإمارات لفحص التربة والخرسانة
+              {ui("شركة رمز الإمارات لفحص التربة والخرسانة")}
             </div>
 
             <p className="mt-2 text-xs leading-6 text-gray-500">
-              نظام التحقق الإلكتروني من الوثائق
+              {ui("نظام التحقق الإلكتروني من الوثائق")}
             </p>
           </footer>
         </div>
 
         <p className="mt-5 text-center text-xs leading-6 text-gray-500">
-          صفحة عامة للتحقق من سجل العقد. لا تعرض بيانات العميل أو تفاصيل
-          توقيعاته.
+          {ui("صفحة عامة للتحقق من سجل العقد. لا تعرض بيانات العميل أو تفاصيل توقيعاته.")}
         </p>
       </div>
     </main>

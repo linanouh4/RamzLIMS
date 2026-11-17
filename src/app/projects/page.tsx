@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -13,6 +14,7 @@ type CurrentUser = {
 };
 
 export default function ProjectsPage() {
+  const ui = useUiText();
   const router = useRouter();
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -50,7 +52,7 @@ export default function ProjectsPage() {
       const userId = Number(savedUser.id);
 
       if (!userId) {
-        alert("بيانات المستخدم الحالي غير صحيحة");
+        alert(ui("بيانات المستخدم الحالي غير صحيحة"));
         return;
       }
 
@@ -70,9 +72,9 @@ export default function ProjectsPage() {
         );
 
         alert(
-          "تعذر تحميل بيانات المستخدم:\n" +
+          ui("تعذر تحميل بيانات المستخدم:\n") +
             (userError?.message ||
-              "المستخدم غير موجود")
+              ui("المستخدم غير موجود"))
         );
 
         return;
@@ -109,8 +111,8 @@ export default function ProjectsPage() {
       );
 
       alert(
-        "حدث خطأ أثناء تحميل الصفحة:\n" +
-          (error?.message || "خطأ غير معروف")
+        ui("حدث خطأ أثناء تحميل الصفحة:\n") +
+          (error?.message || ui("خطأ غير معروف"))
       );
     } finally {
       setLoading(false);
@@ -138,7 +140,7 @@ export default function ProjectsPage() {
       if (current.role !== "admin") {
         if (current.branch_id === null) {
           alert(
-            "المستخدم الحالي غير مرتبط بأي فرع."
+            ui("المستخدم الحالي غير مرتبط بأي فرع.")
           );
 
           setClients([]);
@@ -163,7 +165,7 @@ export default function ProjectsPage() {
         );
 
         alert(
-          "تعذر تحميل العملاء:\n" +
+          ui("تعذر تحميل العملاء:\n") +
             error.message
         );
 
@@ -183,8 +185,8 @@ export default function ProjectsPage() {
       );
 
       alert(
-        "حدث خطأ أثناء تحميل العملاء:\n" +
-          (error?.message || "خطأ غير معروف")
+        ui("حدث خطأ أثناء تحميل العملاء:\n") +
+          (error?.message || ui("خطأ غير معروف"))
       );
     }
   }
@@ -220,7 +222,7 @@ export default function ProjectsPage() {
 
         if (userError || !userData) {
           alert(
-            "تعذر تحميل بيانات المستخدم."
+            ui("تعذر تحميل بيانات المستخدم.")
           );
           return;
         }
@@ -253,7 +255,7 @@ export default function ProjectsPage() {
       if (user.role !== "admin") {
         if (user.branch_id === null) {
           alert(
-            "المستخدم الحالي غير مرتبط بأي فرع."
+            ui("المستخدم الحالي غير مرتبط بأي فرع.")
           );
 
           setProjects([]);
@@ -278,7 +280,7 @@ export default function ProjectsPage() {
         );
 
         alert(
-          "تعذر تحميل المشاريع:\n" +
+          ui("تعذر تحميل المشاريع:\n") +
             error.message
         );
 
@@ -298,8 +300,8 @@ export default function ProjectsPage() {
       );
 
       alert(
-        "حدث خطأ أثناء تحميل المشاريع:\n" +
-          (error?.message || "خطأ غير معروف")
+        ui("حدث خطأ أثناء تحميل المشاريع:\n") +
+          (error?.message || ui("خطأ غير معروف"))
       );
     }
   }
@@ -311,21 +313,21 @@ export default function ProjectsPage() {
   async function addProject() {
     if (!projectName.trim()) {
       alert(
-        "الرجاء إدخال اسم المشروع"
+        ui("الرجاء إدخال اسم المشروع")
       );
       return;
     }
 
     if (!clientId) {
       alert(
-        "الرجاء اختيار العميل."
+        ui("الرجاء اختيار العميل.")
       );
       return;
     }
 
     if (!currentUser) {
       alert(
-        "لم يتم التعرف على المستخدم الحالي."
+        ui("لم يتم التعرف على المستخدم الحالي.")
       );
       return;
     }
@@ -335,7 +337,7 @@ export default function ProjectsPage() {
       currentUser.branch_id === null
     ) {
       alert(
-        "المستخدم الحالي غير مرتبط بأي فرع."
+        ui("المستخدم الحالي غير مرتبط بأي فرع.")
       );
       return;
     }
@@ -354,7 +356,7 @@ export default function ProjectsPage() {
 
     if (!selectedClient) {
       alert(
-        "العميل غير موجود أو غير تابع لفرعك."
+        ui("العميل غير موجود أو غير تابع لفرعك.")
       );
       return;
     }
@@ -365,7 +367,7 @@ export default function ProjectsPage() {
         Number(currentUser.branch_id)
     ) {
       alert(
-        "لا يمكنك إنشاء مشروع لعميل تابع لفرع آخر."
+        ui("لا يمكنك إنشاء مشروع لعميل تابع لفرع آخر.")
       );
       return;
     }
@@ -421,7 +423,7 @@ export default function ProjectsPage() {
       );
 
       alert(
-        "حدث خطأ أثناء إنشاء المشروع:\n" +
+        ui("حدث خطأ أثناء إنشاء المشروع:\n") +
           error.message
       );
 
@@ -429,7 +431,7 @@ export default function ProjectsPage() {
     }
 
     alert(
-      "تم إنشاء المشروع وربطه بالعميل بنجاح."
+      ui("تم إنشاء المشروع وربطه بالعميل بنجاح.")
     );
 
     // Reset form
@@ -452,13 +454,13 @@ export default function ProjectsPage() {
     id: number
   ) {
     if (currentUser?.role === "technical_manager") {
-      alert("المدير الفني غير مخوّل بحذف المشاريع.");
+      alert(ui("المدير الفني غير مخوّل بحذف المشاريع."));
       return;
     }
 
     if (!currentUser) {
       alert(
-        "لم يتم التعرف على المستخدم الحالي."
+        ui("لم يتم التعرف على المستخدم الحالي.")
       );
       return;
     }
@@ -472,7 +474,7 @@ export default function ProjectsPage() {
 
     if (!project) {
       alert(
-        "المشروع غير موجود."
+        ui("المشروع غير موجود.")
       );
       return;
     }
@@ -485,14 +487,14 @@ export default function ProjectsPage() {
         Number(currentUser.branch_id)
     ) {
       alert(
-        "لا يمكنك حذف مشروع تابع لفرع آخر."
+        ui("لا يمكنك حذف مشروع تابع لفرع آخر.")
       );
       return;
     }
 
     if (
       !confirm(
-        "هل أنت متأكد من حذف هذا المشروع؟"
+        ui("هل أنت متأكد من حذف هذا المشروع؟")
       )
     ) {
       return;
@@ -526,7 +528,7 @@ export default function ProjectsPage() {
       );
 
       alert(
-        "حدث خطأ أثناء حذف المشروع:\n" +
+        ui("حدث خطأ أثناء حذف المشروع:\n") +
           error.message
       );
 
@@ -566,23 +568,23 @@ export default function ProjectsPage() {
             }
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            ← Back
+            {ui("← Back")}
           </button>
 
           <div>
 
             <h1 className="text-3xl font-bold">
-              Projects
+              {ui("Projects")}
             </h1>
 
             <p className="text-gray-500 mt-1">
               {currentUser?.role ===
               "branch_manager"
-                ? "Manage projects for your branch."
+                ? ui("Manage projects for your branch.")
                 : currentUser?.role ===
                   "admin"
-                ? "Manage all company projects."
-                : "Manage projects for your branch."}
+                ? ui("Manage all company projects.")
+                : ui("Manage projects for your branch.")}
             </p>
 
           </div>
@@ -594,7 +596,7 @@ export default function ProjectsPage() {
         <div className="bg-white rounded-xl shadow p-6 mb-8">
 
           <h2 className="text-xl font-bold text-blue-900 mb-5">
-            إنشاء مشروع جديد
+            {ui("إنشاء مشروع جديد")}
           </h2>
 
           <div className="grid grid-cols-2 gap-4">
@@ -611,7 +613,7 @@ export default function ProjectsPage() {
               }
             >
               <option value="">
-                اختر العميل *
+                {ui("اختر العميل *")}
               </option>
 
               {clients.map(
@@ -621,7 +623,7 @@ export default function ProjectsPage() {
                     value={client.id}
                   >
                     {client.client_name}{" "}
-                    - ID: {client.id}
+                    {ui("- ID:")} {client.id}
                   </option>
                 )
               )}
@@ -632,7 +634,7 @@ export default function ProjectsPage() {
 
             <input
               className="border rounded-lg p-3"
-              placeholder="Project Name *"
+              placeholder={ui("Project Name *")}
               value={projectName}
               onChange={(e) =>
                 setProjectName(
@@ -645,7 +647,7 @@ export default function ProjectsPage() {
 
             <input
               className="border rounded-lg p-3"
-              placeholder="Project Number"
+              placeholder={ui("Project Number")}
               value={projectNumber}
               onChange={(e) =>
                 setProjectNumber(
@@ -658,7 +660,7 @@ export default function ProjectsPage() {
 
             <input
               className="border rounded-lg p-3"
-              placeholder="Location"
+              placeholder={ui("Location")}
               value={location}
               onChange={(e) =>
                 setLocation(
@@ -679,15 +681,15 @@ export default function ProjectsPage() {
               }
             >
               <option value="Active">
-                Active
+                {ui("Active")}
               </option>
 
               <option value="Completed">
-                Completed
+                {ui("Completed")}
               </option>
 
               <option value="On Hold">
-                On Hold
+                {ui("On Hold")}
               </option>
             </select>
 
@@ -698,7 +700,7 @@ export default function ProjectsPage() {
           <textarea
             className="border rounded-lg p-3 w-full mt-4"
             rows={4}
-            placeholder="Description"
+            placeholder={ui("Description")}
             value={description}
             onChange={(e) =>
               setDescription(
@@ -713,7 +715,7 @@ export default function ProjectsPage() {
             onClick={addProject}
             className="mt-5 bg-blue-700 hover:bg-blue-800 text-white px-5 py-3 rounded-lg"
           >
-            + Add Project
+            {ui("+ Add Project")}
           </button>
 
         </div>
@@ -725,13 +727,13 @@ export default function ProjectsPage() {
           {loading ? (
 
             <div className="p-6 text-center">
-              Loading...
+              {ui("Loading...")}
             </div>
 
           ) : projects.length === 0 ? (
 
             <div className="p-6 text-center text-gray-500">
-              No projects found
+              {ui("No projects found")}
             </div>
 
           ) : (
@@ -742,28 +744,28 @@ export default function ProjectsPage() {
 
                 <tr>
 
-                  <th className="p-3 text-left">
-                    Project
+                  <th className="p-3 text-start">
+                    {ui("Project")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Client
+                  <th className="p-3 text-start">
+                    {ui("Client")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Number
+                  <th className="p-3 text-start">
+                    {ui("Number")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Location
+                  <th className="p-3 text-start">
+                    {ui("Location")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Status
+                  <th className="p-3 text-start">
+                    {ui("Status")}
                   </th>
 
-                  <th className="p-3 text-left">
-                    Actions
+                  <th className="p-3 text-start">
+                    {ui("Actions")}
                   </th>
 
                 </tr>
@@ -807,7 +809,7 @@ export default function ProjectsPage() {
 
                           {client
                             ?.client_name ||
-                            "غير محدد"}
+                            ui("غير محدد")}
 
                         </td>
 
@@ -844,9 +846,7 @@ export default function ProjectsPage() {
                                 : "bg-yellow-600"
                             }`}
                           >
-                            {
-                              project.project_status
-                            }
+                            {ui(project.project_status)}
                           </span>
 
                         </td>
@@ -867,7 +867,7 @@ export default function ProjectsPage() {
                               }
                               className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded"
                             >
-                              Open
+                              {ui("Open")}
                             </button>
 
                             {currentUser &&
@@ -882,7 +882,7 @@ export default function ProjectsPage() {
                                   }
                                   className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                                 >
-                                  Delete
+                                  {ui("Delete")}
                                 </button>
                               )}
 

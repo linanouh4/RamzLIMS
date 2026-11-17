@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +17,7 @@ export default function ProtectedRoute({
   adminOnly = false,
   allowedRoles,
 }: Props) {
+  const ui = useUiText();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -41,7 +43,7 @@ export default function ProtectedRoute({
         if (!isCurrent()) return;
         if (error) {
           clearSavedUser();
-          setMessage("تعذر التحقق من جلسة الدخول. أعيدي المحاولة أو سجّلي الدخول مجددًا.");
+          setMessage(ui("تعذر التحقق من جلسة الدخول. أعيدي المحاولة أو سجّلي الدخول مجددًا."));
           return;
         }
         if (!data.user) {
@@ -59,14 +61,14 @@ export default function ProtectedRoute({
         if (!isCurrent()) return;
         if (profileError || !profile || profile.auth_user_id !== data.user.id) {
           clearSavedUser();
-          setMessage("تعذر تحميل حساب الموظف المرتبط بجلسة الدخول. راجعي مسؤول النظام للتحقق من الربط وصلاحية قراءة الحساب.");
+          setMessage(ui("تعذر تحميل حساب الموظف المرتبط بجلسة الدخول. راجعي مسؤول النظام للتحقق من الربط وصلاحية قراءة الحساب."));
           return;
         }
 
         const role = String(profile.role || "").trim().toLowerCase();
         if (!role) {
           clearSavedUser();
-          setMessage("لم يُحدّد دور لهذا الحساب. راجعي مسؤول النظام.");
+          setMessage(ui("لم يُحدّد دور لهذا الحساب. راجعي مسؤول النظام."));
           return;
         }
 
@@ -82,14 +84,14 @@ export default function ProtectedRoute({
 
         const roles = JSON.parse(rolesKey) as string[];
         if ((adminOnly && role !== "admin") || (roles.length > 0 && !roles.includes(role))) {
-          setMessage("ليس لديكِ صلاحية لفتح هذه الصفحة.");
+          setMessage(ui("ليس لديكِ صلاحية لفتح هذه الصفحة."));
           return;
         }
         setLoading(false);
       } catch {
         if (!isCurrent()) return;
         clearSavedUser();
-        setMessage("تعذر التحقق من صلاحية الدخول. تحققي من الاتصال وأعيدي المحاولة.");
+        setMessage(ui("تعذر التحقق من صلاحية الدخول. تحققي من الاتصال وأعيدي المحاولة."));
       }
     }
 
@@ -129,21 +131,21 @@ export default function ProtectedRoute({
 
   if (message) {
     return (
-      <div dir="rtl" className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p role="alert">{message}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <p role="alert">{ui(message)}</p>
         <button onClick={() => window.location.reload()} className="rounded-lg bg-blue-700 px-4 py-2 text-white">
-          إعادة المحاولة
+          {ui("إعادة المحاولة")}
         </button>
         <button onClick={async () => {
           const { error } = await supabase.auth.signOut();
           if (error) {
-            setMessage("تعذر إنهاء الجلسة. تحققي من الاتصال وأعيدي المحاولة.");
+            setMessage(ui("تعذر إنهاء الجلسة. تحققي من الاتصال وأعيدي المحاولة."));
             return;
           }
           clearSavedUser();
           router.replace("/");
         }} className="rounded-lg border px-4 py-2">
-          تسجيل الخروج
+          {ui("تسجيل الخروج")}
         </button>
       </div>
     );
@@ -152,7 +154,7 @@ export default function ProtectedRoute({
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        جارٍ التحقق من صلاحية الدخول...
+        {ui("جارٍ التحقق من صلاحية الدخول...")}
       </div>
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -9,6 +10,7 @@ import ExternalTestRequestForm, { RequestFields, requestFields, reviewFields, ap
 import { permissions } from "@/lib/permissions";
 
 export default function ProjectDetailsPage() {
+  const ui = useUiText();
   const params = useParams();
   const router = useRouter();
 
@@ -68,8 +70,8 @@ export default function ProjectDetailsPage() {
       if (names.error) throw names.error;
       return rows.data.map(r => ({
         id: String(r.id),
-        label: "عينة " + (projectSamples.find(s => s.id === r.sample_id)?.sample_number || r.sample_id)
-          + " — " + (names.data?.find(t => t.id === r.test_id)?.test_name || "فحص " + r.test_id)
+        label: ui("عينة ") + (projectSamples.find(s => s.id === r.sample_id)?.sample_number || r.sample_id)
+          + " — " + (names.data?.find(t => t.id === r.test_id)?.test_name || ui("فحص ") + r.test_id)
           + " (#" + r.id + ")",
       }));
     }
@@ -81,17 +83,17 @@ export default function ProjectDetailsPage() {
       if (active) setChoiceMessage("تعذّر تحميل فحوصات المشروع. أعيدي فتح النافذة للمحاولة.");
     });
     return () => { active = false; };
-  }, [id, showTaskModal, linkTaskId]);
+  }, [id, showTaskModal, linkTaskId, ui]);
 
   const sampleTestPicker = (
     <div className="mb-4">
-      <label className="block mb-2" htmlFor="task-sample-test">فحص العينة</label>
+      <label className="block mb-2" htmlFor="task-sample-test">{ui("فحص العينة")}</label>
       <select id="task-sample-test" className="w-full border rounded-lg p-3"
         value={sampleTestId} onChange={e => setSampleTestId(e.target.value)}>
-        <option value="">{linkTaskId === null ? "ربط الفحص لاحقًا" : "اختاري فحص العينة"}</option>
+        <option value="">{linkTaskId === null ? ui("ربط الفحص لاحقًا") : ui("اختاري فحص العينة")}</option>
         {choices.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
       </select>
-      {choiceMessage && <p className="mt-1 text-sm">{choiceMessage}</p>}
+      {choiceMessage && <p className="mt-1 text-sm">{ui(choiceMessage)}</p>}
     </div>
   );
 
@@ -184,29 +186,29 @@ export default function ProjectDetailsPage() {
   async function saveTask() {
     if (savingTask) return;
     if (!canAssignTask) {
-      alert("ليس لديك صلاحية إسناد المهام.");
+      alert(ui("ليس لديك صلاحية إسناد المهام."));
       return;
     }
 
     if (!hasApprovedCustomerContract) {
       alert(
-        "لا يمكن إسناد المهمة قبل إنشاء عقد العميل واعتماده من العميل."
+        ui("لا يمكن إسناد المهمة قبل إنشاء عقد العميل واعتماده من العميل.")
       );
       return;
     }
 
     if (!technicianId) {
-      alert("الرجاء اختيار الفني");
+      alert(ui("الرجاء اختيار الفني"));
       return;
     }
 
     if (!taskName.trim()) {
-      alert("الرجاء إدخال اسم المهمة");
+      alert(ui("الرجاء إدخال اسم المهمة"));
       return;
     }
 
     if (!testType) {
-      alert("الرجاء اختيار نوع الفحص");
+      alert(ui("الرجاء اختيار نوع الفحص"));
       return;
     }
 
@@ -231,7 +233,7 @@ export default function ProjectDetailsPage() {
       return;
     }
 
-    alert("تم إسناد المهمة بنجاح");
+    alert(ui("تم إسناد المهمة بنجاح"));
 
     setShowTaskModal(false);
     setTechnicianId("");
@@ -242,7 +244,7 @@ export default function ProjectDetailsPage() {
 
     await loadTasks();
     } catch {
-      alert("تعذر تأكيد حفظ المهمة. حدّثي القائمة قبل إعادة المحاولة.");
+      alert(ui("تعذر تأكيد حفظ المهمة. حدّثي القائمة قبل إعادة المحاولة."));
     } finally {
       setSavingTask(false);
     }
@@ -258,13 +260,13 @@ export default function ProjectDetailsPage() {
         .is("sample_test_id", null).select("id").maybeSingle();
       if (error) throw error;
       if (!data) {
-        alert("تعذّر الربط. تحققي من صلاحيتك وحدّثي قائمة المهام.");
+        alert(ui("تعذّر الربط. تحققي من صلاحيتك وحدّثي قائمة المهام."));
         return;
       }
       setLinkTaskId(null);
       await loadTasks();
     } catch {
-      alert("تعذّر تأكيد ربط الفحص. حدّثي قائمة المهام.");
+      alert(ui("تعذّر تأكيد ربط الفحص. حدّثي قائمة المهام."));
     } finally {
       setSavingTask(false);
     }
@@ -312,22 +314,22 @@ export default function ProjectDetailsPage() {
  async function saveExternalRequest() {
   if (savingRequest) return;
   if (!canCreateContract) {
-    alert("ليس لديك صلاحية إنشاء عقد العميل.");
+    alert(ui("ليس لديك صلاحية إنشاء عقد العميل."));
     return;
   }
 
   if (!requestedTest.trim()) {
-    alert("الرجاء إدخال الاختبار المطلوب");
+    alert(ui("الرجاء إدخال الاختبار المطلوب"));
     return;
   }
 
   if (!sampleKind.trim()) {
-    alert("الرجاء إدخال نوع العينة");
+    alert(ui("الرجاء إدخال نوع العينة"));
     return;
   }
 
   if (sampleQuantity && (!Number.isInteger(Number(sampleQuantity)) || Number(sampleQuantity) < 1)) {
-    alert("عدد العينات يجب أن يكون عددًا صحيحًا موجبًا.");
+    alert(ui("عدد العينات يجب أن يكون عددًا صحيحًا موجبًا."));
     return;
   }
   setSavingRequest(true);
@@ -353,8 +355,8 @@ export default function ProjectDetailsPage() {
       );
 
       alert(
-        "تعذر تحميل المشروع من قاعدة البيانات.\n\n" +
-          (freshProjectError?.message || "المشروع غير موجود")
+        ui("تعذر تحميل المشروع من قاعدة البيانات.\n\n") +
+          (freshProjectError?.message || ui("المشروع غير موجود"))
       );
 
       return;
@@ -371,8 +373,8 @@ export default function ProjectDetailsPage() {
       freshProject.client_id === undefined
     ) {
       alert(
-        "هذا المشروع غير مرتبط بعميل.\n\n" +
-          "يرجى ربط المشروع بعميل أولًا."
+        ui("هذا المشروع غير مرتبط بعميل.\n\n") +
+          ui("يرجى ربط المشروع بعميل أولًا.")
       );
 
       return;
@@ -406,10 +408,10 @@ export default function ProjectDetailsPage() {
       );
 
       alert(
-        "المشروع مرتبط بالعميل رقم " +
+        ui("المشروع مرتبط بالعميل رقم ") +
           clientId +
-          " لكن تعذر تحميل بيانات العميل.\n\n" +
-          (freshClientError?.message || "العميل غير موجود")
+          ui(" لكن تعذر تحميل بيانات العميل.\n\n") +
+          (freshClientError?.message || ui("العميل غير موجود"))
       );
 
       return;
@@ -511,7 +513,7 @@ export default function ProjectDetailsPage() {
       );
 
       alert(
-        "حدث خطأ أثناء حفظ عقد العميل:\n\n" +
+        ui("حدث خطأ أثناء حفظ عقد العميل:\n\n") +
           `Code: ${error.code || "-"}\n` +
           `Message: ${error.message || "-"}\n` +
           `Details: ${error.details || "-"}\n` +
@@ -527,9 +529,9 @@ export default function ProjectDetailsPage() {
     );
 
     alert(
-      `تم إنشاء طلب الفحص بنجاح\n\n` +
-        `رقم العقد: ${data?.request_no || requestNo}\n\n` +
-        `تم إصدار رابط موافقة العميل.`
+      ui("تم إنشاء طلب الفحص بنجاح") + "\n\n" +
+        ui("رقم العقد") + ": " + (data?.request_no || requestNo) + "\n\n" +
+        ui("تم إصدار رابط موافقة العميل.")
     );
 
     if (currentUser?.role === "technical_manager" && data) {
@@ -549,8 +551,8 @@ export default function ProjectDetailsPage() {
     );
 
     alert(
-      "حدث خطأ غير متوقع:\n\n" +
-        (error?.message || "خطأ غير معروف")
+      ui("حدث خطأ غير متوقع:\n\n") +
+        (error?.message || ui("خطأ غير معروف"))
     );
 
   } finally {
@@ -590,19 +592,19 @@ export default function ProjectDetailsPage() {
   // TECHNICAL MANAGER REVIEW
   async function approveTechnicalManager(request: any, draft: RequestDraft) {
     if (approvingTechnicalManager !== null) return;
-    const validation = validateReview(draft);
+    const validation = validateReview(draft, ui);
     if (validation) { alert(validation); return; }
     if (currentUser?.role !== "technical_manager") {
-      alert("هذه الصلاحية مخصصة للمدير الفني.");
+      alert(ui("هذه الصلاحية مخصصة للمدير الفني."));
       return;
     }
 
     if (!currentUser?.id || request.technical_review_status === "Approved") {
-      alert("تعذر إتمام المراجعة أو أن الطلب معتمد فنيًا مسبقًا.");
+      alert(ui("تعذر إتمام المراجعة أو أن الطلب معتمد فنيًا مسبقًا."));
       return;
     }
 
-    if (!window.confirm(`هل تؤكد المراجعة الفنية للطلب ${request.request_no}؟`)) {
+    if (!window.confirm(ui("هل تؤكد المراجعة الفنية للطلب") + " " + request.request_no + ui("؟"))) {
       return;
     }
 
@@ -619,14 +621,14 @@ export default function ProjectDetailsPage() {
       if (reviewerError) throw reviewerError;
 
       if (!reviewer) {
-        throw new Error("تعذر العثور على بيانات المدير الفني.");
+        throw new Error(ui("تعذر العثور على بيانات المدير الفني."));
       }
 
       const reviewerName =
         reviewer.full_name || reviewer.username || "المدير الفني";
 
       if (!reviewer.signature) {
-        alert("لا يوجد توقيع محفوظ لهذا المستخدم. أضيفي توقيعه من صفحة الموظفين أولًا.");
+        alert(ui("لا يوجد توقيع محفوظ لهذا المستخدم. أضيفي توقيعه من صفحة الموظفين أولًا."));
         return;
       }
 
@@ -640,10 +642,10 @@ export default function ProjectDetailsPage() {
       if (readError) throw readError;
 
       if (latest.lab_manager_approval_status === "Approved") {
-        throw new Error("الطلب معتمد من مدير المختبر ولا يمكن تغيير مراجعته الفنية.");
+        throw new Error(ui("الطلب معتمد من مدير المختبر ولا يمكن تغيير مراجعته الفنية."));
       }
       if (latest.technical_review_status === "Approved") {
-        alert("تم اعتماد الطلب فنيًا مسبقًا.");
+        alert(ui("تم اعتماد الطلب فنيًا مسبقًا."));
         await loadExternalRequests();
         return;
       }
@@ -668,17 +670,17 @@ export default function ProjectDetailsPage() {
       if (updateError) throw updateError;
 
       if (!updatedRequest || updatedRequest.length === 0) {
-        throw new Error("لم يُحفظ الاعتماد؛ ربما اعتمد مستخدم آخر الطلب.");
+        throw new Error(ui("لم يُحفظ الاعتماد؛ ربما اعتمد مستخدم آخر الطلب."));
       }
 
       setReviewRequest(null);
-      alert("تم حفظ نتيجة المراجعة الفنية والاسم والتوقيع.");
+      alert(ui("تم حفظ نتيجة المراجعة الفنية والاسم والتوقيع."));
       await loadExternalRequests();
     } catch (error: any) {
       console.error("TECHNICAL REVIEW ERROR:", error);
       alert(
-        "تعذرت المراجعة الفنية: " +
-          (error?.message || "خطأ غير معروف")
+        ui("تعذرت المراجعة الفنية: ") +
+          (error?.message || ui("خطأ غير معروف"))
       );
     } finally {
       setApprovingTechnicalManager(null);
@@ -689,26 +691,26 @@ export default function ProjectDetailsPage() {
   // APPROVE LAB MANAGER
   async function approveLabManager(request: any) {
     if (approvingLabManager !== null) return;
-    if (!isLabManager || !currentUser?.id) { alert("هذه الصلاحية مخصصة لمدير المختبر."); return; }
+    if (!isLabManager || !currentUser?.id) { alert(ui("هذه الصلاحية مخصصة لمدير المختبر.")); return; }
     if (!["مقبول للتنفيذ", "مرفوض", "معلق حتى استكمال بيانات"].includes(executionDecision)) {
-      alert("يرجى اختيار قرار التنفيذ."); return;
+      alert(ui("يرجى اختيار قرار التنفيذ.")); return;
     }
     if (request.lab_manager_approval_status === "Approved") {
-      alert("الطلب معتمد مسبقًا."); return;
+      alert(ui("الطلب معتمد مسبقًا.")); return;
     }
     if (executionDecision === "مقبول للتنفيذ" && request.technical_review_status !== "Approved") {
-      alert("يلزم قبول المراجعة الفنية قبل قبول الطلب للتنفيذ."); return;
+      alert(ui("يلزم قبول المراجعة الفنية قبل قبول الطلب للتنفيذ.")); return;
     }
     if (executionDecision === "مقبول للتنفيذ" && request.customer_approval_status !== "Approved") {
-      alert("يلزم تسجيل موافقة العميل قبل قبول الطلب للتنفيذ."); return;
+      alert(ui("يلزم تسجيل موافقة العميل قبل قبول الطلب للتنفيذ.")); return;
     }
-    if (!window.confirm("هل تؤكد تسجيل القرار: " + executionDecision + "؟")) return;
+    if (!window.confirm(ui("هل تؤكد تسجيل القرار: ") + ui(executionDecision) + ui("؟"))) return;
     setApprovingLabManager(request.id);
     try {
       const { data: manager, error: profileError } = await supabase.from("users")
         .select("id,full_name,username,signature").eq("id", Number(currentUser.id)).single();
       if (profileError) throw profileError;
-      if (!manager?.signature) throw new Error("يلزم توقيع محفوظ لمدير المختبر.");
+      if (!manager?.signature) throw new Error(ui("يلزم توقيع محفوظ لمدير المختبر."));
       const accepted = executionDecision === "مقبول للتنفيذ";
       const rejected = executionDecision === "مرفوض";
       let query = supabase.from("external_test_requests").update({
@@ -723,12 +725,12 @@ export default function ProjectDetailsPage() {
       if (accepted) query = query.eq("technical_review_status", "Approved").eq("customer_approval_status", "Approved");
       const { data, error } = await query.select("id");
       if (error) throw error;
-      if (!data?.length) throw new Error("لم يحفظ القرار. ربما تغيرت حالة الطلب. حدّثي الصفحة.");
+      if (!data?.length) throw new Error(ui("لم يحفظ القرار. ربما تغيرت حالة الطلب. حدّثي الصفحة."));
       setDecisionRequest(null);
       await loadExternalRequests();
-      alert("تم حفظ قرار مدير المختبر.");
+      alert(ui("تم حفظ قرار مدير المختبر."));
     } catch (error: any) {
-      alert("تعذر حفظ القرار: " + (error?.message || "خطأ غير معروف"));
+      alert(ui("تعذر حفظ القرار: ") + (error?.message || ui("خطأ غير معروف")));
     } finally { setApprovingLabManager(null); }
   }
 
@@ -736,7 +738,7 @@ export default function ProjectDetailsPage() {
     if (!canCreateContract || !consentRequest || savingConsent) return;
     if (!["واتساب/بريد موثق", "أمر شراء"].includes(consentDraft.customer_approval_method) ||
         !consentDraft.customer_approval_evidence?.trim() || !consentName.trim()) {
-      alert("يلزم اسم ممثل العميل وطريقة الموافقة ومرجع الدليل الموثق."); return;
+      alert(ui("يلزم اسم ممثل العميل وطريقة الموافقة ومرجع الدليل الموثق.")); return;
     }
     setSavingConsent(true);
     try {
@@ -748,11 +750,11 @@ export default function ProjectDetailsPage() {
       }).eq("id", consentRequest.id).eq("updated_at", consentRequest.updated_at).eq("customer_approval_status", "Pending")
         .neq("lab_manager_approval_status", "Approved").select("id");
       if (error) throw error;
-      if (!data?.length) throw new Error("تغيرت حالة الطلب أو تعذر حفظ الموافقة.");
+      if (!data?.length) throw new Error(ui("تغيرت حالة الطلب أو تعذر حفظ الموافقة."));
       setConsentRequest(null);
       await loadExternalRequests();
-      alert("تم تسجيل موافقة العميل ومرجعها. احتفظي بالدليل الأصلي في سجلات المختبر.");
-    } catch (error: any) { alert(error?.message || "تعذر حفظ الموافقة."); }
+      alert(ui("تم تسجيل موافقة العميل ومرجعها. احتفظي بالدليل الأصلي في سجلات المختبر."));
+    } catch (error: any) { alert(error?.message || ui("تعذر حفظ الموافقة.")); }
     finally { setSavingConsent(false); }
   }
   // =========================
@@ -780,7 +782,7 @@ async function loadProject() {
       console.error("PROJECT LOAD ERROR:", projectError);
 
       alert(
-        "حدث خطأ أثناء تحميل المشروع:\n\n" +
+        ui("حدث خطأ أثناء تحميل المشروع:\n\n") +
           `Code: ${projectError.code || "-"}\n` +
           `Message: ${projectError.message || "-"}\n` +
           `Details: ${projectError.details || "-"}\n` +
@@ -794,7 +796,7 @@ async function loadProject() {
     if (!projectData) {
       console.warn("لم يتم العثور على المشروع:", id);
 
-      alert("لم يتم العثور على بيانات المشروع.");
+      alert(ui("لم يتم العثور على بيانات المشروع."));
 
       setProject(null);
       return;
@@ -830,9 +832,9 @@ async function loadProject() {
         console.error("CLIENT LOAD ERROR:", error);
 
         alert(
-          "المشروع مرتبط بالعميل رقم " +
+          ui("المشروع مرتبط بالعميل رقم ") +
             projectData.client_id +
-            " لكن حدث خطأ أثناء تحميل بيانات العميل:\n\n" +
+            ui(" لكن حدث خطأ أثناء تحميل بيانات العميل:\n\n") +
             error.message
         );
       } else if (data) {
@@ -854,9 +856,9 @@ async function loadProject() {
         );
 
         alert(
-          "المشروع مرتبط بالعميل رقم " +
+          ui("المشروع مرتبط بالعميل رقم ") +
             projectData.client_id +
-            " لكن لم يتم العثور على بياناته في جدول العملاء."
+            ui(" لكن لم يتم العثور على بياناته في جدول العملاء.")
         );
       }
     } else {
@@ -869,8 +871,8 @@ async function loadProject() {
       );
 
       alert(
-        "هذا المشروع غير مرتبط بعميل.\n\n" +
-          "Project ID: " +
+        ui("هذا المشروع غير مرتبط بعميل.\n\n") +
+          ui("Project ID: ") +
           projectData.id
       );
     }
@@ -961,8 +963,8 @@ async function loadProject() {
     );
 
     alert(
-      "حدث خطأ غير متوقع أثناء تحميل المشروع:\n\n" +
-        (error?.message || "خطأ غير معروف")
+      ui("حدث خطأ غير متوقع أثناء تحميل المشروع:\n\n") +
+        (error?.message || ui("خطأ غير معروف"))
     );
   } finally {
     setLoading(false);
@@ -1042,7 +1044,7 @@ async function loadProject() {
   ) {
     if (!request.approval_token) {
       alert(
-        "لا يوجد رابط موافقة لهذا العقد."
+        ui("لا يوجد رابط موافقة لهذا العقد.")
       );
       return;
     }
@@ -1056,7 +1058,7 @@ async function loadProject() {
       );
 
       alert(
-        "تم نسخ رابط موافقة العميل."
+        ui("تم نسخ رابط موافقة العميل.")
       );
     } catch (error) {
       console.error(
@@ -1080,7 +1082,7 @@ async function loadProject() {
   ) {
     if (!request.approval_token) {
       alert(
-        "لا يوجد رابط موافقة لهذا العقد."
+        ui("لا يوجد رابط موافقة لهذا العقد.")
       );
       return;
     }
@@ -1109,17 +1111,17 @@ async function loadProject() {
     event.target.value = "";
 
     if (!isLabManager) {
-      alert("رفع ختم الشركة مخصص لمسؤول النظام فقط.");
+      alert(ui("رفع ختم الشركة مخصص لمسؤول النظام فقط."));
       return;
     }
 
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      alert("يرجى اختيار صورة PNG أو JPG أو WEBP.");
+      alert(ui("يرجى اختيار صورة PNG أو JPG أو WEBP."));
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("يجب ألا يتجاوز حجم صورة الختم 5 ميجابايت.");
+      alert(ui("يجب ألا يتجاوز حجم صورة الختم 5 ميجابايت."));
       return;
     }
 
@@ -1132,7 +1134,7 @@ async function loadProject() {
             const result = String(reader.result || "");
 
             if (!result) {
-              reject(new Error("تعذرت قراءة صورة الختم."));
+              reject(new Error(ui("تعذرت قراءة صورة الختم.")));
               return;
             }
 
@@ -1140,7 +1142,7 @@ async function loadProject() {
           };
 
           reader.onerror = () =>
-            reject(new Error("حدث خطأ أثناء قراءة صورة الختم."));
+            reject(new Error(ui("حدث خطأ أثناء قراءة صورة الختم.")));
 
           reader.readAsDataURL(file);
         }
@@ -1155,19 +1157,19 @@ async function loadProject() {
 
       if (error) throw error;
 
-      alert("تم حفظ ختم الشركة بنجاح.");
+      alert(ui("تم حفظ ختم الشركة بنجاح."));
       await loadExternalRequests();
     } catch (error: any) {
       console.error("TECHNICAL MANAGER STAMP ERROR:", error);
       alert(
-        "تعذر حفظ الختم: " +
-          (error?.message || "خطأ غير معروف")
+        ui("تعذر حفظ الختم: ") +
+          (error?.message || ui("خطأ غير معروف"))
       );
     }
   }
 
   function printExternalRequest(request: any) {
-    printExternalForm(request.id);
+    printExternalForm(request.id, ui);
   }
 
   // =========================
@@ -1221,7 +1223,7 @@ async function loadProject() {
   async function deleteTestTasks() {
     if (!isAdmin) {
       alert(
-        "ليس لديك صلاحية حذف المهام التجريبية."
+        ui("ليس لديك صلاحية حذف المهام التجريبية.")
       );
       return;
     }
@@ -1232,13 +1234,13 @@ async function loadProject() {
 
     if (testTasks.length === 0) {
       alert(
-        "لا توجد مهام تجريبية لحذفها."
+        ui("لا توجد مهام تجريبية لحذفها.")
       );
       return;
     }
 
     const confirmed = window.confirm(
-      `سيتم حذف ${testTasks.length} مهمة تجريبية نهائيًا.\n\nهل أنت متأكد؟`
+      ui("سيتم حذف المهام التجريبية نهائيًا. العدد") + " " + testTasks.length + ui("؟")
     );
 
     if (!confirmed) {
@@ -1258,14 +1260,14 @@ async function loadProject() {
 
       if (error) {
         alert(
-          "حدث خطأ أثناء حذف المهام:\n" +
+          ui("حدث خطأ أثناء حذف المهام:\n") +
             error.message
         );
         return;
       }
 
       alert(
-        "تم حذف جميع المهام التجريبية بنجاح."
+        ui("تم حذف جميع المهام التجريبية بنجاح.")
       );
 
       await loadTasks();
@@ -1282,7 +1284,7 @@ async function loadProject() {
     return (
       <ProtectedRoute>
         <div className="p-8 text-center">
-          Loading project...
+          {ui("Loading project...")}
         </div>
       </ProtectedRoute>
     );
@@ -1292,7 +1294,7 @@ async function loadProject() {
     return (
       <ProtectedRoute>
         <div className="p-8 text-center">
-          Project not found
+          {ui("Project not found")}
         </div>
       </ProtectedRoute>
     );
@@ -1316,11 +1318,11 @@ async function loadProject() {
   onClick={() => router.push("/dashboard")}
   className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
 >
-  ← العودة للوحة التحكم
+  {ui("← العودة للوحة التحكم")}
 </button>
 
           <h1 className="text-3xl font-bold text-blue-900">
-            Project Details
+            {ui("Project Details")}
           </h1>
 
         </div>
@@ -1339,13 +1341,13 @@ async function loadProject() {
 
               <p className="text-gray-500 mt-2">
                 {project.description ||
-                  "No description provided"}
+                  ui("No description provided")}
               </p>
 
               {project.client_name && (
   <div className="mt-4 text-sm">
     <span className="text-gray-500">
-      العميل:
+      {ui("العميل:")}
     </span>{" "}
 
     <span className="font-semibold">
@@ -1357,7 +1359,7 @@ async function loadProject() {
             </div>
 
             <span className="px-3 py-1 rounded-full text-sm text-white bg-green-600">
-              {project.project_status}
+              {ui(project.project_status)}
             </span>
 
           </div>
@@ -1367,7 +1369,7 @@ async function loadProject() {
             <div className="border rounded-lg p-4">
 
               <p className="text-sm text-gray-500">
-                Project Number
+                {ui("Project Number")}
               </p>
 
               <p className="font-semibold">
@@ -1379,7 +1381,7 @@ async function loadProject() {
             <div className="border rounded-lg p-4">
 
               <p className="text-sm text-gray-500">
-                Location
+                {ui("Location")}
               </p>
 
               <p className="font-semibold">
@@ -1391,7 +1393,7 @@ async function loadProject() {
             <div className="border rounded-lg p-4">
 
               <p className="text-sm text-gray-500">
-                Samples Count
+                {ui("Samples Count")}
               </p>
 
               <p className="font-semibold">
@@ -1415,11 +1417,11 @@ async function loadProject() {
             <div>
 
               <h3 className="text-xl font-bold text-blue-900">
-                📝 عقد العميل
+                {ui("📝 عقد العميل")}
               </h3>
 
               <p className="text-sm text-gray-500 mt-1">
-                عقد العميل وطلب الفحص والموافقة والتوقيع الإلكتروني
+                {ui("عقد العميل وطلب الفحص والموافقة والتوقيع الإلكتروني")}
               </p>
 
             </div>
@@ -1432,7 +1434,7 @@ async function loadProject() {
                 }}
                 className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
               >
-                + إنشاء عقد عميل
+                {ui("+ إنشاء عقد عميل")}
               </button>
             )}
 
@@ -1442,7 +1444,7 @@ async function loadProject() {
   <div className="border border-yellow-300 bg-yellow-50 text-yellow-800 rounded-lg p-4 mb-4">
     {project.client_name
       ? `المشروع مرتبط بالعميل: ${project.client_name}، لكن لم يتم العثور على بيانات العميل في جدول العملاء.`
-      : "لا يمكن إنشاء عقد لأن المشروع غير مرتبط بعميل."}
+      : ui("لا يمكن إنشاء عقد لأن المشروع غير مرتبط بعميل.")}
   </div>
 )}
           {externalRequests.length === 0 ? (
@@ -1450,11 +1452,11 @@ async function loadProject() {
             <div className="border border-dashed rounded-lg p-8 text-center">
 
               <p className="text-gray-500 mb-2">
-                لم يتم إنشاء عقد للعميل لهذا المشروع.
+                {ui("لم يتم إنشاء عقد للعميل لهذا المشروع.")}
               </p>
 
               <p className="text-sm text-gray-400">
-                يجب إنشاء العقد وإرسال رابط الموافقة للعميل قبل إسناد المهام.
+                {ui("يجب إنشاء العقد وإرسال رابط الموافقة للعميل قبل إسناد المهام.")}
               </p>
 
             </div>
@@ -1511,13 +1513,13 @@ async function loadProject() {
                           {customerApproved ? (
 
                             <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full">
-                              🟢 العميل وافق ووقّع
+                              {ui("🟢 العميل وافق ووقّع")}
                             </span>
 
                           ) : (
 
                             <span className="bg-yellow-500 text-white text-xs px-3 py-1 rounded-full">
-                              🟡 بانتظار العميل
+                              {ui("🟡 بانتظار العميل")}
                             </span>
 
                           )}
@@ -1525,13 +1527,13 @@ async function loadProject() {
                           {labApproved ? (
 
                             <span className="bg-purple-700 text-white text-xs px-3 py-1 rounded-full">
-                              🧪 معتمد من مدير المختبر
+                              {ui("🧪 معتمد من مدير المختبر")}
                             </span>
 
                           ) : (
 
                             <span className="bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full">
-                              🧪 بانتظار مدير المختبر
+                              {ui("🧪 بانتظار مدير المختبر")}
                             </span>
 
                           )}
@@ -1541,42 +1543,42 @@ async function loadProject() {
                         <div className="mt-4 grid md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
 
                           <p>
-                            العميل:{" "}
+                            {ui("العميل:")}{" "}
                             <strong>
                               {request.customer_name || "-"}
                             </strong>
                           </p>
 
                           <p>
-                            المشروع:{" "}
+                            {ui("المشروع:")}{" "}
                             <strong>
                               {project.project_name}
                             </strong>
                           </p>
 
                           <p>
-                            الاختبار:{" "}
+                            {ui("الاختبار:")}{" "}
                             <strong>
                               {request.requested_test || "-"}
                             </strong>
                           </p>
 
                           <p>
-                            نوع العينة:{" "}
+                            {ui("نوع العينة:")}{" "}
                             <strong>
                               {request.sample_kind || "-"}
                             </strong>
                           </p>
 
                           <p>
-                            العدد:{" "}
+                            {ui("العدد:")}{" "}
                             <strong>
                               {request.quantity ?? "-"}
                             </strong>
                           </p>
 
                           <p>
-                            طريقة الاختبار:{" "}
+                            {ui("طريقة الاختبار:")}{" "}
                             <strong>
                               {request.test_method || "-"}
                             </strong>
@@ -1593,7 +1595,7 @@ async function loadProject() {
                     <div className="mt-5 border-t pt-4">
 
                       <h4 className="font-bold mb-2">
-                        موافقة العميل
+                        {ui("موافقة العميل")}
                       </h4>
 
                       {customerApproved ? (
@@ -1601,11 +1603,11 @@ async function loadProject() {
                         <div className="text-sm space-y-1">
 
                           <p className="text-green-700 font-semibold">
-                            🟢 تم اعتماد العقد وتوقيعه من العميل
+                            {ui("🟢 تم اعتماد العقد وتوقيعه من العميل")}
                           </p>
 
                           <p>
-                            اسم المعتمد:{" "}
+                            {ui("اسم المعتمد:")}{" "}
                             <strong>
                               {request.customer_approved_by ||
                                 "-"}
@@ -1613,7 +1615,7 @@ async function loadProject() {
                           </p>
 
                           <p>
-                            تاريخ الاعتماد:{" "}
+                            {ui("تاريخ الاعتماد:")}{" "}
                             <strong>
                               {approvalDate || "-"}
                             </strong>
@@ -1623,14 +1625,14 @@ async function loadProject() {
                             <div className="mt-3">
 
                               <p className="text-xs text-gray-500 mb-2">
-                                توقيع العميل:
+                                {ui("توقيع العميل:")}
                               </p>
 
                               <img
                                 src={
                                   request.customer_signature
                                 }
-                                alt="توقيع العميل"
+                                alt={ui("توقيع العميل")}
                                 className="max-w-[250px] max-h-[100px] object-contain border rounded-lg bg-white p-2"
                               />
 
@@ -1642,14 +1644,14 @@ async function loadProject() {
                       ) : (
 
                         <p className="text-yellow-700 font-medium">
-                          🟡 لم يوافق العميل على العقد حتى الآن.
+                          {ui("🟡 لم يوافق العميل على العقد حتى الآن.")}
                         </p>
 
                       )}
 
                     </div>
                     <details className="mt-5 border-t pt-4">
-                      <summary className="cursor-pointer font-bold">عرض نموذج طلب الفحص QF 701/02 كاملًا</summary>
+                      <summary className="cursor-pointer font-bold">{ui("عرض نموذج طلب الفحص QF 701/02 كاملًا")}</summary>
                       <ExternalTestRequestForm request={request} projectName={request.project_name || project.project_name} />
                     </details>
                     {canCreateContract && request.customer_approval_status === "Pending" && !labApproved && (
@@ -1657,29 +1659,29 @@ async function loadProject() {
                         setConsentRequest(request);
                         setConsentDraft(toDraft(request, approvalFields));
                         setConsentName(request.customer_approved_by || "");
-                      }}>تسجيل موافقة موثقة أو أمر شراء</button>
+                      }}>{ui("تسجيل موافقة موثقة أو أمر شراء")}</button>
                     )}
                     {/* TECHNICAL MANAGER */}
                     <div className="mt-5 border-t pt-4">
                       <h4 className="font-bold mb-2">
-                        اعتماد المدير الفني
+                        {ui("اعتماد المدير الفني")}
                       </h4>
 
                       {request.technical_review_status === "Approved" ? (
                         <div className="text-sm space-y-2">
                           <p className="text-green-700 font-semibold">
-                            تم اعتماد الطلب فنيًا
+                            {ui("تم اعتماد الطلب فنيًا")}
                           </p>
 
                           <p>
-                            الاسم:{" "}
+                            {ui("الاسم:")}{" "}
                             <strong>
                               {request.technical_reviewed_by_name || "-"}
                             </strong>
                           </p>
 
                           <p>
-                            تاريخ الاعتماد:{" "}
+                            {ui("تاريخ الاعتماد:")}{" "}
                             <strong>
                               {request.reviewed_at
                                 ? new Date(request.reviewed_at).toLocaleString(
@@ -1692,7 +1694,7 @@ async function loadProject() {
                           {request.technical_manager_signature && (
                             <img
                               src={request.technical_manager_signature}
-                              alt="توقيع المدير الفني"
+                              alt={ui("توقيع المدير الفني")}
                               className="max-w-[250px] max-h-[100px] object-contain border rounded-lg bg-white p-2"
                             />
                           )}
@@ -1700,7 +1702,7 @@ async function loadProject() {
                       ) : (
                         <div>
                           <p className="text-amber-700 mb-3">
-                            {request.technical_review_status === "Rejected" ? "المراجعة الفنية مرفوضة" : "بانتظار المراجعة الفنية"}
+                            {request.technical_review_status === "Rejected" ? ui("المراجعة الفنية مرفوضة") : ui("بانتظار المراجعة الفنية")}
                           </p>
 
                           {currentUser?.role === "technical_manager" && (
@@ -1716,8 +1718,8 @@ async function loadProject() {
                               className="bg-green-700 hover:bg-green-800 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg"
                             >
                               {approvingTechnicalManager === request.id
-                                ? "جارٍ الاعتماد الفني..."
-                                : "اعتماد المدير الفني"}
+                                ? ui("جارٍ الاعتماد الفني...")
+                                : ui("اعتماد المدير الفني")}
                             </button>
                           )}
                         </div>
@@ -1728,7 +1730,7 @@ async function loadProject() {
                     <div className="mt-5 border-t pt-4">
 
                       <h4 className="font-bold mb-2">
-                        اعتماد مدير المختبر
+                        {ui("اعتماد مدير المختبر")}
                       </h4>
 
                       {labApproved ? (
@@ -1736,11 +1738,11 @@ async function loadProject() {
                         <div className="text-sm space-y-1">
 
                           <p className="text-purple-700 font-semibold">
-                            🧪 تم اعتماد العقد من مدير المختبر
+                            {ui("🧪 تم اعتماد العقد من مدير المختبر")}
                           </p>
 
                           <p>
-                            الاسم:{" "}
+                            {ui("الاسم:")}{" "}
                             <strong>
                               {request.lab_manager_approved_by_name ||
                                 "-"}
@@ -1748,7 +1750,7 @@ async function loadProject() {
                           </p>
 
                           <p>
-                            التاريخ:{" "}
+                            {ui("التاريخ:")}{" "}
                             <strong>
                               {labApprovalDate || "-"}
                             </strong>
@@ -1761,7 +1763,7 @@ async function loadProject() {
                         <div>
 
                           <p className="text-purple-700 mb-3">
-                            {request.execution_decision || "بانتظار قرار مدير المختبر"}
+                            {ui(request.execution_decision || "بانتظار قرار مدير المختبر")}
                           </p>
 
                           {isLabManager && (
@@ -1780,8 +1782,8 @@ async function loadProject() {
                             >
                               {approvingLabManager ===
                               request.id
-                                ? "جاري الاعتماد..."
-                                : "🧪 اعتماد العقد"}
+                                ? ui("جاري الاعتماد...")
+                                : ui("🧪 اعتماد العقد")}
                             </button>
 
                           )}
@@ -1809,7 +1811,7 @@ async function loadProject() {
                               }
                               className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm"
                             >
-                              🔗 نسخ رابط موافقة العميل
+                              {ui("🔗 نسخ رابط موافقة العميل")}
                             </button>
 
                             <button
@@ -1821,7 +1823,7 @@ async function loadProject() {
                               }
                               className="border border-blue-700 text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm"
                             >
-                              🌐 فتح رابط الموافقة
+                              {ui("🌐 فتح رابط الموافقة")}
                             </button>
                           </>
 
@@ -1836,12 +1838,12 @@ async function loadProject() {
                         }
                         className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm"
                       >
-                        🖨️ طباعة العقد
+                        {ui("🖨️ طباعة العقد")}
                       </button>
 
                       {isLabManager && (
                         <label className="border border-purple-700 text-purple-700 hover:bg-purple-50 px-4 py-2 rounded-lg text-sm cursor-pointer">
-                          رفع ختم الشركة
+                          {ui("رفع ختم الشركة")}
                           <input
                             type="file"
                             accept="image/png,image/jpeg,image/webp"
@@ -1863,10 +1865,10 @@ async function loadProject() {
                             type="button"
                             onClick={() => {
                               const popup = window.open("", "_blank");
-                              if (!popup) { alert("يرجى السماح بالنوافذ المنبثقة."); return; }
+                              if (!popup) { alert(ui("يرجى السماح بالنوافذ المنبثقة.")); return; }
                               popup.opener = null;
                               const title = popup.document.createElement("h2");
-                              title.textContent = "توقيع العميل";
+                              title.textContent = ui("توقيع العميل");
                               const name = popup.document.createElement("p");
                               name.textContent = request.customer_approved_by || "";
                               const image = popup.document.createElement("img");
@@ -1882,7 +1884,7 @@ async function loadProject() {
                             }}
                             className="border border-green-600 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg text-sm"
                           >
-                            ✍️ عرض توقيع العميل
+                            {ui("✍️ عرض توقيع العميل")}
                           </button>
 
                         )}
@@ -1913,7 +1915,7 @@ async function loadProject() {
 
                 if (!hasApprovedCustomerContract) {
                   alert(
-                    "يجب أولًا إنشاء عقد العميل وإرسال الرابط والحصول على موافقته وتوقيعه."
+                    ui("يجب أولًا إنشاء عقد العميل وإرسال الرابط والحصول على موافقته وتوقيعه.")
                   );
                   return;
                 }
@@ -1926,7 +1928,7 @@ async function loadProject() {
                   : "bg-gray-400"
               }`}
             >
-              📋 إسناد مهمة
+              {ui("📋 إسناد مهمة")}
             </button>
 
           )}
@@ -1939,8 +1941,8 @@ async function loadProject() {
               className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg"
             >
               {deletingTasks
-                ? "جاري الحذف..."
-                : "🗑️ حذف المهام التجريبية"}
+                ? ui("جاري الحذف...")
+                : ui("🗑️ حذف المهام التجريبية")}
             </button>
 
           )}
@@ -1956,11 +1958,11 @@ async function loadProject() {
           <div className="flex justify-between items-center mb-4">
 
             <h3 className="text-xl font-bold">
-              المهام المسندة
+              {ui("المهام المسندة")}
             </h3>
 
             <span className="text-sm text-gray-500">
-              عدد المهام: {tasks.length}
+              {ui("عدد المهام:")} {tasks.length}
             </span>
 
           </div>
@@ -1968,7 +1970,7 @@ async function loadProject() {
           {!hasApprovedCustomerContract && (
 
             <div className="mb-4 border border-yellow-300 bg-yellow-50 text-yellow-800 rounded-lg p-4">
-              🔒 إسناد المهام مقفول حتى تتم موافقة العميل وتوقيعه على العقد.
+              {ui("🔒 إسناد المهام مقفول حتى تتم موافقة العميل وتوقيعه على العقد.")}
             </div>
 
           )}
@@ -1976,7 +1978,7 @@ async function loadProject() {
           {tasks.length === 0 ? (
 
             <p className="text-gray-500">
-              لا توجد مهام مسندة لهذا المشروع.
+              {ui("لا توجد مهام مسندة لهذا المشروع.")}
             </p>
 
           ) : (
@@ -2014,7 +2016,7 @@ async function loadProject() {
                           {task.is_test && (
 
                             <span className="text-xs bg-orange-500 text-white px-2 py-1 rounded-full">
-                              تجريبية
+                              {ui("تجريبية")}
                             </span>
 
                           )}
@@ -2029,7 +2031,7 @@ async function loadProject() {
 
                                 const confirmed =
                                   window.confirm(
-                                    `هل أنت متأكد من حذف المهمة رقم ${task.id}؟`
+                                    ui("هل تريد حذف المهمة رقم") + " " + task.id + ui("؟")
                                   );
 
                                 if (!confirmed) {
@@ -2053,7 +2055,7 @@ async function loadProject() {
 
                                 if (error) {
                                   alert(
-                                    "خطأ في حذف المهمة:\n" +
+                                    ui("خطأ في حذف المهمة:\n") +
                                       error.message
                                   );
                                   return;
@@ -2071,52 +2073,51 @@ async function loadProject() {
                               }}
                               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg mt-2"
                             >
-                              🗑️ حذف المهمة
+                              {ui("🗑️ حذف المهمة")}
                             </button>
 
                           )}
 
                         <p className="text-sm text-gray-600 mt-1">
                           {task.task_description ||
-                            "لا يوجد وصف"}
+                            ui("لا يوجد وصف")}
                         </p>
 
                         <div className="mt-2 text-sm space-y-1">
 
                           <p>
-                            👨‍🔬 الفني:{" "}
+                            {ui("👨‍🔬 الفني:")}{" "}
                             <span className="font-semibold">
                               {technician?.full_name ||
                                 technician?.username ||
-                                "غير محدد"}
+                                ui("غير محدد")}
                             </span>
                           </p>
 
                           <p>
-                            🧪 نوع الفحص:{" "}
+                            {ui("🧪 نوع الفحص:")}{" "}
                             {task.test_type || "-"}
                           </p>
 
                           <p>
-                            الأولوية:{" "}
-                            {task.priority || "عادي"}
+                            {ui("الأولوية:")}{" "}
+                            {ui(task.priority || "عادي")}
                           </p>
 
                           <p>
-                            الحالة:{" "}
-                            {task.status ||
-                              "بانتظار البدء"}
+                            {ui("الحالة:")}{" "}
+                            {ui(task.status || "بانتظار البدء")}
                           </p>
 
                           <p className="text-xs text-gray-400">
-                            رقم المهمة: {task.id}
+                            {ui("رقم المهمة:")} {task.id}
                           </p>
                           {task.sample_test_id ? (
-                            <p>رقم سجل فحص العينة: {task.sample_test_id}</p>
+                            <p>{ui("رقم سجل فحص العينة:")} {task.sample_test_id}</p>
                           ) : canAssignTask && (
                             <button type="button" className="text-blue-700 underline"
                               onClick={() => { setSampleTestId(""); setLinkTaskId(task.id); }}>
-                              ربط فحص عينة
+                              {ui("ربط فحص عينة")}
                             </button>
                           )}
 
@@ -2144,13 +2145,13 @@ async function loadProject() {
         <div className="bg-white rounded-xl shadow p-6">
 
           <h3 className="text-xl font-bold mb-4">
-            Associated Samples
+            {ui("Associated Samples")}
           </h3>
 
           {samples.length === 0 ? (
 
             <p className="text-gray-500">
-              No samples linked to this project yet.
+              {ui("No samples linked to this project yet.")}
             </p>
 
           ) : (
@@ -2173,16 +2174,15 @@ async function loadProject() {
 
                     <p className="text-sm text-gray-500">
                       {sample.sample_type ||
-                        "Unknown type"}
+                        ui("Unknown type")}
                     </p>
 
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-end">
 
                     <p className="text-sm font-medium">
-                      {sample.status ||
-                        "Pending"}
+                      {ui(sample.status || "Pending")}
                     </p>
 
                     <p className="text-xs text-gray-400">
@@ -2215,13 +2215,13 @@ async function loadProject() {
           <div className="bg-white rounded-xl p-6 w-full max-w-lg">
 
             <h2 className="text-2xl font-bold mb-6">
-              📋 إسناد مهمة لفني
+              {ui("📋 إسناد مهمة لفني")}
             </h2>
 
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">
-                الفني
+                {ui("الفني")}
               </label>
 
               <select
@@ -2233,7 +2233,7 @@ async function loadProject() {
               >
 
                 <option value="">
-                  اختر الفني
+                  {ui("اختر الفني")}
                 </option>
 
                 {technicians.map((tech) => (
@@ -2254,7 +2254,7 @@ async function loadProject() {
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">
-                نوع الفحص
+                {ui("نوع الفحص")}
               </label>
 
               <select
@@ -2266,15 +2266,15 @@ async function loadProject() {
               >
 
                 <option value="">
-                  اختر نوع الفحص
+                  {ui("اختر نوع الفحص")}
                 </option>
 
                 <option value="concrete-strength">
-                  فحص قوة عينات الخرسانة الأسمنتية
+                  {ui("فحص قوة عينات الخرسانة الأسمنتية")}
                 </option>
 
                 <option value="field-density">
-                  اختبار الكثافة الحقلية بطريقة المخروط الرملي
+                  {ui("اختبار الكثافة الحقلية بطريقة المخروط الرملي")}
                 </option>
 
               </select>
@@ -2286,7 +2286,7 @@ async function loadProject() {
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">
-                اسم المهمة
+                {ui("اسم المهمة")}
               </label>
 
               <input
@@ -2296,7 +2296,7 @@ async function loadProject() {
                   setTaskName(e.target.value)
                 }
                 className="w-full border rounded-lg p-3"
-                placeholder="مثال: أخذ عينات تربة"
+                placeholder={ui("مثال: أخذ عينات تربة")}
               />
 
             </div>
@@ -2304,7 +2304,7 @@ async function loadProject() {
             <div className="mb-4">
 
               <label className="block mb-2 font-medium">
-                وصف المهمة
+                {ui("وصف المهمة")}
               </label>
 
               <textarea
@@ -2316,7 +2316,7 @@ async function loadProject() {
                 }
                 className="w-full border rounded-lg p-3"
                 rows={4}
-                placeholder="اكتب تفاصيل المهمة..."
+                placeholder={ui("اكتب تفاصيل المهمة...")}
               />
 
             </div>
@@ -2324,7 +2324,7 @@ async function loadProject() {
             <div className="mb-6">
 
               <label className="block mb-2 font-medium">
-                الأولوية
+                {ui("الأولوية")}
               </label>
 
               <select
@@ -2336,15 +2336,15 @@ async function loadProject() {
               >
 
                 <option value="منخفضة">
-                  منخفضة
+                  {ui("منخفضة")}
                 </option>
 
                 <option value="عادي">
-                  عادي
+                  {ui("عادي")}
                 </option>
 
                 <option value="عالية">
-                  عالية
+                  {ui("عالية")}
                 </option>
 
               </select>
@@ -2359,7 +2359,7 @@ async function loadProject() {
                 }
                 className="border border-gray-300 px-5 py-2 rounded-lg"
               >
-                إلغاء
+                {ui("إلغاء")}
               </button>
 
               <button
@@ -2367,7 +2367,7 @@ async function loadProject() {
                 onClick={saveTask}
                 className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg"
               >
-                حفظ المهمة
+                {ui("حفظ المهمة")}
               </button>
 
             </div>
@@ -2381,12 +2381,12 @@ async function loadProject() {
       {linkTaskId !== null && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-lg">
-            <h2 className="font-bold text-xl mb-4">ربط فحص بالمهمة رقم {linkTaskId}</h2>
+            <h2 className="font-bold text-xl mb-4">{ui("ربط فحص بالمهمة رقم")} {linkTaskId}</h2>
             {sampleTestPicker}
             <div className="flex gap-3">
               <button type="button" disabled={savingTask || !sampleTestId}
-                onClick={linkExistingTask} className="bg-blue-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">حفظ الربط</button>
-              <button type="button" disabled={savingTask} onClick={() => setLinkTaskId(null)}>إلغاء</button>
+                onClick={linkExistingTask} className="bg-blue-700 text-white rounded-lg px-4 py-2 disabled:opacity-50">{ui("حفظ الربط")}</button>
+              <button type="button" disabled={savingTask} onClick={() => setLinkTaskId(null)}>{ui("إلغاء")}</button>
             </div>
           </div>
         </div>
@@ -2398,30 +2398,30 @@ async function loadProject() {
 
       {showRequestModal && (
 
-        <div role="dialog" aria-modal="true" aria-labelledby="qf-create-title" dir="rtl" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div role="dialog" aria-modal="true" aria-labelledby="qf-create-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6">
             <header className="mb-5 flex items-start justify-between border-b pb-3">
-              <div><h2 id="qf-create-title" className="text-xl font-bold">إنشاء طلب فحص خارجي</h2>
-                <p dir="ltr">External Test Request · QF 701/02</p>
-                <small>الإصدار/المراجعة 2/4 · تاريخ المراجعة 12/08/2026</small></div>
-              <button aria-label="إغلاق" disabled={savingRequest} onClick={() => setShowRequestModal(false)}>✕</button>
+              <div><h2 id="qf-create-title" className="text-xl font-bold">{ui("إنشاء طلب فحص خارجي")}</h2>
+                <p dir="ltr">{ui("External Test Request · QF 701/02")}</p>
+                <small>{ui("الإصدار/المراجعة 2/4 · تاريخ المراجعة 12/08/2026")}</small></div>
+              <button aria-label={ui("إغلاق")} disabled={savingRequest} onClick={() => setShowRequestModal(false)}>✕</button>
             </header>
-<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">العميل والمشروع</legend><div className="grid gap-3 sm:grid-cols-2"><label>اسم العميل<input className="mt-1 block w-full rounded border p-2" type="text" value={client?.client_name || ""} readOnly /></label>
-<label>اسم المشروع أو رقم القطعة<input className="mt-1 block w-full rounded border p-2" type="text" value={project.project_name || ""} readOnly /></label>
-<label>مسؤول الاتصال<input className="mt-1 block w-full rounded border p-2" type="text" value={requestContactPerson} onChange={e => setRequestContactPerson(e.target.value)} /></label>
-<label>الهاتف<input className="mt-1 block w-full rounded border p-2" type="tel" value={requestTelephone} onChange={e => setRequestTelephone(e.target.value)} /></label>
-<label>رقم طلب العميل<input className="mt-1 block w-full rounded border p-2" type="text" value={orderNo} onChange={e => setOrderNo(e.target.value)} /></label>
-<label>تاريخ الطلب<input className="mt-1 block w-full rounded border p-2" type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} /></label>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">{ui("العميل والمشروع")}</legend><div className="grid gap-3 sm:grid-cols-2"><label>{ui("اسم العميل")}<input className="mt-1 block w-full rounded border p-2" type="text" value={client?.client_name || ""} readOnly /></label>
+<label>{ui("اسم المشروع أو رقم القطعة")}<input className="mt-1 block w-full rounded border p-2" type="text" value={project.project_name || ""} readOnly /></label>
+<label>{ui("مسؤول الاتصال")}<input className="mt-1 block w-full rounded border p-2" type="text" value={requestContactPerson} onChange={e => setRequestContactPerson(e.target.value)} /></label>
+<label>{ui("الهاتف")}<input className="mt-1 block w-full rounded border p-2" type="tel" value={requestTelephone} onChange={e => setRequestTelephone(e.target.value)} /></label>
+<label>{ui("رقم طلب العميل")}<input className="mt-1 block w-full rounded border p-2" type="text" value={orderNo} onChange={e => setOrderNo(e.target.value)} /></label>
+<label>{ui("تاريخ الطلب")}<input className="mt-1 block w-full rounded border p-2" type="date" value={requestDate} onChange={e => setRequestDate(e.target.value)} /></label>
 </div></fieldset>
-<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">العينات والفحص المطلوب</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><RequestFields fields={requestFields.filter(field => ["sample_receiving_date"].includes(field.key))} value={requestExtras} onChange={setRequestExtras} /></div><label>فئة العينات / Sample kind *<input className="mt-1 block w-full rounded border p-2" type="text" value={sampleKind} onChange={e => setSampleKind(e.target.value)} /></label>
-<label>عدد العينات<input className="mt-1 block w-full rounded border p-2" type="number" value={sampleQuantity} onChange={e => setSampleQuantity(e.target.value)} /></label>
-<label>الاختبار المطلوب *<input className="mt-1 block w-full rounded border p-2" type="text" value={requestedTest} onChange={e => setRequestedTest(e.target.value)} /></label>
-<label>مواصفة الاختبار<input className="mt-1 block w-full rounded border p-2" type="text" value={testMethod} onChange={e => setTestMethod(e.target.value)} /></label>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">{ui("العينات والفحص المطلوب")}</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><RequestFields fields={requestFields.filter(field => ["sample_receiving_date"].includes(field.key))} value={requestExtras} onChange={setRequestExtras} /></div><label>{ui("فئة العينات / Sample kind *")}<input className="mt-1 block w-full rounded border p-2" type="text" value={sampleKind} onChange={e => setSampleKind(e.target.value)} /></label>
+<label>{ui("عدد العينات")}<input className="mt-1 block w-full rounded border p-2" type="number" value={sampleQuantity} onChange={e => setSampleQuantity(e.target.value)} /></label>
+<label>{ui("الاختبار المطلوب *")}<input className="mt-1 block w-full rounded border p-2" type="text" value={requestedTest} onChange={e => setRequestedTest(e.target.value)} /></label>
+<label>{ui("مواصفة الاختبار")}<input className="mt-1 block w-full rounded border p-2" type="text" value={testMethod} onChange={e => setTestMethod(e.target.value)} /></label>
 <div className="sm:col-span-2"><RequestFields fields={requestFields.filter(field => ["sample_type", "sample_quantity_or_weight"].includes(field.key))} value={requestExtras} onChange={setRequestExtras} /></div></div></fieldset>
-<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">المراجعة الفنية عند الاستلام</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><p className="mb-3 text-sm">يستكمل المدير الفني هذه البيانات ويوقّع المراجعة بعد حفظ الطلب.</p>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">{ui("المراجعة الفنية عند الاستلام")}</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><p className="mb-3 text-sm">{ui("يستكمل المدير الفني هذه البيانات ويوقّع المراجعة بعد حفظ الطلب.")}</p>
 <RequestFields fields={reviewFields} value={creationReview} onChange={setCreationReview} disabled={savingRequest || currentUser?.role !== "technical_manager"} /></div></div></fieldset>
-<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">تسليم النتائج والمسائل المالية</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><RequestFields fields={requestFields.filter(field => ["sample_code", "results_delivery_date", "results_delivery_method"].includes(field.key))} value={requestExtras} onChange={setRequestExtras} /></div><label>طريقة الدفع<select className="mt-1 block w-full rounded border p-2" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}><option value="">اختاري</option><option value="Cash">نقدي</option><option value="Check">شيك</option><option value="Bank Transfer">تحويل بنكي</option><option value="Account">على الحساب</option></select></label></div></fieldset>
-<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">موافقة العميل وقرار مدير المختبر</legend><div className="grid gap-3 sm:grid-cols-2"><p>موافقة العميل أو ممثله المخوّل<br/><small>توقيع من الرابط، أو توثيق موافقة واتساب/بريد أو أمر شراء بعد حفظ الطلب.</small></p><p>قرار مدير المختبر<br/><small>مقبول للتنفيذ / مرفوض / معلق حتى استكمال البيانات.</small></p></div></fieldset>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">{ui("تسليم النتائج والمسائل المالية")}</legend><div className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><RequestFields fields={requestFields.filter(field => ["sample_code", "results_delivery_date", "results_delivery_method"].includes(field.key))} value={requestExtras} onChange={setRequestExtras} /></div><label>{ui("طريقة الدفع")}<select className="mt-1 block w-full rounded border p-2" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}><option value="">{ui("اختاري")}</option><option value="Cash">{ui("نقدي")}</option><option value="Check">{ui("شيك")}</option><option value="Bank Transfer">{ui("تحويل بنكي")}</option><option value="Account">{ui("على الحساب")}</option></select></label></div></fieldset>
+<fieldset disabled={savingRequest} className="mb-5 rounded-lg border p-4"><legend className="px-2 font-bold">{ui("موافقة العميل وقرار مدير المختبر")}</legend><div className="grid gap-3 sm:grid-cols-2"><p>{ui("موافقة العميل أو ممثله المخوّل")}<br/><small>{ui("توقيع من الرابط، أو توثيق موافقة واتساب/بريد أو أمر شراء بعد حفظ الطلب.")}</small></p><p>{ui("قرار مدير المختبر")}<br/><small>{ui("مقبول للتنفيذ / مرفوض / معلق حتى استكمال البيانات.")}</small></p></div></fieldset>
             {/* BUTTONS */}
 
             <div className="flex justify-end gap-3">
@@ -2433,7 +2433,7 @@ async function loadProject() {
                 disabled={savingRequest}
                 className="border border-gray-300 px-5 py-2 rounded-lg"
               >
-                إلغاء
+                {ui("إلغاء")}
               </button>
 
               <button
@@ -2442,8 +2442,8 @@ async function loadProject() {
                 className="bg-blue-700 hover:bg-blue-800 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg"
               >
                 {savingRequest
-                  ? "جارٍ حفظ طلب الفحص..."
-                  : "حفظ طلب الفحص وإصدار الرابط"}
+                  ? ui("جارٍ حفظ طلب الفحص...")
+                  : ui("حفظ طلب الفحص وإصدار الرابط")}
               </button>
 
             </div>
@@ -2457,45 +2457,45 @@ async function loadProject() {
 
       {reviewRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="review-title">
-          <div dir="rtl" className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6">
-            <h2 id="review-title" className="mb-5 text-xl font-bold">المراجعة الفنية للطلب {reviewRequest.request_no}</h2>
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6">
+            <h2 id="review-title" className="mb-5 text-xl font-bold">{ui("المراجعة الفنية للطلب")} {reviewRequest.request_no}</h2>
             <RequestFields fields={reviewFields} value={reviewDraft} onChange={setReviewDraft} disabled={approvingTechnicalManager !== null} />
             <div className="mt-5 flex gap-3">
-              <button disabled={approvingTechnicalManager !== null} onClick={() => approveTechnicalManager(reviewRequest, reviewDraft)} className="rounded-lg bg-green-700 px-5 py-2 text-white disabled:opacity-50">{approvingTechnicalManager !== null ? "جارٍ الحفظ..." : "حفظ المراجعة والتوقيع"}</button>
-              <button disabled={approvingTechnicalManager !== null} onClick={() => setReviewRequest(null)} className="rounded-lg border px-5 py-2">إلغاء</button>
+              <button disabled={approvingTechnicalManager !== null} onClick={() => approveTechnicalManager(reviewRequest, reviewDraft)} className="rounded-lg bg-green-700 px-5 py-2 text-white disabled:opacity-50">{approvingTechnicalManager !== null ? ui("جارٍ الحفظ...") : ui("حفظ المراجعة والتوقيع")}</button>
+              <button disabled={approvingTechnicalManager !== null} onClick={() => setReviewRequest(null)} className="rounded-lg border px-5 py-2">{ui("إلغاء")}</button>
             </div>
           </div>
         </div>
       )}
       {decisionRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="decision-title">
-          <div dir="rtl" className="w-full max-w-lg rounded-xl bg-white p-6">
-            <h2 id="decision-title" className="mb-5 text-xl font-bold">قرار مدير المختبر — {decisionRequest.request_no}</h2>
-            <label className="block">قرار التنفيذ
+          <div className="w-full max-w-lg rounded-xl bg-white p-6">
+            <h2 id="decision-title" className="mb-5 text-xl font-bold">{ui("قرار مدير المختبر —")} {decisionRequest.request_no}</h2>
+            <label className="block">{ui("قرار التنفيذ")}
               <select value={executionDecision} disabled={approvingLabManager !== null} onChange={e => setExecutionDecision(e.target.value)} className="mt-2 w-full rounded-lg border p-3">
-                <option value="">اختاري القرار</option>
-                <option>مقبول للتنفيذ</option><option>مرفوض</option><option>معلق حتى استكمال بيانات</option>
+                <option value="">{ui("اختاري القرار")}</option>
+                <option value="مقبول للتنفيذ">{ui("مقبول للتنفيذ")}</option><option value="مرفوض">{ui("مرفوض")}</option><option value="معلق حتى استكمال بيانات">{ui("معلق حتى استكمال بيانات")}</option>
               </select>
             </label>
             <div className="mt-5 flex gap-3">
-              <button disabled={approvingLabManager !== null} onClick={() => approveLabManager(decisionRequest)} className="rounded-lg bg-purple-700 px-5 py-2 text-white disabled:opacity-50">{approvingLabManager !== null ? "جارٍ الحفظ..." : "تسجيل القرار والتوقيع"}</button>
-              <button disabled={approvingLabManager !== null} onClick={() => setDecisionRequest(null)} className="rounded-lg border px-5 py-2">إلغاء</button>
+              <button disabled={approvingLabManager !== null} onClick={() => approveLabManager(decisionRequest)} className="rounded-lg bg-purple-700 px-5 py-2 text-white disabled:opacity-50">{approvingLabManager !== null ? ui("جارٍ الحفظ...") : ui("تسجيل القرار والتوقيع")}</button>
+              <button disabled={approvingLabManager !== null} onClick={() => setDecisionRequest(null)} className="rounded-lg border px-5 py-2">{ui("إلغاء")}</button>
             </div>
           </div>
         </div>
       )}
       {consentRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="consent-title">
-          <div dir="rtl" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6">
-            <h2 id="consent-title" className="mb-5 text-xl font-bold">توثيق موافقة العميل — {consentRequest.request_no}</h2>
-            <label className="mb-4 block">اسم العميل أو ممثله المخول
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6">
+            <h2 id="consent-title" className="mb-5 text-xl font-bold">{ui("توثيق موافقة العميل —")} {consentRequest.request_no}</h2>
+            <label className="mb-4 block">{ui("اسم العميل أو ممثله المخول")}
               <input value={consentName} disabled={savingConsent} onChange={e => setConsentName(e.target.value)} className="mt-1 w-full rounded-lg border p-3" />
             </label>
             <RequestFields fields={approvalFields.map(field => field.key === "customer_approval_method" ? { ...field, options: ["واتساب/بريد موثق", "أمر شراء"] } : field)} value={consentDraft} onChange={setConsentDraft} disabled={savingConsent} />
-            <p className="mt-3 text-sm">سجلي مرجع رسالة الموافقة وتاريخها أو رقم أمر الشراء، واحتفظي بالدليل الأصلي.</p>
+            <p className="mt-3 text-sm">{ui("سجلي مرجع رسالة الموافقة وتاريخها أو رقم أمر الشراء، واحتفظي بالدليل الأصلي.")}</p>
             <div className="mt-5 flex gap-3">
-              <button disabled={savingConsent} onClick={saveDocumentedConsent} className="rounded-lg bg-blue-700 px-5 py-2 text-white disabled:opacity-50">{savingConsent ? "جارٍ الحفظ..." : "تسجيل موافقة العميل"}</button>
-              <button disabled={savingConsent} onClick={() => setConsentRequest(null)} className="rounded-lg border px-5 py-2">إلغاء</button>
+              <button disabled={savingConsent} onClick={saveDocumentedConsent} className="rounded-lg bg-blue-700 px-5 py-2 text-white disabled:opacity-50">{savingConsent ? ui("جارٍ الحفظ...") : ui("تسجيل موافقة العميل")}</button>
+              <button disabled={savingConsent} onClick={() => setConsentRequest(null)} className="rounded-lg border px-5 py-2">{ui("إلغاء")}</button>
             </div>
           </div>
         </div>

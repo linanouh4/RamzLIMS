@@ -1,11 +1,13 @@
 "use client";
 
+import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
 
 const roles = ["admin", "lab", "reception", "technician"];
 export default function Employees() {
+  const ui = useUiText();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
@@ -44,7 +46,7 @@ async function uploadSignature(
 
   setSignature(data.publicUrl);
 
-  alert("Signature uploaded successfully");
+  alert(ui("Signature uploaded successfully"));
 }
 
 async function loadUsers() {
@@ -86,12 +88,12 @@ async function loadUsers() {
 
 async function saveUser() {
   if (!username.trim() || !fullName.trim()) {
-    alert("Please enter username and full name");
+    alert(ui("Please enter username and full name"));
     return;
   }
 
   if (!selectedUser && !password.trim()) {
-    alert("Please enter a password for the new user");
+    alert(ui("Please enter a password for the new user"));
     return;
   }
 
@@ -123,18 +125,18 @@ async function saveUser() {
       console.log("UPDATE ERROR:", error);
 
       if (error) {
-        alert("SAVE ERROR: " + error.message);
+        alert(ui("SAVE ERROR: ") + error.message);
         return;
       }
 
       if (!updatedUser || updatedUser.length === 0) {
         alert(
-          "لم يتم تعديل المستخدم. تحقق من صلاحيات UPDATE في Supabase."
+          ui("لم يتم تعديل المستخدم. تحقق من صلاحيات UPDATE في Supabase.")
         );
         return;
       }
 
-      alert("تم تعديل المستخدم بنجاح");
+      alert(ui("تم تعديل المستخدم بنجاح"));
 
     } else {
       // إنشاء مستخدم جديد
@@ -155,11 +157,11 @@ async function saveUser() {
       console.log("CREATE ERROR:", error);
 
       if (error) {
-        alert("SAVE ERROR: " + error.message);
+        alert(ui("SAVE ERROR: ") + error.message);
         return;
       }
 
-      alert("تم إنشاء المستخدم بنجاح");
+      alert(ui("تم إنشاء المستخدم بنجاح"));
     }
 
     setOpenModal(false);
@@ -167,11 +169,11 @@ async function saveUser() {
 
   } catch (err) {
     console.error("SAVE USER ERROR:", err);
-    alert("حدث خطأ أثناء حفظ المستخدم");
+    alert(ui("حدث خطأ أثناء حفظ المستخدم"));
   }
 }
 async function deleteUser(id: number) {
-  if (!confirm("Delete this user?")) return;
+  if (!confirm(ui("Delete this user?"))) return;
 
   const { error } = await supabase
     .from("users")
@@ -194,12 +196,12 @@ async function deleteUser(id: number) {
               onClick={() => window.history.back()}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              ← Back
+              {ui("← Back")}
             </button>
             <div>
-              <h1 className="text-3xl font-bold">Users</h1>
+              <h1 className="text-3xl font-bold">{ui("Users")}</h1>
               <p className="text-gray-500 mt-2">
-                Manage application users and roles.
+                {ui("Manage application users and roles.")}
               </p>
             </div>
           </div>
@@ -208,24 +210,24 @@ async function deleteUser(id: number) {
             onClick={openCreateModal}
             className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg"
           >
-            + Add User
+            {ui("+ Add User")}
           </button>
         </div>
 
         <div className="bg-white rounded-xl shadow overflow-hidden">
           {loading ? (
-            <div className="p-6 text-center">Loading users...</div>
+            <div className="p-6 text-center">{ui("Loading users...")}</div>
           ) : users.length === 0 ? (
-            <div className="p-6 text-center">No users found</div>
+            <div className="p-6 text-center">{ui("No users found")}</div>
           ) : (
             <table className="w-full">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="p-4 text-left">ID</th>
-                  <th className="p-4 text-left">Username</th>
-                  <th className="p-4 text-left">Full Name</th>
-                  <th className="p-4 text-left">Role</th>
-                  <th className="p-4 text-left">Actions</th>
+                  <th className="p-4 text-start">{ui("ID")}</th>
+                  <th className="p-4 text-start">{ui("Username")}</th>
+                  <th className="p-4 text-start">{ui("Full Name")}</th>
+                  <th className="p-4 text-start">{ui("Role")}</th>
+                  <th className="p-4 text-start">{ui("Actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -234,20 +236,20 @@ async function deleteUser(id: number) {
                     <td className="p-4">{user.id}</td>
                     <td className="p-4">{user.username}</td>
                     <td className="p-4">{user.full_name}</td>
-                    <td className="p-4 capitalize">{user.role}</td>
+                    <td className="p-4 capitalize">{ui(user.role)}</td>
                     <td className="p-4">
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => openEditModal(user)}
                           className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg"
                         >
-                          Edit
+                          {ui("Edit")}
                         </button>
                         <button
                           onClick={() => deleteUser(user.id)}
                           className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg"
                         >
-                          Delete
+                          {ui("Delete")}
                         </button>
                       </div>
                     </td>
@@ -263,7 +265,7 @@ async function deleteUser(id: number) {
             <div className="w-full max-w-xl bg-white rounded-2xl p-6 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">
-                  {selectedUser ? "Edit User" : "Add User"}
+                  {selectedUser ? ui("Edit User") : ui("Add User")}
                 </h2>
                 <button
                   onClick={() => setOpenModal(false)}
@@ -275,7 +277,7 @@ async function deleteUser(id: number) {
 
               <div className="grid gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Username</label>
+                  <label className="block text-sm font-medium mb-2">{ui("Username")}</label>
                   <input
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -284,7 +286,7 @@ async function deleteUser(id: number) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Full Name</label>
+                  <label className="block text-sm font-medium mb-2">{ui("Full Name")}</label>
                   <input
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
@@ -293,7 +295,7 @@ async function deleteUser(id: number) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Role</label>
+                  <label className="block text-sm font-medium mb-2">{ui("Role")}</label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
@@ -301,7 +303,7 @@ async function deleteUser(id: number) {
                   >
                     {roles.map((item) => (
                       <option key={item} value={item}>
-                        {item}
+                        {ui(item)}
                       </option>
                     ))}
                   </select>
@@ -309,19 +311,19 @@ async function deleteUser(id: number) {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Password {selectedUser ? "(leave empty to keep current)" : ""}
+                    {ui("Password")} {selectedUser ? ui("(leave empty to keep current)") : ""}
                   </label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full border rounded-lg p-3"
-                    placeholder={selectedUser ? "New password" : "Password"}
+                    placeholder={selectedUser ? ui("New password") : ui("Password")}
                   />
                 </div>
 <div>
   <label className="block text-sm font-medium mb-2">
-    Role
+    {ui("Role")}
   </label>
 
   <select
@@ -331,14 +333,14 @@ async function deleteUser(id: number) {
   >
     {roles.map((r) => (
       <option key={r} value={r}>
-        {r}
+        {ui(r)}
       </option>
     ))}
   </select>
 </div>
                <div>
   <label className="block text-sm font-medium mb-2">
-    Signature
+    {ui("Signature")}
   </label>
 
   <input
@@ -352,7 +354,7 @@ async function deleteUser(id: number) {
   <>
     <img
       src={signature}
-      alt="Signature"
+      alt={ui("Signature")}
       className="mt-3 h-16 border rounded object-contain"
     />
     <p>{signature}</p>
@@ -365,13 +367,13 @@ async function deleteUser(id: number) {
                     onClick={() => setOpenModal(false)}
                     className="px-5 py-3 rounded-lg border border-gray-300"
                   >
-                    Cancel
+                    {ui("Cancel")}
                   </button>
                   <button
                     onClick={saveUser}
                     className="px-5 py-3 rounded-lg bg-blue-700 text-white"
                   >
-                    Save
+                    {ui("Save")}
                   </button>
                 </div>
               </div>

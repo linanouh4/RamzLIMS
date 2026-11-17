@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useLanguage } from "@/components/LanguageProvider";
 import { supabase } from "@/lib/supabase";
 import AddClientModal from "@/components/AddClientModal";
 import { getSavedUser } from "@/lib/auth";
@@ -15,6 +16,8 @@ type CurrentUser = {
 
 export default function ClientsPage() {
   const router = useRouter();
+  const { language } = useLanguage();
+  const tr = (ar: string, en: string) => language === "ar" ? ar : en;
 
   const [clients, setClients] = useState<any[]>([]);
   const [openModal, setOpenModal] = useState(false);
@@ -50,7 +53,7 @@ export default function ClientsPage() {
       const userId = Number(savedUser.id);
 
       if (!userId) {
-        alert("بيانات المستخدم الحالي غير صحيحة");
+        alert(tr("بيانات المستخدم الحالي غير صحيحة", "The current user details are invalid."));
         return;
       }
 
@@ -73,9 +76,9 @@ export default function ClientsPage() {
         );
 
         alert(
-          "تعذر تحميل بيانات المستخدم:\n" +
+          tr("تعذر تحميل بيانات المستخدم:\n", "Could not load the user details:\n") +
             (userError?.message ||
-              "المستخدم غير موجود")
+              tr("المستخدم غير موجود", "User not found."))
         );
 
         return;
@@ -114,7 +117,7 @@ export default function ClientsPage() {
       ) {
         if (!current.branch_id) {
           alert(
-            "مدير الفرع غير مرتبط بأي فرع."
+            tr("مدير الفرع غير مرتبط بأي فرع.", "The branch manager is not assigned to a branch.")
           );
 
           setClients([]);
@@ -150,7 +153,7 @@ export default function ClientsPage() {
       );
 
       alert(
-        "حدث خطأ أثناء تحميل العملاء"
+        tr("حدث خطأ أثناء تحميل العملاء", "Could not load clients.")
       );
     } finally {
       setLoading(false);
@@ -160,13 +163,13 @@ export default function ClientsPage() {
   async function deleteClient(id: number) {
     if (!currentUser) {
       alert(
-        "لم يتم التعرف على المستخدم الحالي"
+        tr("لم يتم التعرف على المستخدم الحالي", "Could not identify the current user.")
       );
       return;
     }
 
     if (currentUser.role?.trim().toLowerCase() === "technical_manager") {
-      alert("المدير الفني غير مخوّل بحذف العملاء.");
+      alert(tr("المدير الفني غير مخوّل بحذف العملاء.", "The technical manager cannot delete clients."));
       return;
     }
 
@@ -175,7 +178,7 @@ export default function ClientsPage() {
     );
 
     if (!client) {
-      alert("العميل غير موجود");
+      alert(tr("العميل غير موجود", "Client not found."));
       return;
     }
 
@@ -190,13 +193,13 @@ export default function ClientsPage() {
         Number(currentUser.branch_id)
     ) {
       alert(
-        "لا يمكنك حذف عميل تابع لفرع آخر."
+        tr("لا يمكنك حذف عميل تابع لفرع آخر.", "You cannot delete a client from another branch.")
       );
       return;
     }
 
     const confirmDelete = confirm(
-      "Are you sure you want to delete this client?"
+      tr("هل تريد حذف هذا العميل؟", "Are you sure you want to delete this client?")
     );
 
     if (!confirmDelete) return;
@@ -231,12 +234,12 @@ export default function ClientsPage() {
 
   function editClient(client: any) {
     if (!currentUser || !currentRole) {
-      alert("لم يتم التعرف على المستخدم الحالي");
+      alert(tr("لم يتم التعرف على المستخدم الحالي", "Could not identify the current user."));
       return;
     }
 
     if (currentRole === "technical_manager") {
-      alert("المدير الفني غير مخوّل بتعديل العملاء.");
+      alert(tr("المدير الفني غير مخوّل بتعديل العملاء.", "The technical manager cannot edit clients."));
       return;
     }
 
@@ -250,7 +253,7 @@ export default function ClientsPage() {
         Number(currentUser.branch_id)
     ) {
       alert(
-        "لا يمكنك تعديل عميل تابع لفرع آخر."
+        tr("لا يمكنك تعديل عميل تابع لفرع آخر.", "You cannot edit a client from another branch.")
       );
       return;
     }
@@ -262,6 +265,15 @@ export default function ClientsPage() {
   function addNewClient() {
     setSelectedClient(null);
     setOpenModal(true);
+  }
+
+  function statusLabel(value?: string | null) {
+    const status = value || "Active";
+    switch (status.trim().toLowerCase()) {
+      case "active": return tr("نشط", "Active");
+      case "inactive": return tr("غير نشط", "Inactive");
+      default: return status;
+    }
   }
 
   const filteredClients = clients.filter(
@@ -309,7 +321,7 @@ export default function ClientsPage() {
 
   return (
     <ProtectedRoute>
-      <main className="min-h-screen bg-gray-100 p-8">
+      <main dir={language === "ar" ? "rtl" : "ltr"} className="min-h-screen bg-gray-100 p-8">
 
         {/* HEADER */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
@@ -330,19 +342,18 @@ export default function ClientsPage() {
               }}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              ← Back
+              {language === "ar" ? "→ رجوع" : "← Back"}
             </button>
 
             <div>
               <h1 className="text-3xl font-bold">
-                Clients
+                {language === "ar" ? "العملاء" : "Clients"}
               </h1>
 
               <p className="text-gray-500 mt-1">
-                {currentUser?.role ===
-                "branch_manager"
-                  ? "Manage clients for your branch."
-                  : "Manage your client list and quickly view their samples."}
+                {currentUser?.role === "branch_manager"
+  ? (language === "ar" ? "إدارة عملاء فرعك." : "Manage clients for your branch.")
+  : (language === "ar" ? "إدارة قائمة العملاء واستعراض عيناتهم." : "Manage your client list and quickly view their samples.")}
               </p>
             </div>
 
@@ -352,7 +363,7 @@ export default function ClientsPage() {
             onClick={addNewClient}
             className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold"
           >
-            + Add Client
+            {language === "ar" ? "+ إضافة عميل" : "+ Add Client"}
           </button>
 
         </div>
@@ -362,7 +373,7 @@ export default function ClientsPage() {
 
           <div className="bg-white rounded-xl shadow p-4">
             <p className="text-sm text-gray-500">
-              Total Clients
+              {language === "ar" ? "إجمالي العملاء" : "Total Clients"}
             </p>
 
             <p className="text-2xl font-bold">
@@ -372,7 +383,7 @@ export default function ClientsPage() {
 
           <div className="bg-white rounded-xl shadow p-4">
             <p className="text-sm text-gray-500">
-              Active Clients
+              {language === "ar" ? "العملاء النشطون" : "Active Clients"}
             </p>
 
             <p className="text-2xl font-bold">
@@ -382,7 +393,7 @@ export default function ClientsPage() {
 
           <div className="bg-white rounded-xl shadow p-4">
             <p className="text-sm text-gray-500">
-              Filtered Results
+              {language === "ar" ? "نتائج التصفية" : "Filtered Results"}
             </p>
 
             <p className="text-2xl font-bold">
@@ -400,7 +411,7 @@ export default function ClientsPage() {
             onChange={(e) =>
               setSearchTerm(e.target.value)
             }
-            placeholder="Search by name, phone, city, or email"
+            placeholder={tr("ابحث بالاسم أو الهاتف أو المدينة أو البريد الإلكتروني", "Search by name, phone, city, or email")}
             className="w-full md:max-w-md border rounded-lg p-3"
           />
 
@@ -412,15 +423,15 @@ export default function ClientsPage() {
             className="border rounded-lg p-3"
           >
             <option value="All">
-              All Statuses
+              {language === "ar" ? "كل الحالات" : "All Statuses"}
             </option>
 
             <option value="Active">
-              Active
+              {tr("نشط", "Active")}
             </option>
 
             <option value="Inactive">
-              Inactive
+              {tr("غير نشط", "Inactive")}
             </option>
           </select>
 
@@ -431,7 +442,7 @@ export default function ClientsPage() {
 
           {loading ? (
             <div className="p-10 text-center text-gray-500">
-              Loading clients...
+              {language === "ar" ? "جارٍ تحميل العملاء..." : "Loading clients..."}
             </div>
           ) : (
             <table className="w-full">
@@ -439,36 +450,36 @@ export default function ClientsPage() {
               <thead className="bg-blue-700 text-white">
 
                 <tr>
-                  <th className="p-4 text-left">
-                    ID
+                  <th className="p-4 text-start">
+                    {language === "ar" ? "المعرّف" : "ID"}
                   </th>
 
-                  <th className="p-4 text-left">
-                    Client Name
+                  <th className="p-4 text-start">
+                    {language === "ar" ? "اسم العميل" : "Client Name"}
                   </th>
 
-                  <th className="p-4 text-left">
-                    Phone
+                  <th className="p-4 text-start">
+                    {language === "ar" ? "الهاتف" : "Phone"}
                   </th>
 
-                  <th className="p-4 text-left">
-                    City
+                  <th className="p-4 text-start">
+                    {language === "ar" ? "المدينة" : "City"}
                   </th>
 
-                  <th className="p-4 text-left">
-                    Contact Person
+                  <th className="p-4 text-start">
+                    {language === "ar" ? "الشخص المسؤول" : "Contact Person"}
                   </th>
 
-                  <th className="p-4 text-left">
-                    Company Type
+                  <th className="p-4 text-start">
+                    {language === "ar" ? "نوع الشركة" : "Company Type"}
                   </th>
 
-                  <th className="p-4 text-left">
-                    Status
+                  <th className="p-4 text-start">
+                    {language === "ar" ? "الحالة" : "Status"}
                   </th>
 
-                  <th className="p-4 text-left">
-                    Actions
+                  <th className="p-4 text-start">
+                    {language === "ar" ? "الإجراءات" : "Actions"}
                   </th>
                 </tr>
 
@@ -483,8 +494,7 @@ export default function ClientsPage() {
                       colSpan={8}
                       className="text-center p-6 text-gray-500"
                     >
-                      No clients found for
-                      the selected criteria.
+                      {language === "ar" ? "لا يوجد عملاء يطابقون معايير التصفية." : "No clients found for the selected criteria."}
                     </td>
                   </tr>
                 ) : (
@@ -523,8 +533,7 @@ export default function ClientsPage() {
 
                         <td className="p-4">
                           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">
-                            {client.status ||
-                              "Active"}
+                            {statusLabel(client.status)}
                           </span>
                         </td>
 
@@ -539,7 +548,7 @@ export default function ClientsPage() {
                               }
                               className="bg-green-700 hover:bg-green-800 text-white px-3 py-2 rounded-lg"
                             >
-                              Open
+                              {language === "ar" ? "فتح" : "Open"}
                             </button>
 
                             {canEdit && (
@@ -551,7 +560,7 @@ export default function ClientsPage() {
                               }
                               className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg"
                             >
-                              Edit
+                              {language === "ar" ? "تعديل" : "Edit"}
                             </button>
                             )}
 
@@ -566,7 +575,7 @@ export default function ClientsPage() {
                               }
                               className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg"
                             >
-                              Delete
+                              {language === "ar" ? "حذف" : "Delete"}
                             </button>
                             )}
 
