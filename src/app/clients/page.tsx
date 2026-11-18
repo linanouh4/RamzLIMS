@@ -277,10 +277,18 @@ export default function ClientsPage() {
     }
   }
 
+  function normalizeClientName(value: string) {
+    return value
+      .replace(/[أإآٱ]/g, "ا")
+      .replace(/ـ/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
   const filteredClients = clients.filter(
     (client) => {
       const search =
-        searchTerm.toLowerCase();
+        normalizeClientName(searchTerm);
 
       const status = (
         client.status || "Active"
@@ -288,7 +296,7 @@ export default function ClientsPage() {
 
       const matchesSearch =
         !search ||
-        String(client.client_name || "").toLowerCase().includes(search);
+        normalizeClientName(client.client_name || "").includes(search);
 
       const matchesStatus =
         statusFilter === "All" ||
