@@ -3,7 +3,7 @@ import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { QuotationHeader } from "./QuotationPaper";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { getSavedUser } from "@/lib/auth";
@@ -22,10 +22,19 @@ const headerFields = [
   { name: "region", label: "المنطقة" },
 ];
 
+const methods = ["ASTM C39", "ASTM C805", "ASTM D1556", "ASTM D1557", "ASTM D1883", "ASTM D2216", "ASTM D7830", "AASHTO T 191"];
+
+function readMethod(text: string) {
+  const [first, ...rest] = text.split("\n");
+  return methods.includes(first)
+    ? { method: first, notes: rest.join("\n") }
+    : { method: "", notes: text };
+}
+
 function newLine(key: number) {
   return {
     key, test_name: "", unit: "", quantity: "1", unit_price: "",
-    method_or_notes: "", saac_scope_status: "",
+    method: "", notes: "", saac_scope_status: "",
   };
 }
 
@@ -89,7 +98,7 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
   const router = useRouter();
   const user = getSavedUser();
   const role = user?.role?.trim().toLowerCase();
-  const canCreate = role === "accountant" || role === "technical_manager" ||
+  const canCreate = role === "branch_manager" || role === "accountant" || role === "technical_manager" ||
     (role === "admin" && Number(user?.id) === 1);
 
   const [lines, setLines] = useState<Line[]>(() => quote
@@ -99,10 +108,18 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
         unit: item.unit,
         quantity: String(item.quantity),
         unit_price: String(item.unit_price),
-        method_or_notes: item.method_or_notes ?? "",
+        ...readMethod(item.method_or_notes ?? ""),
         saac_scope_status: item.saac_scope_status ?? "",
       }))
     : [newLine(1)]);
+  const [testNames, setTestNames] = useState<string[]>([]);
+  useEffect(() => {
+    let active = true;
+    void supabase.from("tests").select("test_name").order("test_name").then(({ data }) => {
+      if (active) setTestNames([...new Set((data || []).map(test => String(test.test_name)))]);
+    });
+    return () => { active = false; };
+  }, []);
   const nextKey = useRef(lines.length + 1);
   const savingNow = useRef(false);
   const [saving, setSaving] = useState(false);
@@ -127,7 +144,7 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
       unit: line.unit.trim(),
       quantity: Number(line.quantity),
       unit_price: Number(line.unit_price),
-      method_or_notes: line.method_or_notes.trim() || null,
+      method_or_notes: [line.method, line.notes.trim()].filter(Boolean).join("\n") || null,
       saac_scope_status: line.saac_scope_status || null,
     }));
 
@@ -167,6 +184,9 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
 
         <div className="mb-4 bg-white"><QuotationHeader /></div>
         <form onSubmit={save}>
+          <datalist id="quote-tests">{testNames.map(name => <option key={name} value={name} />)}</datalist>
+          <datalist id="quote-units">{["عينة", "اختبار", "نقطة", "زيارة", "متر", "مجموعة"].map(unit => <option key={unit} value={unit} />)}</datalist>
+          <datalist id="quote-notes">{["حسب طلب العميل", "اختبار ميداني", "اختبار معملي"].map(note => <option key={note} value={note} />)}</datalist>
           <fieldset disabled={saving} className="space-y-5">
             <section className="rounded-xl bg-white p-5 shadow">
               <h2 className="mb-4 text-lg font-bold">{ui("بيانات العرض والعميل")}</h2>
@@ -193,11 +213,11 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
                   <legend className="px-2 font-semibold">{ui("البند")} {index + 1}</legend>
                   <div className="grid gap-3 md:grid-cols-2">
                     <label>{ui("اسم الفحص *")}
-                      <input required className={inputClass} value={line.test_name}
+                      <input list="quote-tests" required className={inputClass} value={line.test_name}
                         onChange={e => changeLine(line.key, "test_name", e.target.value)} />
                     </label>
                     <label>{ui("الوحدة *")}
-                      <input required className={inputClass} value={line.unit}
+                      <input list="quote-units" required className={inputClass} value={line.unit}
                         onChange={e => changeLine(line.key, "unit", e.target.value)} />
                     </label>
                     <label>{ui("الكمية *")}
@@ -210,9 +230,16 @@ export default function DraftForm({ quote }: { quote?: SavedQuote }) {
                         value={line.unit_price}
                         onChange={e => changeLine(line.key, "unit_price", e.target.value)} />
                     </label>
-                    <label>{ui("طريقة الفحص أو الملاحظات")}
-                      <input className={inputClass} value={line.method_or_notes}
-                        onChange={e => changeLine(line.key, "method_or_notes", e.target.value)} />
+                    <label>{ui("طريقة الاختبار")}
+                      <select className={inputClass} value={line.method}
+                        onChange={e => changeLine(line.key, "method", e.target.value)}>
+                        <option value="">—</option>
+                        {methods.map(method => <option key={method}>{method}</option>)}
+                      </select>
+                    </label>
+                    <label>{ui("Notes")}
+                      <input list="quote-notes" className={inputClass} value={line.notes}
+                        onChange={e => changeLine(line.key, "notes", e.target.value)} />
                     </label>
                     <label>{ui("حالة الفحص ضمن نطاق اعتماد ساك")}
                       <select className={inputClass} value={line.saac_scope_status}

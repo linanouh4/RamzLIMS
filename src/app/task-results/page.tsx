@@ -1,5 +1,6 @@
 "use client";
 
+import TaskResultApproval from "./TaskResultApproval";
 import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
@@ -160,6 +161,7 @@ type Task = {
 id: number;
 project_id?: number | null;
 
+test_type?: string;
 task_name: string;
 
 task_description?: string | null;
@@ -292,6 +294,7 @@ return [
   "admin",
   "lab_manager",
   "labmanager",
+  "quality_manager",
   "technical_manager",
   "technicalmanager",
   "branch_manager",
@@ -1186,7 +1189,7 @@ return (
                   <div>
 
                     <h2 className="text-xl font-bold">
-                      {task.task_name}
+                      {task.task_name} {task.test_type === "electrical-density" && <a className="underline" href={`/technician/tests/${task.id}/electrical-density`}>ASTM D7830</a>}
                     </h2>
 
                     <p className="mt-2">
@@ -2216,6 +2219,8 @@ return (
                   </div>
 
                 )}
+
+                {currentUser && <TaskResultApproval taskId={task.id} role={normalizedRole(currentUser)} userId={Number(currentUser.id)} />}
 
               </div>
 

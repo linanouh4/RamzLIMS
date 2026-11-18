@@ -12,6 +12,8 @@ type Client = {
   city: string;
   email: string;
   address: string;
+  national_id?: string;
+  commercial_registration?: string;
   contact_person?: string;
   company_type?: string;
   status: string;
@@ -36,6 +38,8 @@ export default function AddClientModal({
   const { language } = useLanguage();
   const tr = (ar: string, en: string) => language === "ar" ? ar : en;
   const [clientName, setClientName] = useState("");
+  const [nationalId, setNationalId] = useState("");
+  const [registration, setRegistration] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [email, setEmail] = useState("");
@@ -47,6 +51,8 @@ export default function AddClientModal({
   useEffect(() => {
     if (client) {
       setClientName(client.client_name || "");
+      setNationalId(client.national_id || "");
+      setRegistration(client.commercial_registration || "");
       setPhone(client.phone || "");
       setCity(client.city || "");
       setEmail(client.email || "");
@@ -60,6 +66,8 @@ export default function AddClientModal({
 
   function clearForm() {
     setClientName("");
+    setNationalId("");
+    setRegistration("");
     setPhone("");
     setCity("");
     setEmail("");
@@ -111,6 +119,8 @@ export default function AddClientModal({
           .from("clients")
           .update({
             client_name: clientName.trim(),
+            national_id: nationalId.trim() || null,
+            commercial_registration: registration.trim() || null,
             phone: phone.trim(),
             city: city.trim(),
             email: email.trim(),
@@ -136,7 +146,9 @@ export default function AddClientModal({
           .insert([
             {
               client_name: clientName.trim(),
-              phone: phone.trim(),
+              national_id: nationalId.trim() || null,
+            commercial_registration: registration.trim() || null,
+            phone: phone.trim(),
               city: city.trim(),
               email: email.trim(),
               address: address.trim(),
@@ -198,6 +210,24 @@ export default function AddClientModal({
             value={clientName}
             onChange={(e) =>
               setClientName(e.target.value)
+            }
+          />
+
+          <input
+            className="border border-gray-300 rounded-lg p-3 text-black"
+            placeholder={tr("رقم الهوية", "National ID")}
+            value={nationalId}
+            onChange={(e) =>
+              setNationalId(e.target.value)
+            }
+          />
+
+          <input
+            className="border border-gray-300 rounded-lg p-3 text-black"
+            placeholder={tr("رقم السجل التجاري", "Commercial registration number")}
+            value={registration}
+            onChange={(e) =>
+              setRegistration(e.target.value)
             }
           />
 

@@ -374,6 +374,7 @@ const arabic: Record<string, string> = {
 };
 
 const english: Record<string, string> = {
+  "طريقة الاختبار": "Test method",
   "شركة رمز الأمارات لفحص التربة والخرسانة": "Ramz Alemarat for Soil and Concrete Testing Company",
   "الرجاء إدخال اسم المستخدم وكلمة المرور": "Enter your username and password.",
   "خطأ Supabase في قراءة المستخدم:\n\n": "Could not read the user account in Supabase:\n\n",
@@ -882,7 +883,7 @@ const english: Record<string, string> = {
   "يجب أولًا إنشاء عقد العميل وإرسال الرابط والحصول على موافقته وتوقيعه.": "Create the client contract, send the link and obtain client approval and signature first.",
   "📋 إسناد مهمة": "📋 Assign task",
   "جاري الحذف...": "Deleting...",
-  "🗑️ حذف المهام التجريبية": "🗑️ Delete trial tasks",
+  "🗑️ حذف المهام ": "🗑️ Delete trial tasks",
   "المهام المسندة": "Assigned tasks",
   "عدد المهام:": "Task count:",
   "🔒 إسناد المهام مقفول حتى تتم موافقة العميل وتوقيعه على العقد.": "🔒 Tasks can be assigned after the client approves and signs the contract.",

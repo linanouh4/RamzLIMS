@@ -377,7 +377,7 @@ return (
 
                     <a
   href={
-    task.test_type === "field-density"
+    task.test_type === "electrical-density" ? `/technician/tests/${task.id}/electrical-density` : task.test_type === "field-density"
       ? `/technician/tests/${task.id}/field-density`
       : `/technician/tests/${task.id}`
   }

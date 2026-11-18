@@ -33,8 +33,8 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
 
   const currentRole = currentUser?.role?.trim().toLowerCase();
-  const canEdit = Boolean(currentRole) && currentRole !== "technical_manager";
-  const canDelete = Boolean(currentRole) && currentRole !== "technical_manager";
+  const canEdit = Boolean(currentRole) && currentRole !== "quality_manager" && currentRole !== "technical_manager";
+  const canDelete = Boolean(currentRole) && currentRole !== "quality_manager" && currentRole !== "technical_manager";
 
   useEffect(() => {
     loadClients();
@@ -288,18 +288,7 @@ export default function ClientsPage() {
 
       const matchesSearch =
         !search ||
-        [
-          client.client_name,
-          client.phone,
-          client.city,
-          client.email,
-          client.contact_person,
-          client.company_type,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(search);
+        String(client.client_name || "").toLowerCase().includes(search);
 
       const matchesStatus =
         statusFilter === "All" ||
@@ -356,7 +345,7 @@ export default function ClientsPage() {
           </div>
 
           <button
-            onClick={addNewClient}
+            hidden={currentRole === "quality_manager"} onClick={addNewClient}
             className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold"
           >
             {language === "ar" ? "+ إضافة عميل" : "+ Add Client"}
@@ -407,7 +396,7 @@ export default function ClientsPage() {
             onChange={(e) =>
               setSearchTerm(e.target.value)
             }
-            placeholder={tr("ابحث بالاسم أو الهاتف أو المدينة أو البريد الإلكتروني", "Search by name, phone, city, or email")}
+            placeholder={tr("ابحث باسم العميل", "Search by client name")}
             className="w-full md:max-w-md border rounded-lg p-3"
           />
 

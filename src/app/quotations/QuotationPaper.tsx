@@ -1,3 +1,4 @@
+import { saudiRiyalsInWords } from "./saudiRiyalsInWords";
 import type { SavedQuote } from "./QuotationForm";
 
 const price = new Intl.NumberFormat("ar-SA", {
@@ -49,6 +50,7 @@ function printImageUrl(value: string | null | undefined) {
 }
 
 export default function QuotationPaper({ quote, total }: { quote: SavedQuote; total: number }) {
+  const totalInWords = saudiRiyalsInWords(total);
   const approved = quote.status === "Approved" && quote.approved_by === 1;
   const rows = quote.quotation_items;
   const signature = approved ? printImageUrl(quote.approval_signature) : null;
@@ -139,7 +141,7 @@ export default function QuotationPaper({ quote, total }: { quote: SavedQuote; to
             <tr key={item.line_no}>
               <td>{item.line_no}</td><td>{item.test_name}</td><td>{item.unit}</td>
               <td>{item.quantity}</td><td>{price.format(item.unit_price)}</td>
-              <td>{price.format(item.line_total)}</td><td>{item.method_or_notes || "—"}</td>
+              <td>{price.format(item.line_total)}</td><td className="whitespace-pre-line">{item.method_or_notes || "—"}</td>
               <td>{item.saac_scope_status || "لم تُحدّد"}</td>
             </tr>
           ))}
@@ -150,6 +152,7 @@ export default function QuotationPaper({ quote, total }: { quote: SavedQuote; to
             </tr>
           ))}
           <tr><th colSpan={5}>الإجمالي (ريال سعودي)</th><td colSpan={3}>{price.format(total)}</td></tr>
+          {totalInWords && <tr><th colSpan={2}>الإجمالي كتابةً</th><td colSpan={6} dir="rtl">{totalInWords}</td></tr>}
         </tbody>
       </table>
 

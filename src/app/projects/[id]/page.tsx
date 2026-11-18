@@ -1937,7 +1937,7 @@ async function loadProject() {
             >
               {deletingTasks
                 ? ui("جاري الحذف...")
-                : ui("🗑️ حذف المهام التجريبية")}
+                : ui("🗑️ حذف المهام ")}
             </button>
 
           )}
@@ -2268,6 +2268,7 @@ async function loadProject() {
                   {ui("فحص قوة عينات الخرسانة الأسمنتية")}
                 </option>
 
+                <option value="electrical-density">ASTM D7830 · Electrical Density Gauge / الكثافة بالجهاز الكهربائي</option>
                 <option value="field-density">
                   {ui("اختبار الكثافة الحقلية بطريقة المخروط الرملي")}
                 </option>

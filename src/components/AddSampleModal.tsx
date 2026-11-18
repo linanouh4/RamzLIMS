@@ -52,7 +52,7 @@ export default function AddSampleModal({
 
       let query = supabase
         .from("projects")
-        .select("id, project_name, branch_id")
+        .select("id, project_name, branch_id, client_id")
         .order("project_name", {
           ascending: true,
         });
@@ -213,6 +213,7 @@ export default function AddSampleModal({
 
     const payload = {
       project_id: Number(projectId),
+      client_id: projects.find(project => Number(project.id) === Number(projectId))?.client_id ?? null,
       sample_number: sampleNumber,
       sample_type: sampleType,
       received_date: receivedDate,
@@ -228,7 +229,7 @@ export default function AddSampleModal({
       const response = await supabase
         .from("samples")
         .update(payload)
-        .eq("id", sample.id);
+        .eq("id", sample.id).select("id").single();
 
       error = response.error;
     } else {
@@ -298,14 +299,10 @@ export default function AddSampleModal({
             }
           />
 
-          <input
-            className="border rounded-lg p-3"
-            placeholder={ui("Sample Type")}
-            value={sampleType}
-            onChange={(e) =>
-              setSampleType(e.target.value)
-            }
-          />
+          <select className="border rounded-lg p-3" aria-label={ui("Sample Type")} value={sampleType} onChange={e => setSampleType(e.target.value)}>
+            <option value="">{ui("Sample Type")}</option>
+            {Array.from(new Set(["رمل", "خرسانة", "أسفلت", sampleType].filter(Boolean))).map(value => <option key={value} value={value}>{ui(value)}</option>)}
+          </select>
 
           <input
             type="date"
@@ -325,14 +322,10 @@ export default function AddSampleModal({
             }
           />
 
-          <input
-            className="border rounded-lg p-3"
-            placeholder={ui("Received Condition")}
-            value={receivedCondition}
-            onChange={(e) =>
-              setReceivedCondition(e.target.value)
-            }
-          />
+          <select className="border rounded-lg p-3" aria-label={ui("Received Condition")} value={receivedCondition} onChange={e => setReceivedCondition(e.target.value)}>
+            <option value="">{ui("Received Condition")}</option>
+            {Array.from(new Set(["جيدة", "مقبولة", "مرفوضة", receivedCondition].filter(Boolean))).map(value => <option key={value} value={value}>{ui(value)}</option>)}
+          </select>
 
           <select
             className="border rounded-lg p-3"

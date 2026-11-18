@@ -3,6 +3,7 @@
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { sampleLabels } from "@/lib/sampleLabels";
 import BackButton from "@/components/BackButton";
 import { supabase } from "@/lib/supabase";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -80,7 +81,12 @@ export default function SampleDetailsPage() {
 
     }
 
-    setSample(data);
+    try {
+      const [row] = await sampleLabels([data]);
+      setSample(row);
+    } catch {
+      setSample(data);
+    }
 
     const { data: tests, error: testsError } = await supabase
       .from("sample_tests")
@@ -148,7 +154,7 @@ export default function SampleDetailsPage() {
       .update({
         status,
       })
-      .eq("id", testId);
+      .eq("id", testId).select("id").single();
 
     if (error) {
 
@@ -311,7 +317,9 @@ export default function SampleDetailsPage() {
         <div className="grid grid-cols-2 gap-4">
 
           <div>
-            <strong>{ui("Sample Number:")}</strong>
+            <strong>{ui("Client")}</strong><br />{sample.client_name || "—"}</div>
+          <div><strong>{ui("Project")}</strong><br />{sample.project_name || "—"}</div>
+          <div><strong>{ui("Sample Number:")}</strong>
             <br />
             {sample.sample_number}
           </div>

@@ -111,7 +111,7 @@ export default function TechnicianTasksPage() {
 
                   <button
   onClick={() => {
-    if (task.task_name === "Field Density") {
+    if (task.test_type === "electrical-density") { router.push(`/technician/tests/${task.id}/electrical-density`); } else if (task.test_type === "field-density" || task.task_name === "Field Density") {
       router.push(`/technician/tests/${task.id}/field-density`);
     } else {
       router.push(`/technician/tests/${task.id}`);

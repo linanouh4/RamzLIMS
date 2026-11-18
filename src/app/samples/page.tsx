@@ -1,6 +1,7 @@
 ﻿
 "use client";
 
+import { sampleLabels } from "@/lib/sampleLabels";
 import BackButton from "@/components/BackButton";
 import { useUiText } from "@/lib/uiText";
 import { useEffect, useState } from "react";
@@ -16,8 +17,8 @@ export default function SamplesPage() {
   const router = useRouter();
 
   const [currentRole, setCurrentRole] = useState<string | null>(null);
-  const canDelete = Boolean(currentRole) && currentRole !== "technical_manager";
-  const canEdit = Boolean(currentRole) && currentRole !== "technical_manager";
+  const canDelete = Boolean(currentRole) && currentRole !== "quality_manager" && currentRole !== "technical_manager";
+  const canEdit = Boolean(currentRole) && currentRole !== "quality_manager" && currentRole !== "technical_manager";
 
   const [samples, setSamples] = useState<any[]>([]);
   const [filteredSamples, setFilteredSamples] = useState<any[]>([]);
@@ -39,6 +40,7 @@ export default function SamplesPage() {
 
       data = data.filter(
         (sample) =>
+          String(sample.sample_number || "").toLowerCase().includes(value) ||
           sample.project_name
             ?.toLowerCase()
             .includes(value) ||
@@ -105,14 +107,14 @@ export default function SamplesPage() {
         return;
       }
 
-      let result = samplesData || [];
+      let result = await sampleLabels(samplesData || []);
 
       /*
        * ADMIN:
        * يشاهد جميع العينات.
        */
 
-      if (currentUser.role === "admin") {
+      if (currentUser.role === "admin" || currentUser.role === "quality_manager") {
         setSamples(result);
         setFilteredSamples(result);
         return;
@@ -373,7 +375,7 @@ export default function SamplesPage() {
 
           </div>
 
-          <button
+          <button hidden={currentRole === "quality_manager"}
             onClick={openAddModal}
             className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-3 rounded-lg"
           >
@@ -427,7 +429,7 @@ export default function SamplesPage() {
                 <tr>
 
                   <th className="p-3 text-start">
-                    {ui("Project")}
+                    {ui("Sample Number")}</th><th className="p-3 text-start">{ui("Project")}
                   </th>
 
                   <th className="p-3 text-start">
@@ -469,7 +471,7 @@ export default function SamplesPage() {
                     >
 
                       <td className="p-3">
-                        {sample.project_name}
+                        {sample.sample_number || "—"}</td><td className="p-3">{sample.project_name || "—"}
                       </td>
 
                       <td className="p-3">

@@ -61,7 +61,7 @@ function QuotationList() {
       try {
         const user = getSavedUser();
         const role = user?.role?.trim().toLowerCase();
-        const canOpen = role === "accountant" ||
+        const canOpen = role === "quality_manager" || role === "branch_manager" || role === "accountant" ||
           role === "technical_manager" ||
           (role === "admin" && Number(user?.id) === 1);
 
@@ -94,7 +94,7 @@ function QuotationList() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex items-center justify-between gap-4">
           <h1 className="text-3xl font-bold text-blue-900">{ui("عروض الأسعار")}</h1>
-          {!loading && !error && (
+          {!loading && !error && actor?.role !== "quality_manager" && (
             <Link href="/quotations/new" className="rounded-lg bg-blue-700 px-4 py-2 text-white hover:bg-blue-800">
               {ui("إنشاء عرض سعر")}
             </Link>
@@ -144,7 +144,7 @@ function QuotationList() {
                       <div className="flex flex-wrap gap-3 text-blue-800">
                         <Link href={"/quotations/" + quote.id}>{ui("عرض")}</Link>
                         <Link href={"/quotations/" + quote.id + "?action=print"}>{ui("طباعة")}</Link>
-                        {quote.status === "Draft" && (
+                        {quote.status === "Draft" && actor?.role !== "quality_manager" && (
                           <Link href={"/quotations/" + quote.id + "?action=edit"}>{ui("تعديل")}</Link>
                         )}
                         {quote.status === "Draft" && canDelete && (
@@ -168,7 +168,7 @@ function QuotationList() {
 
 export default function QuotationsPage() {
   return (
-    <ProtectedRoute allowedRoles={["admin", "accountant", "technical_manager"]}>
+    <ProtectedRoute allowedRoles={["admin", "accountant", "branch_manager", "technical_manager", "quality_manager"]}>
       <QuotationList />
     </ProtectedRoute>
   );

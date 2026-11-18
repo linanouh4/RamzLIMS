@@ -266,7 +266,7 @@ function Details() {
 
 export default function QuotationDetailsPage() {
   return (
-    <ProtectedRoute allowedRoles={["admin", "accountant", "technical_manager"]}>
+    <ProtectedRoute allowedRoles={["admin", "accountant", "branch_manager", "technical_manager", "quality_manager"]}>
       <Details />
     </ProtectedRoute>
   );
