@@ -278,7 +278,7 @@ export default function ClientsPage() {
   }
 
   function normalizeClientName(value: string) {
-    return value
+    return value.normalize("NFKC")
       .replace(/[أإآٱ]/g, "ا")
       .replace(/ـ/g, "")
       .replace(/\s+/g, " ")
