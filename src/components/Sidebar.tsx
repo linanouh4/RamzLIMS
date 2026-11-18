@@ -1,10 +1,10 @@
 "use client";
 
 import { useUiText } from "@/lib/uiText";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearSavedUser } from "@/lib/auth";
+import { clearSavedUser, getSavedUser, saveUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -25,6 +25,41 @@ const [logoutError, setLogoutError] = useState("");
 
 const { language, setLanguage } = useLanguage();
 const role = user?.role?.toLowerCase();
+
+const [roles, setRoles] = useState<string[]>([]);
+const [switchingRole, setSwitchingRole] = useState(false);
+const [roleError, setRoleError] = useState("");
+useEffect(() => {
+  let active = true;
+  if (user?.id) {
+    void supabase.rpc("my_staff_roles").then(({ data }) => {
+      if (active) setRoles(Array.isArray(data) ? data : []);
+    });
+  }
+  return () => { active = false; };
+}, [user?.id]);
+
+async function switchRole(nextRole: string) {
+  if (switchingRole || nextRole === role) return;
+  setSwitchingRole(true);
+  setRoleError("");
+  try {
+    const { error } = await supabase.rpc("switch_staff_role", { p_role: nextRole });
+    if (error) throw error;
+    const profile = getSavedUser();
+    if (profile) saveUser({ ...profile, role: nextRole });
+    window.location.assign(nextRole === "technician" ? "/technician" : "/dashboard");
+  } catch {
+    setRoleError(language === "ar" ? "تعذّر تبديل الدور." : "Could not switch roles.");
+    setSwitchingRole(false);
+  }
+}
+const roleLabels: Record<string, [string, string]> = {
+  branch_manager: ["مدير فرع", "Branch manager"],
+  quality_manager: ["مدير جودة", "Quality manager"],
+  technician: ["فني", "Technician"],
+};
+
 
 const logout = async () => {
 if (loggingOut) return;
@@ -58,6 +93,20 @@ return (
       </div>
     </div>
   )}
+
+  {roles.length > 1 && (
+    <label className="mb-4 block text-sm">
+      {language === "ar" ? "الدور الحالي" : "Active role"}
+      <select className="mt-1 w-full rounded bg-white p-2 text-blue-900"
+        value={role || ""} disabled={switchingRole}
+        onChange={(event) => void switchRole(event.target.value)}>
+        {roles.map(option => (
+          <option key={option} value={option}>{roleLabels[option]?.[language === "ar" ? 0 : 1] || option}</option>
+        ))}
+      </select>
+    </label>
+  )}
+  {roleError && <p role="alert">{roleError}</p>}
 
   <nav className="space-y-4">
     {role === "admin" && (
@@ -170,6 +219,20 @@ return (
       </>
     )}
 
+    {role === "quality_manager" && (
+      <>
+        {[
+          ["/dashboard", "لوحة التحكم", "Dashboard"],
+          ["/clients", "العملاء", "Clients"],
+          ["/samples", "العينات", "Samples"],
+          ["/task-results", "المهام المنجزة", "Completed tasks"],
+          ["/quotations", "عروض الأسعار", "Quotations"],
+        ].map(([href, ar, en]) => (
+          <Link key={href} href={href} className={linkClass(href)}>{language === "ar" ? ar : en}</Link>
+        ))}
+      </>
+    )}
+
     {role === "lab_manager" && (
       <>
         <Link href="/dashboard" className={linkClass("/dashboard")}>
@@ -227,7 +290,7 @@ return (
       </>
     )}
 
-    {(role === "accountant" ||
+    {(role === "branch_manager" || role === "accountant" ||
       role === "technical_manager" ||
       (role === "admin" && Number(user?.id) === 1)) && (
       <Link href="/quotations" className={linkClass("/quotations")}>
